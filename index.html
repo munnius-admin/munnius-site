@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Munnius – Consultoria empresarial moderna</title>
+  <meta name="description" content="Munnius é uma consultoria empresarial que profissionaliza pequenos empreendedores do Brasil, de forma remota, com organização de processos e uso prático de IA." />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:title" content="Munnius – Consultoria empresarial moderna" />
+  <meta property="og:description" content="Profissionalizamos pequenos empreendedores do Brasil com organização, processos e IA." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://munnius.com.br" />
+  <meta property="og:image" content="https://munnius.com.br/og.jpg" />
+  <meta name="theme-color" content="#0a1f2a" />
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230a1f2a'/><text x='50' y='58' font-size='56' text-anchor='middle' fill='white' font-family='Arial, Helvetica, sans-serif'>M</text></svg>">
+
+  <style>
+    :root {
+      --munn-primary: #0a1f2a;
+      --munn-primary-600: #0f2c3c;
+      --munn-contrast: #c46c44;
+      --munn-contrast-alt: #d3a019;
+      --munn-bg: #ffffff;
+      --munn-fg: #0b0b0b;
+      --munn-muted: #5a6a73;
+      --munn-border: #e7ebee;
+      --font-body: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 6px 24px rgba(0,0,0,.08);
+    }
+
+    body { margin: 0; font-family: var(--font-body); color: var(--munn-fg); background: var(--munn-bg); line-height: 1.6; }
+    img { max-width: 100%; border-radius: 12px; }
+    .container { width: min(1120px, 92vw); margin: 0 auto; }
+
+    header { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); background: #fff9; border-bottom: 1px solid var(--munn-border); }
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(135deg, var(--munn-primary), var(--munn-primary-600)); color: #fff; font-weight: 800; box-shadow: var(--shadow-sm); }
+
+    .hero { padding: 80px 0; text-align: center; }
+    .hero img { margin-top: 32px; }
+    .hero h2 { font-size: clamp(28px, 4.8vw, 48px); margin-bottom: 16px; }
+    .hero p { max-width: 700px; margin: 0 auto 22px; color: var(--munn-muted); }
+    .cta-row { margin-top: 20px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    .btn { padding: 14px 20px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; }
+    .btn.primary { background: var(--munn-primary); color: #fff; }
+
+    section { padding: 60px 0; }
+    .section-title { font-size: clamp(22px, 3vw, 30px); margin-bottom: 12px; text-align: center; }
+    .section-sub { text-align: center; color: var(--munn-muted); margin-bottom: 32px; }
+
+    .about { display: grid; gap: 32px; align-items: center; }
+    .grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .service { padding: 20px; border: 1px solid var(--munn-border); border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow-sm); }
+
+    form { display: grid; gap: 12px; max-width: 600px; margin: auto; }
+    input, textarea { padding: 12px; border-radius: 10px; border: 1px solid var(--munn-border); }
+
+    footer { border-top: 1px solid var(--munn-border); padding: 24px 0; text-align: center; color: var(--munn-muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="brand"><div class="logo">M</div><h1>Munnius</h1></div>
+      <nav>
+        <ul style="list-style:none;display:flex;gap:18px;margin:0;padding:0">
+          <li><a href="#sobre">Sobre</a></li>
+          <li><a href="#servicos">Serviços</a></li>
+          <li><a href="#processo">Como trabalhamos</a></li>
+          <li><a href="#contato">Contato</a></li>
+          <li><a href="politicas.html">Políticas</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h2>Consultoria que profissionaliza pequenos empreendedores</h2>
+      <p>Organização de processos, automação com IA e assessoria em projetos internos. Tudo de forma prática e remota.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#contato">Quero meu diagnóstico gratuito</a>
+      </div>
+      <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80" alt="Equipe de negócios moderna trabalhando" />
+    </div>
+  </section>
+
+  <section id="sobre">
+    <div class="container about">
+      <div>
+        <h3 class="section-title">Sobre a Munnius</h3>
+        <p>A Munnius nasce do desejo antigo de colocar em prática o que aprendi na engenharia de produção, pós em gestão de projetos e experiência em startup atendendo grandes clientes como Vale, Azul e Iveco. Nosso propósito é ajudar pequenas empresas a acompanharem os avanços de tecnologia e IA, com eficiência e simplicidade.</p>
+        <p>Fundada por <strong>Gabriel R. Munhoz</strong>, a Munnius carrega no nome a raiz de <em>Munhoz</em> em latim — um aceno à origem e à ideia de fundamento: construir base sólida, depois escalar.</p>
+      </div>
+      <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80" alt="Consultoria estratégica" />
+    </div>
+  </section>
+
+  <!-- Galeria / Imagens -->
+  <section id="galeria">
+    <div class="container">
+      <h3 class="section-title">Por dentro do trabalho</h3>
+      <p class="section-sub">Visual limpo, moderno e focado em resultado.</p>
+      <div class="grid">
+        <img alt="Quadro de projeto minimalista" src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=70"/>
+        <img alt="Mesa de trabalho moderna" src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=70"/>
+        <img alt="Equipe colaborando com pós-its" src="https://images.unsplash.com/photo-1552581234-26160f608093?auto=format&fit=crop&w=1200&q=70"/>
+      </div>
+    </div>
+  </section>
+
+  <section id="servicos">
+    <div class="container">
+      <h3 class="section-title">Serviços</h3>
+      <p class="section-sub">Nossas principais frentes de atuação.</p>
+      <div class="grid">
+        <div class="service">
+          <h4>Consultoria em Organização de Processos</h4>
+          <p>Mapeamento e padronização para dar clareza, eficiência e escalabilidade ao negócio.</p>
+        </div>
+        <div class="service">
+          <h4>Automação com IA no Operacional</h4>
+          <p>Implantação prática de automações com inteligência artificial para reduzir retrabalho e otimizar recursos.</p>
+        </div>
+        <div class="service">
+          <h4>Gestão de Projetos Internos (Assessoria)</h4>
+          <p>Acompanhamento e governança simples para garantir execução ágil e resultados consistentes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="diferenciais">
+    <div class="container">
+      <h3 class="section-title">Por que a Munnius?</h3>
+      <div class="grid">
+        <div class="service">
+          <h4>Enfoque no essencial</h4>
+          <p>Nada de projetos intermináveis. Arrumamos a casa primeiro e só então escalamos.</p>
+        </div>
+        <div class="service">
+          <h4>IA prática e responsável</h4>
+          <p>Automação com propósito: reduzir custos e liberar tempo do time para o que importa.</p>
+        </div>
+        <div class="service">
+          <h4>Experiência real</h4>
+          <p>Vivência com startups e grandes contas (Vale, Azul, Iveco) para trazer o que funciona no dia a dia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="processo">
+    <div class="container">
+      <h3 class="section-title">Como trabalhamos</h3>
+      <div class="grid">
+        <div class="service">
+          <h4>1. Diagnóstico gratuito</h4>
+          <p>Entendemos rapidamente seu contexto e principais gargalos em uma chamada curta.</p>
+        </div>
+        <div class="service">
+          <h4>2. Plano enxuto</h4>
+          <p>Roadmap de poucas semanas com entregas claras e métricas simples de sucesso.</p>
+        </div>
+        <div class="service">
+          <h4>3. Execução assistida</h4>
+          <p>Implementação acompanhada, ajustes finos e transferência de conhecimento para o seu time.</p>
+        </div>
+      </div>
+      <div class="cta-row" style="margin-top:16px">
+        <a class="btn primary" href="#contato">Quero meu diagnóstico</a>
+        <a class="btn" href="#sobre">Ver credenciais</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="galeria">
+    <div class="container">
+      <h3 class="section-title">Por dentro do trabalho</h3>
+      <p class="section-sub">Alguns visuais que representam nosso estilo de entrega: claro, moderno e orientado a resultados.</p>
+      <div class="grid">
+        <div class="card"><img alt="Quadro de projeto minimalista" src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1200&auto=format&fit=crop&q=60"/></div>
+        <div class="card"><img alt="Mesa de trabalho moderna" src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&auto=format&fit=crop&q=60"/></div>
+        <div class="card"><img alt="Equipe colaborando com pós-its" src="https://images.unsplash.com/photo-1552581234-26160f608093?w=1200&auto=format&fit=crop&q=60"/></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cta-final">
+    <div class="container">
+      <div class="hero-slab" style="padding:40px;border-radius:16px;background:linear-gradient(135deg,var(--munn-primary),var(--munn-primary-600));color:#fff;text-align:center;">
+        <h2 style="margin-bottom:8px">Vamos organizar sua operação e colocar a IA para trabalhar a seu favor?</h2>
+        <p style="margin-bottom:16px">Comece com um diagnóstico gratuito — sem compromisso.</p>
+        <a class="btn" style="background:#fff;color:var(--munn-primary)" href="#contato">Falar com a Munnius</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Diferenciais -->
+  <section id="diferenciais">
+    <div class="container">
+      <h3 class="section-title">Por que a Munnius?</h3>
+      <p class="section-sub">O que guiamos em cada projeto.</p>
+      <div class="grid">
+        <div class="service">
+          <h4>Enfoque no essencial</h4>
+          <p>Nada de projetos intermináveis. Arrumamos a casa primeiro e só então escalamos.</p>
+        </div>
+        <div class="service">
+          <h4>IA prática e responsável</h4>
+          <p>Automação com propósito: reduzir custos e liberar tempo do time para o que importa.</p>
+        </div>
+        <div class="service">
+          <h4>Experiência real</h4>
+          <p>Vivência com startups e grandes contas (Vale, Azul, Iveco) para trazer o que funciona no dia a dia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Como trabalhamos -->
+  <section id="processo">
+    <div class="container">
+      <h3 class="section-title">Como trabalhamos</h3>
+      <div class="grid">
+        <div class="service">
+          <h4>1. Diagnóstico gratuito</h4>
+          <p>Entendemos rapidamente seu contexto e principais gargalos em uma chamada curta.</p>
+        </div>
+        <div class="service">
+          <h4>2. Plano enxuto</h4>
+          <p>Roadmap de poucas semanas com entregas claras e métricas simples de sucesso.</p>
+        </div>
+        <div class="service">
+          <h4>3. Execução assistida</h4>
+          <p>Implementação acompanhada, ajustes finos e transferência de conhecimento para o seu time.</p>
+        </div>
+      </div>
+      <div class="cta-row" style="margin-top:16px">
+        <a class="btn primary" href="#contato">Quero meu diagnóstico</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Final -->
+  <section id="cta-final">
+    <div class="container">
+      <div class="hero" style="padding:40px 0">
+        <h2 style="margin-bottom:8px">Pronto para profissionalizar sua operação?</h2>
+        <p class="section-sub" style="margin-bottom:16px">Organização de processos, automação com IA e gestão de projetos internos.</p>
+        <a class="btn primary" href="#contato">Falar com a Munnius</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="contato">
+    <div class="container">
+      <h3 class="section-title">Vamos conversar?</h3>
+      <p class="section-sub">Receba um diagnóstico inicial gratuito. Escreva para <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a> ou preencha o formulário abaixo.</p>
+      <form id="contactForm" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+        <input type="text" name="nome" placeholder="Seu nome" required />
+        <input type="email" name="email" placeholder="Seu e-mail" required />
+        <input type="text" name="assunto" placeholder="Assunto" required />
+        <textarea name="mensagem" placeholder="Sua mensagem"></textarea>
+        <button class="btn primary" type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>© 2025 Munnius. Todos os direitos reservados. | <a href="politicas.html">Privacidade & Termos</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll suave para navegação interna
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const id = a.getAttribute('href');
+      if (id && id.length > 1) {
+        e.preventDefault();
+        const el = document.querySelector(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    // Alerta se o ID do Formspree não foi configurado
+    const form = document.getElementById('contactForm');
+    form?.addEventListener('submit', (e) => {
+      if (form.action.includes('YOUR_FORM_ID')) {
+        e.preventDefault();
+        alert('Configure o ID do formulário do Formspree antes de enviar.');
+      }
+    });
+  </script>
+</body>
+</html>
