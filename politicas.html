@@ -4,48 +4,85 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Políticas — Munnius</title>
-  <meta name="description" content="Política de Privacidade e Termos de Uso da Munnius." />
+  <meta name="description" content="Política de Privacidade e Termos de Uso da Munnius.">
   <link rel="icon" href="/favicon.svg" />
+
+  <!-- Tipografia + Ícones -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+
   <style>
-    :root{--fg:#0b0b0b;--bg:#fff;--border:#e7ebee;--muted:#5a6a73;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial}
-    @media (prefers-color-scheme: dark){:root{--bg:#0a0f12;--fg:#eef4f8;--border:#1b242a;--muted:#9fb2bc}}
-    body{margin:0;background:var(--bg);color:var(--fg);line-height:1.6}
-    .container{width:min(900px,92vw);margin:28px auto}
-    a{color:inherit}
-    header{position:sticky;top:0;background:#fff9;backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
-    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
-    .logo{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#0a1f2a,#0f2c3c);color:#fff;font-weight:800}
-    .card{border:1px solid var(--border);border-radius:14px;padding:18px;margin:14px 0}
-    footer{border-top:1px solid var(--border);padding:18px 0;margin-top:16px;color:var(--muted);font-size:14px}
+    :root{ --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280; --accent:#D4AF37; --border:#E5E7EB; --maxw:900px; --shadow:0 18px 48px rgba(0,0,0,.12); }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
+    a{text-decoration:none;color:inherit}
+    header{position:sticky;top:0;background:#fff9;backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10}
+    .nav{width:min(var(--maxw),92vw);margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+    .brand{font-weight:800;color:var(--ink)}
+    .wrap{width:min(var(--maxw),92vw);margin:28px auto;display:grid;gap:16px}
+    .card{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:22px}
+    h1{color:var(--primary);margin:8px 0 6px}
+    .muted{color:var(--muted)}
+    h2{margin:10px 0 6px;color:var(--primary);font-size:20px;display:flex;gap:8px;align-items:center}
+    ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+    footer{border-top:1px solid var(--border);color:var(--muted);font-size:14px;margin-top:16px;padding:18px 0}
+    .footer-inner{width:min(var(--maxw),92vw);margin:0 auto;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .tag{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 10px;color:var(--muted)}
   </style>
 </head>
 <body>
   <header>
-    <div class="container nav">
-      <div style="display:flex;gap:12px;align-items:center">
-        <div class="logo">M</div>
-        <strong>Munnius</strong>
-      </div>
-      <a href="/">← Voltar ao site</a>
+    <div class="nav">
+      <div class="brand">Munnius</div>
+      <a href="/"><i class="ph ph-house"></i> Início</a>
     </div>
   </header>
 
-  <main class="container">
-    <h1>Políticas</h1>
+  <main class="wrap">
     <div class="card">
-      <h2>Política de Privacidade</h2>
-      <p>Coletamos apenas os dados submetidos voluntariamente no formulário (nome, e-mail, mensagem) para retorno do contato. Não vendemos nem compartilhamos dados com terceiros. Você pode solicitar exclusão a qualquer momento via contato@munnius.com.br.</p>
+      <h1>Políticas</h1>
+      <div class="muted">Última atualização: 2025-01-01</div>
+      <div class="tag"><i class="ph ph-shield-check"></i> Transparência e simplicidade</div>
     </div>
+
     <div class="card">
-      <h2>Termos de Uso</h2>
-      <p>O conteúdo deste site tem caráter informativo. As recomendações oferecidas em diagnóstico inicial são estimativas e podem exigir análise aprofundada para implementação. Ao utilizar o formulário, você concorda com o contato por e-mail.</p>
+      <h2><i class="ph ph-lock"></i> Política de Privacidade</h2>
+      <p>Valorizamos sua privacidade. Coletamos apenas os dados necessários para responder ao seu contato e prestar nossos serviços. Não vendemos dados e não compartilhamos com terceiros, exceto quando exigido por lei ou para viabilizar a prestação do serviço (ex.: provedores de e-mail).</p>
+      <ul>
+        <li><strong>Dados de contato:</strong> nome, e-mail e mensagem enviados pelo formulário.</li>
+        <li><strong>Uso dos dados:</strong> retornar seu contato e organizar o atendimento.</li>
+        <li><strong>Retenção:</strong> mantemos somente pelo tempo necessário para o atendimento e obrigações legais.</li>
+        <li><strong>Seus direitos:</strong> solicitar acesso, correção ou exclusão a qualquer momento pelo e-mail <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="ph ph-cookie"></i> Cookies & Métricas</h2>
+      <p>Usamos apenas cookies essenciais e, quando ativado por você, um analytics leve para medir visitas de forma agregada e sem rastrear indivíduos. Você pode bloquear cookies no seu navegador sem prejuízo essencial da navegação.</p>
+    </div>
+
+    <div class="card">
+      <h2><i class="ph ph-file-text"></i> Termos de Uso</h2>
+      <ul>
+        <li>A Munnius presta serviços de consultoria remota e sob demanda.</li>
+        <li>Propostas comerciais e prazos são acordados por e-mail ou documento específico.</li>
+        <li>Conteúdos do site são informativos e podem mudar sem aviso prévio.</li>
+        <li>Marcas citadas pertencem aos respectivos proprietários.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2><i class="ph ph-headset"></i> Contato</h2>
+      <p>Dúvidas sobre esta política? Fale com a gente em <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>.</p>
     </div>
   </main>
 
   <footer>
-    <div class="container" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <span>© 2025 Munnius</span>
-      <a href="/">munnius.com.br</a>
+    <div class="footer-inner">
+      <span>© 2025 Munnius — Todos os direitos reservados</span>
+      <a href="/contato.html">Contato</a>
     </div>
   </footer>
 </body>
