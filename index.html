@@ -4,226 +4,236 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Munnius — Consultoria Empresarial</title>
-  <meta name="description" content="Munnius é uma consultoria empresarial que profissionaliza pequenos empreendedores através de organização, processos e uso de IA." />
+  <meta name="description" content="Profissionalizamos pequenos negócios com organização de processos, automação com IA e gestão de projetos internos." />
   <link rel="icon" href="/favicon.svg" />
+
+  <!-- Tipografia -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <!-- Ícones (Phosphor - free) -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+
   <style>
     :root {
-      --color-primary: #0A2342;
-      --color-light: #F9FAFB;
-      --color-gray: #6B7280;
-      --color-dark: #1C1C1C;
-      --color-accent: #D4AF37;
-      --radius: 12px;
-      --font: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --primary: #0A2342;   /* azul petróleo */
+      --bg: #F9FAFB;        /* quase branco */
+      --ink: #1C1C1C;       /* quase preto */
+      --muted: #6B7280;     /* cinza */
+      --accent: #D4AF37;    /* dourado */
+      --border: #E5E7EB;    /* cinza claro */
+      --maxw: 1160px;
+      --r-lg: 24px; --r-md: 16px; --r-sm: 12px;
+      --shadow: 0 18px 48px rgba(0,0,0,.12);
+      --space-section: 72px;
     }
 
-    body {
-      margin: 0;
-      font-family: var(--font);
-      background: var(--color-light);
-      color: var(--color-dark);
-      line-height: 1.6;
-    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); line-height:1.55; }
+    img { max-width:100%; display:block; }
+    a { color:inherit; text-decoration:none; }
+    .container { width:min(var(--maxw),92vw); margin:0 auto; }
 
-    a { color: inherit; text-decoration: none; }
+    /* Header */
+    header { position:sticky; top:0; z-index:50; backdrop-filter:blur(10px); border-bottom:1px solid rgba(0,0,0,.06); }
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
+    .brand { font-weight:800; font-size:22px; letter-spacing:.4px; }
+    nav ul { list-style:none; display:flex; gap:22px; margin:0; padding:0; }
+    nav a { padding:10px 12px; border-radius:12px; }
+    nav a:hover { background:rgba(0,0,0,.06); }
 
-    header {
-      position: sticky;
-      top: 0;
-      background: var(--color-light);
-      border-bottom: 1px solid var(--color-gray);
-      z-index: 50;
+    /* Hero impactante */
+    .hero { position:relative; min-height:100svh; display:grid; place-items:center; padding:88px 0; isolation:isolate; }
+    .hero::before { /* imagem de fundo (suba assets/hero.jpg) */
+      content:""; position:absolute; inset:0; background:
+        url('assets/hero.jpg') center/cover no-repeat,
+        radial-gradient(1000px 600px at 10% 0%, rgba(212,175,55,.18), transparent 60%),
+        radial-gradient(900px 520px at 100% 10%, rgba(10,35,66,.25), transparent 60%);
+      opacity:.28; z-index:-2;
     }
+    .hero-card { width:min(var(--maxw),92vw); display:grid; grid-template-columns:1.15fr .85fr; gap: clamp(16px, 3.6vw, 32px); background:rgba(255,255,255,.82); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow); padding: clamp(24px, 4vw, 40px); backdrop-filter: blur(6px); }
+    @media (max-width: 900px){ .hero-card{ grid-template-columns:1fr; } }
+    .kicker { text-transform:uppercase; letter-spacing:.16em; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    h1.hero-title { font-size: clamp(32px, 5.4vw, 56px); line-height:1.06; margin:0 0 8px; color: var(--primary); }
+    .hero-sub { font-size: clamp(15px, 1.8vw, 18px); color: var(--muted); margin:0 0 14px; }
+    .btn { display:inline-flex; align-items:center; gap:10px; padding:12px 18px; border-radius:12px; font-weight:700; cursor:pointer; transition: transform .08s ease, background .2s ease; border:1px solid var(--border); background:#fff; }
+    .btn.primary { background: var(--primary); color:#fff; border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); }
+    .btn:hover { transform: translateY(-1px); }
+    .hero-photo { border-radius:18px; overflow:hidden; border:1px solid var(--border); }
 
-    nav ul {
-      list-style: none;
-      display: flex;
-      gap: 24px;
-      margin: 0;
-      padding: 16px 0;
-    }
+    /* Seções */
+    section { padding: var(--space-section) 0; }
+    .section-title { font-size: clamp(22px, 2.8vw, 30px); color: var(--primary); margin:0 0 8px; }
+    .section-sub { color: var(--muted); margin:0 0 20px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:var(--r-md); padding:18px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
 
-    nav a {
-      font-weight: 500;
-      color: var(--color-dark);
-      transition: color .2s;
-    }
-    nav a:hover { color: var(--color-accent); }
+    .grid { display:grid; gap:16px; }
+    .grid-3 { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 900px){ .grid-3{ grid-template-columns:1fr; } }
 
-    .container {
-      width: min(1100px, 92vw);
-      margin: auto;
-      padding: 40px 0;
-    }
+    /* Serviços com ícones + imagem no topo */
+    .service h3 { margin:10px 0 6px; display:flex; align-items:center; gap:8px; }
+    .service p { margin:0 0 10px; color:var(--muted); }
+    .service ul { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
+    .service li { display:flex; align-items:flex-start; gap:8px; color:var(--muted); }
+    .svc-media{ height:140px; border-radius:12px; border:1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,.04); background-size:cover; background-position:center; }
 
-    .hero {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 40px;
-      padding: 60px 0;
-    }
+    /* Timeline: fio acima dos textos, dots centralizados (sem sobrepor) */
+    .timeline { position:relative; display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:10px; }
+    .timeline::before { content:""; position:absolute; top:28px; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--accent), transparent); opacity:.6; }
+    .step { position:relative; padding-top:56px; text-align:center; }
+    .step .dot { position:absolute; top:20px; left:50%; transform:translateX(-50%); width:16px; height:16px; background:var(--accent); border-radius:999px; box-shadow:0 0 0 6px rgba(212,175,55,.18); }
+    .step h4 { margin:0 0 6px; }
+    .step p { margin:0; color:var(--muted); }
 
-    .hero-text h1 {
-      font-size: 2.5rem;
-      margin-bottom: 16px;
-      color: var(--color-primary);
-    }
-    .hero-text p { font-size: 1.2rem; color: var(--color-gray); }
+    /* CTA card */
+    .cta-card { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px; border-radius:var(--r-md); border:1px solid var(--border); background:#fff; box-shadow: var(--shadow); }
 
-    .hero img {
-      width: 280px;
-      border-radius: var(--radius);
-    }
-
-    h2.section-title {
-      font-size: 1.8rem;
-      margin-bottom: 24px;
-      color: var(--color-primary);
-    }
-
-    .grid {
-      display: grid;
-      gap: 24px;
-    }
-    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-
-    .service {
-      background: #fff;
-      border-radius: var(--radius);
-      padding: 24px;
-      border: 1px solid var(--color-gray);
-      transition: transform .2s;
-    }
-    .service:hover { transform: translateY(-4px); }
-    .service h3 { color: var(--color-dark); margin-bottom: 8px; }
-    .service p { color: var(--color-gray); }
-
-    /* Timeline visual para "Como Trabalhamos" */
-    .timeline {
-      display: flex;
-      justify-content: space-between;
-      position: relative;
-      margin: 40px 0;
-    }
-    .timeline::before {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: var(--color-accent);
-      z-index: 1;
-    }
-    .timeline-step {
-      position: relative;
-      z-index: 2;
-      background: var(--color-light);
-      padding: 20px;
-      border-radius: var(--radius);
-      border: 2px solid var(--color-accent);
-      text-align: center;
-      flex: 1;
-      margin: 0 8px;
-    }
-    .timeline-step h4 { margin-bottom: 8px; color: var(--color-primary); }
-    .timeline-step p { font-size: 0.95rem; color: var(--color-gray); }
-
-    footer {
-      border-top: 1px solid var(--color-gray);
-      padding: 20px 0;
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--color-gray);
-    }
+    /* Animações básicas */
+    .reveal { opacity:0; transform:translateY(12px); }
+    .reveal.show { opacity:1; transform:none; transition: opacity .6s ease, transform .6s ease; }
+    @media (prefers-reduced-motion: reduce){ .reveal, .reveal.show { transition: none; } }
   </style>
-  <script src="https://kit.fontawesome.com/4e5d6e5f2d.js" crossorigin="anonymous"></script>
 </head>
 <body>
+  <!-- Header -->
   <header>
-    <div class="container" style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:1.4rem;font-weight:700;color:var(--color-primary)">Munnius</div>
+    <div class="container nav">
+      <div class="brand">Munnius</div>
       <nav>
         <ul>
           <li><a href="#sobre">Sobre</a></li>
           <li><a href="#servicos">Serviços</a></li>
           <li><a href="#processo">Como trabalhamos</a></li>
-          <li><a href="#contato">Contato</a></li>
-          <li><a href="politicas.html">Políticas</a></li>
+          <li><a href="/contato.html">Contato</a></li>
+          <li><a href="/politicas.html">Políticas</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
-  <section class="hero container">
-    <div class="hero-text">
-      <h1>Profissionalizando Pequenos Negócios</h1>
-      <p>Consultoria em organização, automação com IA e gestão de projetos internos. Feito para destravar o crescimento.</p>
-    </div>
-    <img src="assets/foto_munhoz.jpg" alt="Gabriel Munhoz" />
-  </section>
-
-  <section id="sobre" class="container">
-    <h2 class="section-title">Sobre</h2>
-    <p>Sou Gabriel R. Munhoz, fundador da Munnius. Engenheiro de formação, pós-graduado em Gestão de Projetos e com experiência prática em startups e grandes clientes como Vale, Azul e Iveco. O nome Munnius vem da raiz do meu sobrenome Munhoz, do latim.</p>
-  </section>
-
-  <section id="servicos" class="container">
-    <h2 class="section-title">Serviços</h2>
-    <div class="grid grid-3">
-      <div class="service">
-        <h3><i class="fas fa-sitemap"></i> Consultoria em Processos</h3>
-        <p>Organização e padronização para clareza e eficiência desde o primeiro dia.</p>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-card reveal">
+      <div>
+        <div class="kicker">Consultoria remota • Processos • IA aplicada</div>
+        <h1 class="hero-title">Profissionalize sua operação. Processos claros. IA que entrega.</h1>
+        <p class="hero-sub">Para pequenos empreendedores que querem destravar o crescimento com organização e tecnologia na medida certa.</p>
+        <a class="btn primary" href="/contato.html"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
       </div>
-      <div class="service">
-        <h3><i class="fas fa-robot"></i> Automação com IA</h3>
-        <p>Aplicação prática de inteligência artificial no operacional para reduzir retrabalho.</p>
-      </div>
-      <div class="service">
-        <h3><i class="fas fa-project-diagram"></i> Gestão de Projetos Internos</h3>
-        <p>Acompanhamento simples, metas claras e governança sem burocracia.</p>
-      </div>
+      <div class="hero-photo"><img src="assets/foto_munhoz.jpg" alt="Gabriel R. Munhoz"/></div>
     </div>
   </section>
 
-  <section id="processo" class="container">
-    <h2 class="section-title">Como trabalhamos</h2>
-    <div class="timeline">
-      <div class="timeline-step">
-        <h4><i class="fas fa-search"></i> Diagnóstico</h4>
-        <p>Uma conversa inicial para entender seus desafios. Gratuito e sem compromisso.</p>
+  <!-- Sobre (1ª pessoa + missão) -->
+  <section id="sobre">
+    <div class="container grid" style="grid-template-columns:1.15fr .85fr; gap:18px;">
+      <div class="card reveal">
+        <h3 class="section-title">Sobre a Munnius</h3>
+        <p class="section-sub">Sou <strong>Gabriel R. Munhoz</strong>, engenheiro de produção com pós em gestão de projetos. Atuei em startup liderando operações e projetos para grandes clientes como Vale, Azul, Iveco, Intelbras, Viveo e Nutrien. Minha <strong>missão</strong> com a Munnius é ajudar empreendedores a profissionalizar a operação de forma simples e eficiente — organização primeiro, tecnologia na medida certa e foco em execução.</p>
+        <p>O nome <em>Munnius</em> nasce da raiz de <em>Munhoz</em> no latim: construir base sólida para poder escalar.</p>
       </div>
-      <div class="timeline-step">
-        <h4><i class="fas fa-list"></i> Plano enxuto</h4>
-        <p>Definição de um roadmap de poucas semanas, com entregas claras.</p>
-      </div>
-      <div class="timeline-step">
-        <h4><i class="fas fa-rocket"></i> Execução</h4>
-        <p>Implementação assistida, ajustes e transferência de conhecimento para o time.</p>
+      <div class="card reveal">
+        <h4 class="section-sub" style="margin-top:0">O que você ganha rapidamente</h4>
+        <ul class="benefits" style="list-style:none;margin:0;padding:0;display:grid;gap:8px;color:var(--muted)">
+          <li><i class="ph ph-check-circle"></i> Rotinas e padrões mínimos que tiram o time do improviso.</li>
+          <li><i class="ph ph-check-circle"></i> Automação pragmática com IA para reduzir retrabalho e erros.</li>
+          <li><i class="ph ph-check-circle"></i> Acompanhamento próximo para os projetos realmente andarem.</li>
+        </ul>
       </div>
     </div>
   </section>
 
-  <section id="contato" class="container">
-    <h2 class="section-title">Contato</h2>
-    <p>Preencha o formulário e receba um diagnóstico inicial gratuito:</p>
-    <form id="contactForm" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
-      <input type="text" name="name" placeholder="Seu nome" required style="display:block;margin-bottom:12px;padding:12px;width:100%;border-radius:var(--radius);border:1px solid var(--color-gray)">
-      <input type="email" name="email" placeholder="Seu e-mail" required style="display:block;margin-bottom:12px;padding:12px;width:100%;border-radius:var(--radius);border:1px solid var(--color-gray)">
-      <textarea name="message" placeholder="Mensagem" required style="display:block;margin-bottom:12px;padding:12px;width:100%;border-radius:var(--radius);border:1px solid var(--color-gray)"></textarea>
-      <button type="submit" style="padding:12px 24px;border:none;border-radius:var(--radius);background:var(--color-accent);color:#fff;font-weight:600;cursor:pointer;">Enviar</button>
-    </form>
-  </section>
-
-  <footer>
+  <!-- Serviços com imagens -->
+  <section id="servicos">
     <div class="container">
-      © 2025 Munnius — Todos os direitos reservados
+      <h3 class="section-title">Serviços</h3>
+      <p class="section-sub">Três frentes para organizar a casa e destravar crescimento.</p>
+      <div class="grid grid-3">
+        <div class="card service reveal">
+          <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(212,175,55,.18), transparent 60%), url('assets/svc-processos.jpg') center/cover no-repeat;"></div>
+          <h3><i class="ph ph-squares-four"></i> Consultoria em Processos</h3>
+          <p>Mapeamento leve do que já existe, desenho de fluxos, papéis e padrões. Priorização do essencial para ganhar eficiência sem burocracia.</p>
+          <ul>
+            <li><i class="ph ph-check"></i> Levantamento rápido (as-is → to-be)</li>
+            <li><i class="ph ph-check"></i> Padrões mínimos e documentos-chave</li>
+            <li><i class="ph ph-check"></i> Indicadores operacionais simples</li>
+          </ul>
+        </div>
+        <div class="card service reveal">
+          <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(10,35,66,.18), transparent 60%), url('assets/svc-ia.jpg') center/cover no-repeat;"></div>
+          <h3><i class="ph ph-robot"></i> Automação com IA</h3>
+          <p>IA aplicada ao operacional para cortar custo e liberar tempo do time: documentos, atendimento, planilhas e integrações.</p>
+          <ul>
+            <li><i class="ph ph-check"></i> Geração de documentos e relatórios</li>
+            <li><i class="ph ph-check"></i> Atendimento e triagem com IA</li>
+            <li><i class="ph ph-check"></i> Conectores (e-mail, planilhas, CRM)</li>
+          </ul>
+        </div>
+        <div class="card service reveal">
+          <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(28,28,28,.12), transparent 60%), url('assets/svc-projetos.jpg') center/cover no-repeat;"></div>
+          <h3><i class="ph ph-kanban"></i> Gestão de Projetos</h3>
+          <p>Assessoria para tirar o plano do papel: ritos semanais, governança leve e acompanhamento próximo até a entrega.</p>
+          <ul>
+            <li><i class="ph ph-check"></i> Metas claras e roadmap curto</li>
+            <li><i class="ph ph-check"></i> Rotina de execução e checkpoints</li>
+            <li><i class="ph ph-check"></i> Transferência de conhecimento</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Como trabalhamos -->
+  <section id="processo">
+    <div class="container reveal">
+      <h3 class="section-title">Como trabalhamos</h3>
+      <div class="timeline">
+        <div class="step">
+          <span class="dot" aria-hidden="true"></span>
+          <h4><i class="ph ph-magnifying-glass"></i> Diagnóstico</h4>
+          <p>Conversa objetiva para entender contexto, metas e gargalos. Gratuito.</p>
+        </div>
+        <div class="step">
+          <span class="dot" aria-hidden="true"></span>
+          <h4><i class="ph ph-list-checks"></i> Plano enxuto</h4>
+          <p>Roadmap curto (semanas) com entregas claras e métricas de sucesso.</p>
+        </div>
+        <div class="step">
+          <span class="dot" aria-hidden="true"></span>
+          <h4><i class="ph ph-rocket-launch"></i> Execução assistida</h4>
+          <p>Implementação, ajustes finos e transferência de conhecimento.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA final -->
+  <section>
+    <div class="container">
+      <div class="cta-card reveal">
+        <div>
+          <h3 class="section-title" style="margin:0">Vamos organizar sua operação?</h3>
+          <p class="section-sub" style="margin:6px 0 0">Comece com um diagnóstico gratuito — sem compromisso.</p>
+        </div>
+        <a class="btn primary" href="/contato.html"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <div>© 2025 Munnius — Todos os direitos reservados</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="/politicas.html">Privacidade & Termos</a>
+        <a href="/contato.html">Contato</a>
+      </div>
     </div>
   </footer>
 
   <script>
-    // Scroll suave para navegação interna
+    // Navegação suave
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a[href^="#"]');
       if (!a) return;
@@ -234,6 +244,13 @@
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
+
+    // Revela elementos ao rolar
+    const els = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{ if(en.isIntersecting) en.target.classList.add('show'); });
+    }, { threshold: 0.12 });
+    els.forEach(el=>io.observe(el));
   </script>
 </body>
 </html>
