@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Munnius — Consultoria Empresarial</title>
   <meta name="description" content="Profissionalizamos pequenos negócios com organização de processos, automação com IA e gestão de projetos internos." />
+  <!-- Open Graph / SEO -->
+  <meta property="og:title" content="Munnius — Consultoria em Processos, IA e Projetos" />
+  <meta property="og:description" content="Organize a operação, automatize com IA e tire projetos do papel. Diagnóstico gratuito." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://munnius.com.br/" />
+  <meta property="og:image" content="/assets/og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Munnius — Consultoria em Processos, IA e Projetos" />
+  <meta name="twitter:description" content="Organize a operação, automatize com IA e tire projetos do papel. Diagnóstico gratuito." />
+  <meta name="twitter:image" content="/assets/og.jpg" />
   <link rel="icon" href="/favicon.svg" />
 
   <!-- Tipografia -->
@@ -51,13 +61,15 @@
         radial-gradient(900px 520px at 100% 10%, rgba(10,35,66,.25), transparent 60%);
       opacity:.28; z-index:-2;
     }
-    .hero-card { width:min(var(--maxw),92vw); display:grid; grid-template-columns:1.15fr .85fr; gap: clamp(16px, 3.6vw, 32px); background:rgba(255,255,255,.82); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow); padding: clamp(24px, 4vw, 40px); backdrop-filter: blur(6px); }
+    .hero-card { width:min(var(--maxw),92vw); display:grid; grid-template-columns:1.15fr .85fr; gap: clamp(16px, 3.6vw, 32px); background:rgba(255,255,255,.82); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:0 30px 80px rgba(0,0,0,.16); padding: clamp(24px, 4vw, 40px); backdrop-filter: blur(6px); transition: box-shadow .2s ease, transform .2s ease; }
+    .hero-card:hover{ box-shadow:0 40px 120px rgba(0,0,0,.22); transform: translateY(-2px); }
     @media (max-width: 900px){ .hero-card{ grid-template-columns:1fr; } }
     .kicker { text-transform:uppercase; letter-spacing:.16em; font-size:12px; color:var(--muted); margin-bottom:6px; }
     h1.hero-title { font-size: clamp(32px, 5.4vw, 56px); line-height:1.06; margin:0 0 8px; color: var(--primary); }
     .hero-sub { font-size: clamp(15px, 1.8vw, 18px); color: var(--muted); margin:0 0 14px; }
     .btn { display:inline-flex; align-items:center; gap:10px; padding:12px 18px; border-radius:12px; font-weight:700; cursor:pointer; transition: transform .08s ease, background .2s ease; border:1px solid var(--border); background:#fff; }
-    .btn.primary { background: var(--primary); color:#fff; border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); }
+    .btn.primary { background: var(--primary); color:#fff; border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); box-shadow: 0 6px 18px rgba(10,35,66,.20); }
+    .btn.primary:hover { transform: translateY(-1px) scale(1.01); box-shadow: 0 10px 28px rgba(10,35,66,.28); }
     .btn:hover { transform: translateY(-1px); }
     .hero-photo { border-radius:18px; overflow:hidden; border:1px solid var(--border); }
 
@@ -76,6 +88,8 @@
     .service p { margin:0 0 10px; color:var(--muted); }
     .service ul { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
     .service li { display:flex; align-items:flex-start; gap:8px; color:var(--muted); }
+    .service{ transition: transform .12s ease, box-shadow .12s ease; }
+    .service:hover{ transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); }
     .svc-media{ height:140px; border-radius:12px; border:1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,.04); background-size:cover; background-position:center; }
 
     /* Timeline: fio acima dos textos, dots centralizados (sem sobrepor) */
@@ -85,6 +99,10 @@
     .step .dot { position:absolute; top:20px; left:50%; transform:translateX(-50%); width:16px; height:16px; background:var(--accent); border-radius:999px; box-shadow:0 0 0 6px rgba(212,175,55,.18); }
     .step h4 { margin:0 0 6px; }
     .step p { margin:0; color:var(--muted); }
+
+    /* Social proof (badge) */
+    .badge-clients{ display:flex; align-items:center; gap:10px; margin-top:10px; color:var(--muted); font-size:14px; }
+    .badge-clients i{ opacity:.7; }
 
     /* CTA card */
     .cta-card { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px; border-radius:var(--r-md); border:1px solid var(--border); background:#fff; box-shadow: var(--shadow); }
@@ -117,11 +135,12 @@
     <div class="hero-card reveal">
       <div>
         <div class="kicker">Consultoria remota • Processos • IA aplicada</div>
-        <h1 class="hero-title">Profissionalize sua operação. Processos claros. IA que entrega.</h1>
-        <p class="hero-sub">Para pequenos empreendedores que querem destravar o crescimento com organização e tecnologia na medida certa.</p>
+        <h1 class="hero-title">Sua operação profissional, do processo à execução.</h1>
+        <p class="hero-sub">Organizamos processos, implantamos automação com IA e assessoramos a gestão de projetos internos — de forma pragmática, remota e orientada a resultado.</p>
         <a class="btn primary" href="/contato.html"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
+        
       </div>
-      <div class="hero-photo"><img src="assets/foto_munhoz.jpg" alt="Gabriel R. Munhoz"/></div>
+      <div class="hero-photo"><img src="assets/foto_munhoz.jpg" alt="Gabriel R. Munhoz" loading="lazy" decoding="async"/></div>
     </div>
   </section>
 
@@ -130,15 +149,15 @@
     <div class="container grid" style="grid-template-columns:1.15fr .85fr; gap:18px;">
       <div class="card reveal">
         <h3 class="section-title">Sobre a Munnius</h3>
-        <p class="section-sub">Sou <strong>Gabriel R. Munhoz</strong>, engenheiro de produção com pós em gestão de projetos. Atuei em startup liderando operações e projetos para grandes clientes como Vale, Azul, Iveco, Intelbras, Viveo e Nutrien. Minha <strong>missão</strong> com a Munnius é ajudar empreendedores a profissionalizar a operação de forma simples e eficiente — organização primeiro, tecnologia na medida certa e foco em execução.</p>
-        <p>O nome <em>Munnius</em> nasce da raiz de <em>Munhoz</em> no latim: construir base sólida para poder escalar.</p>
+        <p class="section-sub">Sou <strong>Gabriel R. Munhoz</strong>, engenheiro de produção com pós em gestão de projetos. Atuei em startup liderando operações e entregas para grandes contas (Vale, Azul, Iveco, Intelbras, Viveo e Nutrien). Minha missão com a Munnius é <strong>profissionalizar pequenos negócios</strong> com organização de processos, <strong>automação com IA</strong> e <strong>gestão de projetos internos</strong> — sem burocracia, com foco no que move o ponteiro.</p>
+        <p>O nome <em>Munnius</em> nasce da raiz de <em>Munhoz</em> no latim: construir base sólida para poder escalar com segurança.</p>
       </div>
       <div class="card reveal">
         <h4 class="section-sub" style="margin-top:0">O que você ganha rapidamente</h4>
         <ul class="benefits" style="list-style:none;margin:0;padding:0;display:grid;gap:8px;color:var(--muted)">
-          <li><i class="ph ph-check-circle"></i> Rotinas e padrões mínimos que tiram o time do improviso.</li>
-          <li><i class="ph ph-check-circle"></i> Automação pragmática com IA para reduzir retrabalho e erros.</li>
-          <li><i class="ph ph-check-circle"></i> Acompanhamento próximo para os projetos realmente andarem.</li>
+          <li><i class="ph ph-check-circle"></i> <strong>Processos claros</strong> e rotinas mínimas para reduzir retrabalho.</li>
+          <li><i class="ph ph-check-circle"></i> <strong>Automação com IA</strong> aplicada ao dia a dia (documentos, atendimento, planilhas).</li>
+          <li><i class="ph ph-check-circle"></i> <strong>Execução assistida</strong> para seus projetos saírem do papel.</li>
         </ul>
       </div>
     </div>
@@ -153,7 +172,7 @@
         <div class="card service reveal">
           <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(212,175,55,.18), transparent 60%), url('assets/svc-processos.jpg') center/cover no-repeat;"></div>
           <h3><i class="ph ph-squares-four"></i> Consultoria em Processos</h3>
-          <p>Mapeamento leve do que já existe, desenho de fluxos, papéis e padrões. Priorização do essencial para ganhar eficiência sem burocracia.</p>
+          <p>Diagnóstico enxuto, mapeamento as-is → to-be e padronização do essencial. Priorizamos o que traz impacto imediato para eficiência e escalabilidade.</p>
           <ul>
             <li><i class="ph ph-check"></i> Levantamento rápido (as-is → to-be)</li>
             <li><i class="ph ph-check"></i> Padrões mínimos e documentos-chave</li>
@@ -163,7 +182,7 @@
         <div class="card service reveal">
           <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(10,35,66,.18), transparent 60%), url('assets/svc-ia.jpg') center/cover no-repeat;"></div>
           <h3><i class="ph ph-robot"></i> Automação com IA</h3>
-          <p>IA aplicada ao operacional para cortar custo e liberar tempo do time: documentos, atendimento, planilhas e integrações.</p>
+          <p>IA pragmática para pequenas empresas: reduzir custos, ganhar velocidade e diminuir erros em tarefas repetitivas.</p>
           <ul>
             <li><i class="ph ph-check"></i> Geração de documentos e relatórios</li>
             <li><i class="ph ph-check"></i> Atendimento e triagem com IA</li>
@@ -173,7 +192,7 @@
         <div class="card service reveal">
           <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(28,28,28,.12), transparent 60%), url('assets/svc-projetos.jpg') center/cover no-repeat;"></div>
           <h3><i class="ph ph-kanban"></i> Gestão de Projetos</h3>
-          <p>Assessoria para tirar o plano do papel: ritos semanais, governança leve e acompanhamento próximo até a entrega.</p>
+          <p>Assessoria para tirar o plano do papel: PMO leve, metas objetivas e ritos semanais para manter o ritmo até a entrega.</p>
           <ul>
             <li><i class="ph ph-check"></i> Metas claras e roadmap curto</li>
             <li><i class="ph ph-check"></i> Rotina de execução e checkpoints</li>
@@ -192,17 +211,17 @@
         <div class="step">
           <span class="dot" aria-hidden="true"></span>
           <h4><i class="ph ph-magnifying-glass"></i> Diagnóstico</h4>
-          <p>Conversa objetiva para entender contexto, metas e gargalos. Gratuito.</p>
+          <p>Reunião objetiva para entender contexto, metas e gargalos. Trazemos hipóteses de ganho rápido e definimos escopo inicial.</p>
         </div>
         <div class="step">
           <span class="dot" aria-hidden="true"></span>
           <h4><i class="ph ph-list-checks"></i> Plano enxuto</h4>
-          <p>Roadmap curto (semanas) com entregas claras e métricas de sucesso.</p>
+          <p>Roadmap de poucas semanas com entregas claras, responsáveis e métricas simples. Nada de burocracia — foco no essencial.</p>
         </div>
         <div class="step">
           <span class="dot" aria-hidden="true"></span>
           <h4><i class="ph ph-rocket-launch"></i> Execução assistida</h4>
-          <p>Implementação, ajustes finos e transferência de conhecimento.</p>
+          <p>Implementação, ajustes finos e transferência de conhecimento para o time seguir operando com segurança.</p>
         </div>
       </div>
     </div>
@@ -231,6 +250,9 @@
       </div>
     </div>
   </footer>
+
+  <!-- Analytics (Cloudflare Web Analytics) — opcional e gratuito. Gere seu token e troque YOUR_TOKEN abaixo. -->
+  <!-- <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_TOKEN"}'></script> -->
 
   <script>
     // Navegação suave
