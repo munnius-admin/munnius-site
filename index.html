@@ -21,9 +21,9 @@
   <!-- (opcional) melhora LCP se o hero for pesado -->
   <link rel="preload" as="image" href="/assets/hero.jpg" imagesrcset="/assets/hero.jpg" imagesizes="100vw">
 
-  <!-- Segurança (dentro do possível no GitHub Pages) -->
+  <!-- Segurança (CSP corrigido para permitir JS inline usado no site) -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
+        content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
@@ -40,7 +40,7 @@
     "@type": "Organization",
     "name": "Munnius",
     "url": "https://munnius.com.br/",
-    "logo": "https://munnius.com.br/assets/logo.jpg",
+    "logo": "https://munnius.com.br/assets/logo.png",
     "sameAs": []
   }
   </script>
@@ -130,19 +130,19 @@
     @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
     @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
 
-    /* Acessibilidade/animação */
-    .reveal{opacity:0;transform:translateY(12px)}
+    /* Acessibilidade/animação (à prova de JS off) */
+    .reveal{opacity:1;transform:none}
     .reveal.show{opacity:1;transform:none;transition:opacity .6s,transform .6s}
     @media (prefers-reduced-motion:reduce){ .reveal,.reveal.show{transition:none} }
   </style>
 </head>
 <body>
-  <!-- Header -->
+  <!-- Header (logo: PNG → JPG → texto) -->
   <header>
     <div class="container nav">
       <a class="brand" href="/" aria-label="Página inicial">
-        <img src="assets/logo.jpg" alt="Munnius" class="brand-logo"
-             onerror="this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>';">
+        <img src="assets/logo.png" alt="Munnius" class="brand-logo"
+             onerror="if(this.src.includes('logo.png')){this.src='assets/logo.jpg'}else{this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>'}">
       </a>
       <nav aria-label="Principal">
         <ul>
@@ -300,7 +300,6 @@
         </div>
         <div class="footer-col">
           <h5>Utilidades</h5>
-          <a href="/sitemap.xml">Sitemap</a>
           <a href="/" rel="noopener">Início</a>
         </div>
       </div>
@@ -317,7 +316,7 @@
       const a=e.target.closest('a[href^="#"]'); if(!a) return;
       const id=a.getAttribute('href'); if(id.length>1){ e.preventDefault(); const el=document.querySelector(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
     });
-    // Animações
+    // Animações (classe .reveal já é visível por padrão; .show mantém transição)
     const els=document.querySelectorAll('.reveal');
     const io=new IntersectionObserver((entries)=>{entries.forEach(en=>{if(en.isIntersecting) en.target.classList.add('show');});},{threshold:.12});
     els.forEach(el=>io.observe(el));
