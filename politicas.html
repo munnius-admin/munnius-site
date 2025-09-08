@@ -4,57 +4,82 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Políticas — Munnius</title>
-  <meta name="description" content="Política de Privacidade e Termos de Uso da Munnius.">
+  <meta name="description" content="Política de Privacidade, Cookies e Termos de Uso da Munnius.">
   <link rel="icon" href="/favicon.svg" />
+  <meta property="og:title" content="Políticas — Munnius">
+  <meta property="og:description" content="Nossa política de privacidade e termos de uso.">
+  <meta property="og:image" content="/assets/og.jpg">
 
-  <!-- Tipografia + Ícones -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
 
   <style>
     :root{ --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280; --accent:#D4AF37; --border:#E5E7EB; --maxw:900px; --shadow:0 18px 48px rgba(0,0,0,.12); }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
+    *{box-sizing:border-box} body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
     a{text-decoration:none;color:inherit}
-    header{position:sticky;top:0;background:#fff9;backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10}
-    .nav{width:min(var(--maxw),92vw);margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 0}
-    .brand{font-weight:800;color:var(--ink)}
-    .wrap{width:min(var(--maxw),92vw);margin:28px auto;display:grid;gap:16px}
+    .container{width:min(var(--maxw),92vw);margin:0 auto}
+
+    /* header igual */
+    header{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-logo{height:28px;display:block}
+    .brand-text{font-weight:800}
+    nav ul{list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap}
+    nav a{padding:10px 12px;border-radius:12px}
+    nav a:hover{background:#0000000f}
+
+    main{padding:28px 0}
     .card{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:22px}
     h1{color:var(--primary);margin:8px 0 6px}
     .muted{color:var(--muted)}
     h2{margin:10px 0 6px;color:var(--primary);font-size:20px;display:flex;gap:8px;align-items:center}
     ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
-    footer{border-top:1px solid var(--border);color:var(--muted);font-size:14px;margin-top:16px;padding:18px 0}
-    .footer-inner{width:min(var(--maxw),92vw);margin:0 auto;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .tag{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 10px;color:var(--muted)}
+
+    /* footer padrão */
+    footer{margin-top:28px;border-top:1px solid var(--border);background:#fff}
+    .footer-top{border-bottom:1px solid var(--border);padding:18px 0}
+    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px}
+    .footer-col h5{margin:0 0 8px;color:var(--primary);font-size:14px}
+    .footer-col a{display:block;padding:4px 0;color:var(--muted)}
+    .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
+    @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <header>
-    <div class="nav">
-      <div class="brand">Munnius</div>
-      <a href="/"><i class="ph ph-house"></i> Início</a>
+    <div class="container nav">
+      <a class="brand" href="/" aria-label="Página inicial">
+        <img src="assets/logo.jpg" alt="Munnius" class="brand-logo"
+             onerror="this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>';">
+      </a>
+      <nav aria-label="Principal">
+        <ul>
+          <li><a href="/">Início</a></li>
+          <li><a href="/#servicos">Serviços</a></li>
+          <li><a href="/#processo">Como trabalhamos</a></li>
+          <li><a href="/contato.html" rel="nofollow">Contato</a></li>
+        </ul>
+      </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="container">
     <div class="card">
       <h1>Políticas</h1>
       <div class="muted">Última atualização: 2025-01-01</div>
-      <div class="tag"><i class="ph ph-shield-check"></i> Transparência e simplicidade</div>
     </div>
 
     <div class="card">
       <h2><i class="ph ph-lock"></i> Política de Privacidade</h2>
-      <p>Valorizamos sua privacidade. Coletamos apenas os dados necessários para responder ao seu contato e prestar nossos serviços. Não vendemos dados e não compartilhamos com terceiros, exceto quando exigido por lei ou para viabilizar a prestação do serviço (ex.: provedores de e-mail).</p>
+      <p>Coletamos apenas os dados necessários para responder ao seu contato e prestar nossos serviços. Não vendemos dados e não compartilhamos com terceiros, exceto quando exigido por lei ou para viabilizar a prestação do serviço (ex.: provedores de e-mail).</p>
       <ul>
         <li><strong>Dados de contato:</strong> nome, e-mail e mensagem enviados pelo formulário.</li>
         <li><strong>Uso dos dados:</strong> retornar seu contato e organizar o atendimento.</li>
-        <li><strong>Retenção:</strong> mantemos somente pelo tempo necessário para o atendimento e obrigações legais.</li>
-        <li><strong>Seus direitos:</strong> solicitar acesso, correção ou exclusão a qualquer momento pelo e-mail <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>.</li>
+        <li><strong>Retenção:</strong> somente pelo tempo necessário ao atendimento e obrigações legais.</li>
+        <li><strong>Direitos:</strong> solicite acesso, correção ou exclusão pelo e-mail <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>.</li>
       </ul>
     </div>
 
@@ -75,14 +100,34 @@
 
     <div class="card">
       <h2><i class="ph ph-headset"></i> Contato</h2>
-      <p>Dúvidas sobre esta política? Fale com a gente em <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>.</p>
+      <p>Dúvidas? Escreva para <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>.</p>
     </div>
   </main>
 
   <footer>
-    <div class="footer-inner">
+    <div class="footer-top">
+      <div class="container footer-grid">
+        <div class="footer-col">
+          <h5>Munnius</h5>
+          <p class="muted" style="margin:0">Processos, IA aplicada e projetos internos.</p>
+        </div>
+        <div class="footer-col">
+          <h5>Site</h5>
+          <a href="/#sobre">Sobre</a><a href="/#servicos">Serviços</a><a href="/#processo">Como trabalhamos</a>
+        </div>
+        <div class="footer-col">
+          <h5>Institucional</h5>
+          <a href="/politicas.html">Privacidade & Termos</a><a href="/contato.html" rel="nofollow">Contato</a>
+        </div>
+        <div class="footer-col">
+          <h5>Utilidades</h5>
+          <a href="/sitemap.xml">Sitemap</a><a href="/" rel="noopener">Início</a>
+        </div>
+      </div>
+    </div>
+    <div class="container footer-bottom">
       <span>© 2025 Munnius — Todos os direitos reservados</span>
-      <a href="/contato.html">Contato</a>
+      <span><a href="/contato.html" rel="nofollow">Fale conosco</a></span>
     </div>
   </footer>
 </body>
