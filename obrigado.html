@@ -6,15 +6,13 @@
   <title>Obrigado — Munnius</title>
   <meta name="description" content="Mensagem enviada com sucesso. Em breve retornaremos seu contato.">
   <link rel="icon" href="/favicon.svg" />
-  <!-- Evitar indexação -->
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://munnius.com.br/obrigado.html">
 
-  <!-- Tipografia & Ícones -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1">
 
   <style>
     :root{ --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280; --accent:#D4AF37; --border:#E5E7EB; --maxw:900px; --shadow:0 18px 48px rgba(0,0,0,.12) }
@@ -24,7 +22,7 @@
     header{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10}
     .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
     .brand{display:flex;align-items:center;gap:10px}
-    .brand-logo{height:28px;display:block}
+    .brand-logo{height:36px;filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
     nav ul{list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap}
     nav a{padding:10px 12px;border-radius:12px} nav a:hover{background:#0000000f}
     main{padding:28px 0}
@@ -35,7 +33,6 @@
     .btn{padding:12px 18px;border-radius:12px;border:1px solid var(--border);background:#fff;font-weight:700;cursor:pointer}
     .btn.primary{background:var(--primary);color:#fff}
     .meta{margin-top:12px;color:var(--muted);font-size:14px}
-    /* confete sutil */
     .confetti{position:absolute;inset:0;pointer-events:none;opacity:.08;background:
       radial-gradient(6px 6px at 20% 30%, var(--accent), transparent 60%),
       radial-gradient(6px 6px at 70% 25%, var(--primary), transparent 60%),
@@ -78,7 +75,6 @@
       <p class="lead">Obrigado por entrar em contato. Vamos ler seu pedido e retornar <strong>em até 1 dia útil</strong> para alinhar o diagnóstico e os próximos passos.</p>
       <div class="actions">
         <a class="btn primary" href="/">Voltar ao site</a>
-        <a class="btn" href="mailto:contato@munnius.com.br"><i class="ph ph-envelope"></i>&nbsp;Enviar e-mail</a>
       </div>
       <div class="meta">Se preferir, escreva para <strong>contato@munnius.com.br</strong>.</div>
     </div>
