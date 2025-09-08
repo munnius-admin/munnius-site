@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Obrigado — Munnius</title>
+  <meta name="description" content="Mensagem enviada com sucesso. Em breve retornaremos seu contato.">
+  <link rel="icon" href="/favicon.svg" />
+  <!-- Evitar indexação -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://munnius.com.br/obrigado.html">
+
+  <!-- Tipografia & Ícones -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+
+  <style>
+    :root{ --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280; --accent:#D4AF37; --border:#E5E7EB; --maxw:900px; --shadow:0 18px 48px rgba(0,0,0,.12) }
+    *{box-sizing:border-box} body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
+    a{text-decoration:none;color:inherit}
+    .container{width:min(var(--maxw),92vw);margin:0 auto}
+    header{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-logo{height:28px;display:block}
+    nav ul{list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap}
+    nav a{padding:10px 12px;border-radius:12px} nav a:hover{background:#0000000f}
+    main{padding:28px 0}
+    .card{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:24px;text-align:center}
+    .title{font-size:clamp(26px,4vw,34px);color:var(--primary);margin:6px 0 8px}
+    .lead{color:var(--muted);margin:0 auto 18px;max-width:56ch}
+    .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    .btn{padding:12px 18px;border-radius:12px;border:1px solid var(--border);background:#fff;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff}
+    .meta{margin-top:12px;color:var(--muted);font-size:14px}
+    /* confete sutil */
+    .confetti{position:absolute;inset:0;pointer-events:none;opacity:.08;background:
+      radial-gradient(6px 6px at 20% 30%, var(--accent), transparent 60%),
+      radial-gradient(6px 6px at 70% 25%, var(--primary), transparent 60%),
+      radial-gradient(6px 6px at 85% 70%, var(--accent), transparent 60%),
+      radial-gradient(6px 6px at 30% 75%, var(--primary), transparent 60%);
+      filter:blur(.2px)}
+    footer{margin-top:28px;border-top:1px solid var(--border);background:#fff}
+    .footer-top{border-bottom:1px solid var(--border);padding:18px 0}
+    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px}
+    .footer-col h5{margin:0 0 8px;color:var(--primary);font-size:14px}
+    .footer-col a{display:block;padding:4px 0;color:var(--muted)}
+    .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
+    @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="/" aria-label="Página inicial">
+        <img src="assets/logo.png" alt="Munnius" class="brand-logo"
+             onerror="if(this.src.includes('logo.png')){this.src='assets/logo.jpg'}else{this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>'}">
+      </a>
+      <nav aria-label="Principal">
+        <ul>
+          <li><a href="/">Início</a></li>
+          <li><a href="/#servicos">Serviços</a></li>
+          <li><a href="/#processo">Como trabalhamos</a></li>
+          <li><a href="/politicas.html">Políticas</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card" style="position:relative;overflow:hidden">
+      <div class="confetti" aria-hidden="true"></div>
+      <i class="ph ph-check-circle" style="font-size:42px;color:var(--accent)"></i>
+      <h1 class="title">Recebemos sua mensagem!</h1>
+      <p class="lead">Obrigado por entrar em contato. Vamos ler seu pedido e retornar <strong>em até 1 dia útil</strong> para alinhar o diagnóstico e os próximos passos.</p>
+      <div class="actions">
+        <a class="btn primary" href="/">Voltar ao site</a>
+        <a class="btn" href="mailto:contato@munnius.com.br"><i class="ph ph-envelope"></i>&nbsp;Enviar e-mail</a>
+      </div>
+      <div class="meta">Se preferir, escreva para <strong>contato@munnius.com.br</strong>.</div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-top">
+      <div class="container footer-grid">
+        <div class="footer-col">
+          <h5>Munnius</h5>
+          <p class="lead" style="margin:0;color:var(--muted)">Processos, IA aplicada e projetos internos.</p>
+        </div>
+        <div class="footer-col">
+          <h5>Site</h5>
+          <a href="/#sobre">Sobre</a><a href="/#servicos">Serviços</a><a href="/#processo">Como trabalhamos</a>
+        </div>
+        <div class="footer-col">
+          <h5>Institucional</h5>
+          <a href="/politicas.html">Privacidade & Termos</a><a href="/contato.html">Contato</a>
+        </div>
+        <div class="footer-col">
+          <h5>Utilidades</h5>
+          <a href="/" rel="noopener">Início</a>
+        </div>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© 2025 Munnius — Todos os direitos reservados</span>
+      <span><a href="/contato.html">Fale conosco</a></span>
+    </div>
+  </footer>
+</body>
+</html>
