@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Contato — Munnius</title>
   <meta name="description" content="Fale com a Munnius e agende seu diagnóstico gratuito. Processos claros, automação com IA e gestão de projetos.">
-  <link rel="icon" href="/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="canonical" href="https://munnius.com.br/contato.html">
+  <meta name="robots" content="index, follow, max-image-preview:large">
 
-  <!-- OG -->
   <meta property="og:title" content="Contato — Munnius">
   <meta property="og:description" content="Agende seu diagnóstico gratuito.">
   <meta property="og:image" content="/assets/og.jpg">
+  <meta property="og:site_name" content="Munnius">
 
-  <!-- Segurança básica -->
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
-  <!-- Tipografia + Ícones -->
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
@@ -26,7 +26,7 @@
     a{text-decoration:none;color:inherit}
     .container{width:min(var(--maxw),92vw);margin:0 auto}
 
-    /* header igual ao site */
+    /* header padrão */
     header{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border);z-index:10}
     .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
     .brand{display:flex;align-items:center;gap:10px}
@@ -42,8 +42,8 @@
     h1{color:var(--primary);margin:8px 0 6px;font-size:clamp(26px,4vw,34px)}
     p.lead{color:var(--muted);margin:0 0 16px}
     form{display:grid;gap:12px;margin-top:6px}
-    input,textarea{padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff;font:inherit;color:var(--ink)}
-    input,textarea{width:100%} textarea{min-height:140px;resize:vertical}
+    input,textarea{padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff;font:inherit;color:var(--ink);width:100%}
+    textarea{min-height:140px;resize:vertical}
     button{padding:12px 18px;border-radius:12px;border:0;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;
       box-shadow:0 6px 18px rgba(10,35,66,.20); transition:transform .08s, box-shadow .12s}
     button:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 10px 28px rgba(10,35,66,.28)}
@@ -85,14 +85,14 @@
       <p class="lead">Conte brevemente seu desafio. Retornamos com rapidez para alinhar o diagnóstico e os próximos passos.</p>
 
       <!-- FormSubmit (grátis) -->
-      <form action="https://formsubmit.co/contato@munnius.com.br" method="POST" autocomplete="off">
+      <form action="https://formsubmit.co/contato@munnius.com.br" method="POST" autocomplete="off" novalidate>
         <input type="hidden" name="_subject" value="Novo contato — Munnius">
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_captcha" value="false">
         <input type="hidden" name="_next" value="https://munnius.com.br/contato.html?enviado=1">
         <input type="text" name="_honey" style="display:none">
 
-        <input type="text" name="name" placeholder="Seu nome" required autocomplete="name" inputmode="text" aria-label="Seu nome">
+        <input type="text"  name="name"  placeholder="Seu nome"  required autocomplete="name"  inputmode="text"  aria-label="Seu nome">
         <input type="email" name="email" placeholder="Seu e-mail" required autocomplete="email" inputmode="email" aria-label="Seu e-mail">
         <textarea name="message" placeholder="Descreva brevemente seu desafio" required aria-label="Sua mensagem"></textarea>
         <button type="submit"><i class="ph ph-paper-plane-tilt"></i> Enviar</button>
@@ -105,7 +105,6 @@
     </div>
   </main>
 
-  <!-- FOOTER padrão -->
   <footer>
     <div class="footer-top">
       <div class="container footer-grid">
