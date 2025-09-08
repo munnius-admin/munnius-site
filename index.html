@@ -3,127 +3,153 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Munnius — Consultoria Empresarial</title>
-  <meta name="description" content="Profissionalizamos pequenos negócios com organização de processos, automação com IA e gestão de projetos internos." />
-  <!-- Open Graph / SEO -->
-  <meta property="og:title" content="Munnius — Consultoria em Processos, IA e Projetos" />
-  <meta property="og:description" content="Organize a operação, automatize com IA e tire projetos do papel. Diagnóstico gratuito." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://munnius.com.br/" />
-  <meta property="og:image" content="/assets/og.jpg" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Munnius — Consultoria em Processos, IA e Projetos" />
-  <meta name="twitter:description" content="Organize a operação, automatize com IA e tire projetos do papel. Diagnóstico gratuito." />
-  <meta name="twitter:image" content="/assets/og.jpg" />
-  <link rel="icon" href="/favicon.svg" />
+  <title>Munnius — Processos claros, IA aplicada e projetos que andam</title>
+  <meta name="description" content="Profissionalizamos pequenos negócios: organização de processos, automação com IA e gestão de projetos internos. Comece com diagnóstico gratuito.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="canonical" href="https://munnius.com.br/">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 
-  <!-- Tipografia -->
+  <!-- Open Graph / Twitter -->
+  <meta property="og:title" content="Munnius — Processos claros, IA aplicada e projetos que andam">
+  <meta property="og:description" content="Organize a operação, automatize com IA e tire projetos do papel. Diagnóstico gratuito.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://munnius.com.br/">
+  <meta property="og:image" content="/assets/og.jpg">
+  <meta property="og:site_name" content="Munnius">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- (opcional) melhora LCP se o hero for pesado -->
+  <link rel="preload" as="image" href="/assets/hero.jpg" imagesrcset="/assets/hero.jpg" imagesizes="100vw">
+
+  <!-- Segurança (dentro do possível no GitHub Pages) -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+  <!-- Tipografia + Ícones -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <!-- Ícones (Phosphor - free) -->
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
 
-  <style>
-    :root {
-      --primary: #0A2342;   /* azul petróleo */
-      --bg: #F9FAFB;        /* quase branco */
-      --ink: #1C1C1C;       /* quase preto */
-      --muted: #6B7280;     /* cinza */
-      --accent: #D4AF37;    /* dourado */
-      --border: #E5E7EB;    /* cinza claro */
-      --maxw: 1160px;
-      --r-lg: 24px; --r-md: 16px; --r-sm: 12px;
-      --shadow: 0 18px 48px rgba(0,0,0,.12);
-      --space-section: 72px;
-    }
+  <!-- Schema.org (Organization) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Munnius",
+    "url": "https://munnius.com.br/",
+    "logo": "https://munnius.com.br/assets/logo.jpg",
+    "sameAs": []
+  }
+  </script>
 
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); line-height:1.55; }
-    img { max-width:100%; display:block; }
-    a { color:inherit; text-decoration:none; }
-    .container { width:min(var(--maxw),92vw); margin:0 auto; }
+  <style>
+    :root{
+      --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280;
+      --accent:#D4AF37; --border:#E5E7EB; --maxw:1160px;
+      --r-lg:24px; --r-md:16px; --r-sm:12px; --space:72px;
+      --shadow:0 18px 48px rgba(0,0,0,.12);
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--ink);line-height:1.6}
+    img{max-width:100%;display:block}
+    a{color:inherit;text-decoration:none}
+    .container{width:min(var(--maxw),92vw);margin:0 auto}
 
     /* Header */
-    header { position:sticky; top:0; z-index:50; backdrop-filter:blur(10px); border-bottom:1px solid rgba(0,0,0,.06); }
-    .nav { display:flex; align-items:center; justify-content:space-between; padding:14px 0; }
-    .brand { font-weight:800; font-size:22px; letter-spacing:.4px; }
-    nav ul { list-style:none; display:flex; gap:22px; margin:0; padding:0; }
-    nav a { padding:10px 12px; border-radius:12px; }
-    nav a:hover { background:rgba(0,0,0,.06); }
+    header{position:sticky;top:0;z-index:50;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-logo{height:28px;display:block}
+    .brand-text{font-weight:800;font-size:20px;letter-spacing:.4px}
+    nav ul{list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap}
+    nav a{padding:10px 12px;border-radius:12px}
+    nav a:focus-visible{outline:2px solid var(--accent)}
+    nav a:hover{background:#0000000f}
 
-    /* Hero impactante */
-    .hero { position:relative; min-height:100svh; display:grid; place-items:center; padding:88px 0; isolation:isolate; }
-    .hero::before { /* imagem de fundo (suba assets/hero.jpg) */
-      content:""; position:absolute; inset:0; background:
-        url('assets/hero.jpg') center/cover no-repeat,
-        radial-gradient(1000px 600px at 10% 0%, rgba(212,175,55,.18), transparent 60%),
-        radial-gradient(900px 520px at 100% 10%, rgba(10,35,66,.25), transparent 60%);
-      opacity:.28; z-index:-2;
+    /* Hero */
+    .hero{position:relative;min-height:100svh;display:grid;place-items:center;padding:88px 0;isolation:isolate}
+    .hero::before{
+      content:"";position:absolute;inset:0;z-index:-2;
+      background:url('assets/hero.jpg') center/cover no-repeat,
+                 radial-gradient(1000px 600px at 10% 0%, rgba(212,175,55,.18), transparent 60%),
+                 radial-gradient(900px 520px at 100% 10%, rgba(10,35,66,.25), transparent 60%);
+      opacity:.28;
     }
-    .hero-card { width:min(var(--maxw),92vw); display:grid; grid-template-columns:1.15fr .85fr; gap: clamp(16px, 3.6vw, 32px); background:rgba(255,255,255,.82); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:0 30px 80px rgba(0,0,0,.16); padding: clamp(24px, 4vw, 40px); backdrop-filter: blur(6px); transition: box-shadow .2s ease, transform .2s ease; }
-    .hero-card:hover{ box-shadow:0 40px 120px rgba(0,0,0,.22); transform: translateY(-2px); }
-    @media (max-width: 900px){ .hero-card{ grid-template-columns:1fr; } }
-    .kicker { text-transform:uppercase; letter-spacing:.16em; font-size:12px; color:var(--muted); margin-bottom:6px; }
-    h1.hero-title { font-size: clamp(32px, 5.4vw, 56px); line-height:1.06; margin:0 0 8px; color: var(--primary); }
-    .hero-sub { font-size: clamp(15px, 1.8vw, 18px); color: var(--muted); margin:0 0 14px; }
-    .btn { display:inline-flex; align-items:center; gap:10px; padding:12px 18px; border-radius:12px; font-weight:700; cursor:pointer; transition: transform .08s ease, background .2s ease; border:1px solid var(--border); background:#fff; }
-    .btn.primary { background: var(--primary); color:#fff; border-color: color-mix(in oklab, var(--primary) 70%, var(--border)); box-shadow: 0 6px 18px rgba(10,35,66,.20); }
-    .btn.primary:hover { transform: translateY(-1px) scale(1.01); box-shadow: 0 10px 28px rgba(10,35,66,.28); }
-    .btn:hover { transform: translateY(-1px); }
-    .hero-photo { border-radius:18px; overflow:hidden; border:1px solid var(--border); }
+    .hero-card{width:min(var(--maxw),92vw);display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(16px,3.6vw,32px);
+      background:#ffffffd2;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 30px 80px rgba(0,0,0,.16);
+      padding:clamp(22px,4vw,40px);backdrop-filter:blur(6px);transition:box-shadow .2s ease,transform .2s ease}
+    .hero-card:hover{box-shadow:0 40px 120px rgba(0,0,0,.22);transform:translateY(-2px)}
+    .kicker{text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--muted);margin-bottom:6px}
+    h1.hero-title{font-size:clamp(32px,5.4vw,56px);line-height:1.06;margin:0 0 10px;color:var(--primary)}
+    .hero-sub{font-size:clamp(15px,1.8vw,18px);color:var(--muted);margin:0 0 14px}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;
+      border:1px solid var(--border);background:#fff;transition:transform .08s,box-shadow .12s}
+    .btn.primary{background:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(10,35,66,.20)}
+    .btn.primary:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 10px 28px rgba(10,35,66,.28)}
+    .hero-photo{border-radius:18px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3}
+    .hero-photo img{width:100%;height:100%;object-fit:cover;display:block}
 
     /* Seções */
-    section { padding: var(--space-section) 0; }
-    .section-title { font-size: clamp(22px, 2.8vw, 30px); color: var(--primary); margin:0 0 8px; }
-    .section-sub { color: var(--muted); margin:0 0 20px; }
-    .card { background:#fff; border:1px solid var(--border); border-radius:var(--r-md); padding:18px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    section{padding:var(--space) 0}
+    .section-title{font-size:clamp(22px,2.8vw,30px);color:var(--primary);margin:0 0 8px}
+    .section-sub{color:var(--muted);margin:0 0 20px}
+    .card{background:#fff;border:1px solid var(--border);border-radius:var(--r-md);padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .grid{display:grid;gap:16px}
+    .grid-3{grid-template-columns:repeat(3, minmax(0, 1fr))}
+    @media (max-width: 900px){ .hero-card{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr} nav ul{gap:10px} }
 
-    .grid { display:grid; gap:16px; }
-    .grid-3 { grid-template-columns:repeat(3, minmax(0, 1fr)); }
-    @media (max-width: 900px){ .grid-3{ grid-template-columns:1fr; } }
+    /* Serviços + imagens */
+    .service h3{margin:10px 0 6px;display:flex;align-items:center;gap:8px}
+    .service p{margin:0 0 10px;color:var(--muted)}
+    .service ul{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+    .service li{display:flex;align-items:flex-start;gap:8px;color:var(--muted)}
+    .svc-media{height:160px;border-radius:12px;border:1px solid var(--border);box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
+    .svc-media img{width:100%;height:100%;object-fit:cover;display:block}
 
-    /* Serviços com ícones + imagem no topo */
-    .service h3 { margin:10px 0 6px; display:flex; align-items:center; gap:8px; }
-    .service p { margin:0 0 10px; color:var(--muted); }
-    .service ul { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
-    .service li { display:flex; align-items:flex-start; gap:8px; color:var(--muted); }
-    .service{ transition: transform .12s ease, box-shadow .12s ease; }
-    .service:hover{ transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.08); }
-    .svc-media{ height:140px; border-radius:12px; border:1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,.04); background-size:cover; background-position:center; }
+    /* Timeline */
+    .timeline{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:10px}
+    .timeline::before{content:"";position:absolute;top:28px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);opacity:.6}
+    .step{position:relative;padding-top:56px;text-align:center}
+    .step .dot{position:absolute;top:20px;left:50%;transform:translateX(-50%);width:16px;height:16px;background:var(--accent);border-radius:999px;box-shadow:0 0 0 6px rgba(212,175,55,.18)}
+    .step h4{margin:0 0 6px}.step p{margin:0;color:var(--muted)}
 
-    /* Timeline: fio acima dos textos, dots centralizados (sem sobrepor) */
-    .timeline { position:relative; display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:10px; }
-    .timeline::before { content:""; position:absolute; top:28px; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--accent), transparent); opacity:.6; }
-    .step { position:relative; padding-top:56px; text-align:center; }
-    .step .dot { position:absolute; top:20px; left:50%; transform:translateX(-50%); width:16px; height:16px; background:var(--accent); border-radius:999px; box-shadow:0 0 0 6px rgba(212,175,55,.18); }
-    .step h4 { margin:0 0 6px; }
-    .step p { margin:0; color:var(--muted); }
+    /* CTA */
+    .cta-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px;border-radius:var(--r-md);border:1px solid var(--border);background:#fff;box-shadow:var(--shadow)}
+    @media (max-width:700px){ .cta-card{flex-direction:column;align-items:flex-start} }
 
-    /* Social proof (badge) */
-    .badge-clients{ display:flex; align-items:center; gap:10px; margin-top:10px; color:var(--muted); font-size:14px; }
-    .badge-clients i{ opacity:.7; }
+    /* Footer */
+    footer{margin-top:10px;border-top:1px solid var(--border);background:#fff}
+    .footer-top{border-bottom:1px solid var(--border);padding:18px 0}
+    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px}
+    .footer-col h5{margin:0 0 8px;color:var(--primary);font-size:14px}
+    .footer-col a{display:block;padding:4px 0;color:var(--muted)}
+    .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
+    @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
 
-    /* CTA card */
-    .cta-card { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px; border-radius:var(--r-md); border:1px solid var(--border); background:#fff; box-shadow: var(--shadow); }
-
-    /* Animações básicas */
-    .reveal { opacity:0; transform:translateY(12px); }
-    .reveal.show { opacity:1; transform:none; transition: opacity .6s ease, transform .6s ease; }
-    @media (prefers-reduced-motion: reduce){ .reveal, .reveal.show { transition: none; } }
+    /* Acessibilidade/animação */
+    .reveal{opacity:0;transform:translateY(12px)}
+    .reveal.show{opacity:1;transform:none;transition:opacity .6s,transform .6s}
+    @media (prefers-reduced-motion:reduce){ .reveal,.reveal.show{transition:none} }
   </style>
 </head>
 <body>
   <!-- Header -->
   <header>
     <div class="container nav">
-      <div class="brand">Munnius</div>
-      <nav>
+      <a class="brand" href="/" aria-label="Página inicial">
+        <img src="assets/logo.jpg" alt="Munnius" class="brand-logo"
+             onerror="this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>';">
+      </a>
+      <nav aria-label="Principal">
         <ul>
           <li><a href="#sobre">Sobre</a></li>
           <li><a href="#servicos">Serviços</a></li>
           <li><a href="#processo">Como trabalhamos</a></li>
-          <li><a href="/contato.html">Contato</a></li>
+          <li><a href="/contato.html" rel="nofollow">Contato</a></li>
           <li><a href="/politicas.html">Políticas</a></li>
         </ul>
       </nav>
@@ -136,17 +162,18 @@
       <div>
         <div class="kicker">Consultoria remota • Processos • IA aplicada</div>
         <h1 class="hero-title">Sua operação profissional, do processo à execução.</h1>
-        <p class="hero-sub">Organizamos processos, implantamos automação com IA e assessoramos a gestão de projetos internos — de forma pragmática, remota e orientada a resultado.</p>
-        <a class="btn primary" href="/contato.html"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
-        
+        <p class="hero-sub">Organizo seus processos, conecto a <strong>IA</strong> ao seu dia a dia e ajudo seus projetos a <strong>andarem</strong> — simples, direto e com foco em resultado.</p>
+        <a class="btn primary" href="/contato.html" rel="nofollow"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
       </div>
-      <div class="hero-photo"><img src="assets/foto_munhoz.jpg" alt="Gabriel R. Munhoz" loading="lazy" decoding="async"/></div>
+      <div class="hero-photo">
+        <img src="assets/foto_munhoz.jpg" alt="Gabriel R. Munhoz" width="1200" height="900">
+      </div>
     </div>
   </section>
 
-  <!-- Sobre (1ª pessoa + missão) -->
+  <!-- Sobre -->
   <section id="sobre">
-    <div class="container grid" style="grid-template-columns:1.15fr .85fr; gap:18px;">
+    <div class="container grid" style="grid-template-columns:1.15fr .85fr;gap:18px;">
       <div class="card reveal">
         <h3 class="section-title">Sobre a Munnius</h3>
         <p class="section-sub">Sou <strong>Gabriel R. Munhoz</strong>, engenheiro de produção com pós em gestão de projetos. Atuei em startup liderando operações e entregas para grandes contas (Vale, Azul, Iveco, Intelbras, Viveo e Nutrien). Minha missão com a Munnius é <strong>profissionalizar pequenos negócios</strong> com organização de processos, <strong>automação com IA</strong> e <strong>gestão de projetos internos</strong> — sem burocracia, com foco no que move o ponteiro.</p>
@@ -163,38 +190,50 @@
     </div>
   </section>
 
-  <!-- Serviços com imagens -->
+  <!-- Serviços -->
   <section id="servicos">
     <div class="container">
       <h3 class="section-title">Serviços</h3>
       <p class="section-sub">Três frentes para organizar a casa e destravar crescimento.</p>
+
       <div class="grid grid-3">
         <div class="card service reveal">
-          <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(212,175,55,.18), transparent 60%), url('assets/svc-processos.jpg') center/cover no-repeat;"></div>
+          <div class="svc-media">
+            <img src="assets/svc-processos.jpg" alt="Consultoria em Processos"
+                 loading="lazy" decoding="async" width="1200" height="600">
+          </div>
           <h3><i class="ph ph-squares-four"></i> Consultoria em Processos</h3>
           <p>Diagnóstico enxuto, mapeamento as-is → to-be e padronização do essencial. Priorizamos o que traz impacto imediato para eficiência e escalabilidade.</p>
           <ul>
-            <li><i class="ph ph-check"></i> Levantamento rápido (as-is → to-be)</li>
-            <li><i class="ph ph-check"></i> Padrões mínimos e documentos-chave</li>
-            <li><i class="ph ph-check"></i> Indicadores operacionais simples</li>
+            <li><i class="ph ph-check"></i> Papéis, fluxos e SLAs simples</li>
+            <li><i class="ph ph-check"></i> Documentos e templates operacionais</li>
+            <li><i class="ph ph-check"></i> Indicadores de acompanhamento</li>
           </ul>
         </div>
+
         <div class="card service reveal">
-          <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(10,35,66,.18), transparent 60%), url('assets/svc-ia.jpg') center/cover no-repeat;"></div>
+          <div class="svc-media">
+            <img src="assets/svc-ia.jpg" alt="Automação com IA"
+                 loading="lazy" decoding="async" width="1200" height="600">
+          </div>
           <h3><i class="ph ph-robot"></i> Automação com IA</h3>
           <p>IA pragmática para pequenas empresas: reduzir custos, ganhar velocidade e diminuir erros em tarefas repetitivas.</p>
           <ul>
-            <li><i class="ph ph-check"></i> Geração de documentos e relatórios</li>
-            <li><i class="ph ph-check"></i> Atendimento e triagem com IA</li>
-            <li><i class="ph ph-check"></i> Conectores (e-mail, planilhas, CRM)</li>
+            <li><i class="ph ph-check"></i> Geração de documentos, e-mails e relatórios</li>
+            <li><i class="ph ph-check"></i> Atendimento e triagem com IA (ex.: WhatsApp/Email)</li>
+            <li><i class="ph ph-check"></i> Integrações com planilhas e sistemas</li>
           </ul>
         </div>
+
         <div class="card service reveal">
-          <div class="svc-media" style="background: radial-gradient(120% 80% at 0% 0%, rgba(28,28,28,.12), transparent 60%), url('assets/svc-projetos.jpg') center/cover no-repeat;"></div>
+          <div class="svc-media">
+            <img src="assets/svc-projetos.jpg" alt="Gestão de Projetos"
+                 loading="lazy" decoding="async" width="1200" height="600">
+          </div>
           <h3><i class="ph ph-kanban"></i> Gestão de Projetos</h3>
           <p>Assessoria para tirar o plano do papel: PMO leve, metas objetivas e ritos semanais para manter o ritmo até a entrega.</p>
           <ul>
-            <li><i class="ph ph-check"></i> Metas claras e roadmap curto</li>
+            <li><i class="ph ph-check"></i> Roadmap curto e prioridades claras</li>
             <li><i class="ph ph-check"></i> Rotina de execução e checkpoints</li>
             <li><i class="ph ph-check"></i> Transferência de conhecimento</li>
           </ul>
@@ -203,7 +242,7 @@
     </div>
   </section>
 
-  <!-- Como trabalhamos -->
+  <!-- Processo -->
   <section id="processo">
     <div class="container reveal">
       <h3 class="section-title">Como trabalhamos</h3>
@@ -227,7 +266,7 @@
     </div>
   </section>
 
-  <!-- CTA final -->
+  <!-- CTA -->
   <section>
     <div class="container">
       <div class="cta-card reveal">
@@ -235,43 +274,52 @@
           <h3 class="section-title" style="margin:0">Vamos organizar sua operação?</h3>
           <p class="section-sub" style="margin:6px 0 0">Comece com um diagnóstico gratuito — sem compromisso.</p>
         </div>
-        <a class="btn primary" href="/contato.html"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
+        <a class="btn primary" href="/contato.html" rel="nofollow"><i class="ph ph-paper-plane-tilt"></i> Falar com a Munnius</a>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
   <footer>
-    <div class="container" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
-      <div>© 2025 Munnius — Todos os direitos reservados</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <a href="/politicas.html">Privacidade & Termos</a>
-        <a href="/contato.html">Contato</a>
+    <div class="footer-top">
+      <div class="container footer-grid">
+        <div class="footer-col">
+          <h5>Munnius</h5>
+          <p class="section-sub" style="margin:0">Processos, IA aplicada e gestão de projetos internos.</p>
+        </div>
+        <div class="footer-col">
+          <h5>Site</h5>
+          <a href="#sobre">Sobre</a>
+          <a href="#servicos">Serviços</a>
+          <a href="#processo">Como trabalhamos</a>
+        </div>
+        <div class="footer-col">
+          <h5>Institucional</h5>
+          <a href="/politicas.html">Privacidade & Termos</a>
+          <a href="/contato.html" rel="nofollow">Contato</a>
+        </div>
+        <div class="footer-col">
+          <h5>Utilidades</h5>
+          <a href="/sitemap.xml">Sitemap</a>
+          <a href="/" rel="noopener">Início</a>
+        </div>
       </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© 2025 Munnius — Todos os direitos reservados</span>
+      <span><a href="/contato.html" rel="nofollow">Fale conosco</a></span>
     </div>
   </footer>
 
-  <!-- Analytics (Cloudflare Web Analytics) — opcional e gratuito. Gere seu token e troque YOUR_TOKEN abaixo. -->
-  <!-- <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "YOUR_TOKEN"}'></script> -->
-
   <script>
-    // Navegação suave
-    document.addEventListener('click', (e) => {
-      const a = e.target.closest('a[href^="#"]');
-      if (!a) return;
-      const id = a.getAttribute('href');
-      if (id && id.length > 1) {
-        e.preventDefault();
-        const el = document.querySelector(id);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+    // Scroll suave só para âncoras internas
+    document.addEventListener('click',(e)=>{
+      const a=e.target.closest('a[href^="#"]'); if(!a) return;
+      const id=a.getAttribute('href'); if(id.length>1){ e.preventDefault(); const el=document.querySelector(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
     });
-
-    // Revela elementos ao rolar
-    const els = document.querySelectorAll('.reveal');
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach(en=>{ if(en.isIntersecting) en.target.classList.add('show'); });
-    }, { threshold: 0.12 });
+    // Animações
+    const els=document.querySelectorAll('.reveal');
+    const io=new IntersectionObserver((entries)=>{entries.forEach(en=>{if(en.isIntersecting) en.target.classList.add('show');});},{threshold:.12});
     els.forEach(el=>io.observe(el));
   </script>
 </body>
