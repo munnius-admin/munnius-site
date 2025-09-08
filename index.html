@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Munnius — Processos claros, IA aplicada e projetos que andam</title>
   <meta name="description" content="Profissionalizamos pequenos negócios: organização de processos, automação com IA e gestão de projetos internos. Comece com diagnóstico gratuito.">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" href="/favicon.svg" />
   <link rel="canonical" href="https://munnius.com.br/">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 
@@ -18,12 +18,9 @@
   <meta property="og:site_name" content="Munnius">
   <meta name="twitter:card" content="summary_large_image">
 
-  <!-- (opcional) melhora LCP se o hero for pesado -->
-  <link rel="preload" as="image" href="/assets/hero.jpg" imagesrcset="/assets/hero.jpg" imagesizes="100vw">
-
-  <!-- Segurança (CSP corrigido para permitir JS inline usado no site) -->
+  <!-- Segurança (CSP) -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
+        content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com https://unpkg.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
@@ -31,7 +28,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css"/>
+  <!-- Import estável do Phosphor (corrige “quadradinhos”) -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1">
 
   <!-- Schema.org (Organization) -->
   <script type="application/ld+json">
@@ -62,11 +60,11 @@
     header{position:sticky;top:0;z-index:50;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
     .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
     .brand{display:flex;align-items:center;gap:10px}
-    .brand-logo{height:28px;display:block}
+    .brand-logo{height:36px;display:block;filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
     .brand-text{font-weight:800;font-size:20px;letter-spacing:.4px}
     nav ul{list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap}
     nav a{padding:10px 12px;border-radius:12px}
-    nav a:focus-visible{outline:2px solid var(--accent)}
+    nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     nav a:hover{background:#0000000f}
 
     /* Hero */
@@ -80,13 +78,13 @@
     }
     .hero-card{width:min(var(--maxw),92vw);display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(16px,3.6vw,32px);
       background:#ffffffd2;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 30px 80px rgba(0,0,0,.16);
-      padding:clamp(22px,4vw,40px);backdrop-filter:blur(6px);transition:box-shadow .2s ease,transform .2s ease}
+      padding:clamp(22px,4vw,40px);backdrop-filter:blur(6px);transition:box-shadow .25s ease,transform .25s ease}
     .hero-card:hover{box-shadow:0 40px 120px rgba(0,0,0,.22);transform:translateY(-2px)}
     .kicker{text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--muted);margin-bottom:6px}
     h1.hero-title{font-size:clamp(32px,5.4vw,56px);line-height:1.06;margin:0 0 10px;color:var(--primary)}
     .hero-sub{font-size:clamp(15px,1.8vw,18px);color:var(--muted);margin:0 0 14px}
     .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;
-      border:1px solid var(--border);background:#fff;transition:transform .08s,box-shadow .12s}
+      border:1px solid var(--border);background:#fff;transition:transform .12s,box-shadow .2s}
     .btn.primary{background:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(10,35,66,.20)}
     .btn.primary:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 10px 28px rgba(10,35,66,.28)}
     .hero-photo{border-radius:18px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3}
@@ -130,14 +128,16 @@
     @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
     @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
 
-    /* Acessibilidade/animação (à prova de JS off) */
+    /* Animação suave e à prova de JS */
     .reveal{opacity:1;transform:none}
-    .reveal.show{opacity:1;transform:none;transition:opacity .6s,transform .6s}
-    @media (prefers-reduced-motion:reduce){ .reveal,.reveal.show{transition:none} }
+    @media (prefers-reduced-motion: no-preference){
+      .reveal{opacity:.001;transform:translateY(10px)}
+      .reveal.show{opacity:1;transform:none;transition:opacity .5s ease, transform .5s ease}
+    }
   </style>
 </head>
 <body>
-  <!-- Header (logo: PNG → JPG → texto) -->
+  <!-- Header -->
   <header>
     <div class="container nav">
       <a class="brand" href="/" aria-label="Página inicial">
@@ -316,7 +316,7 @@
       const a=e.target.closest('a[href^="#"]'); if(!a) return;
       const id=a.getAttribute('href'); if(id.length>1){ e.preventDefault(); const el=document.querySelector(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
     });
-    // Animações (classe .reveal já é visível por padrão; .show mantém transição)
+    // Animações (suaves e seguras)
     const els=document.querySelectorAll('.reveal');
     const io=new IntersectionObserver((entries)=>{entries.forEach(en=>{if(en.isIntersecting) en.target.classList.add('show');});},{threshold:.12});
     els.forEach(el=>io.observe(el));
