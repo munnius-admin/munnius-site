@@ -14,7 +14,10 @@
   <meta property="og:image" content="/assets/og.jpg">
   <meta property="og:site_name" content="Munnius">
 
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -64,8 +67,8 @@
   <header>
     <div class="container nav">
       <a class="brand" href="/" aria-label="Página inicial">
-        <img src="assets/logo.jpg" alt="Munnius" class="brand-logo"
-             onerror="this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>';">
+        <img src="assets/logo.png" alt="Munnius" class="brand-logo"
+             onerror="if(this.src.includes('logo.png')){this.src='assets/logo.jpg'}else{this.closest('.brand').innerHTML='<span class=&quot;brand-text&quot;>Munnius</span>'}">
       </a>
       <nav aria-label="Principal">
         <ul>
@@ -122,7 +125,7 @@
         </div>
         <div class="footer-col">
           <h5>Utilidades</h5>
-          <a href="/sitemap.xml">Sitemap</a><a href="/" rel="noopener">Início</a>
+          <a href="/" rel="noopener">Início</a>
         </div>
       </div>
     </div>
