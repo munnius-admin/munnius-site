@@ -54,12 +54,31 @@
     .container{width:min(var(--maxw),92vw);margin:0 auto}
 
     /* Header */
-    header{position:sticky;top:0;z-index:50;background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
-    .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px}
-    .brand img{height:36px;filter:drop-shadow(0 0 1px rgba(0,0,0,.55))}
-    nav ul{list-style:none;display:flex;gap:18px;margin:0;padding:0;flex-wrap:wrap}
-    nav a{padding:10px 12px;border-radius:12px}
-    nav a:hover{background:#0000000f}
+header{
+  position:sticky; top:0; z-index:50;
+  background:#ffffffcc; backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+}
+.nav{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:24px; padding:10px 0;
+}
+
+    /* Marca / logo */
+    .brand{ display:flex; align-items:center; }
+    .brand img{
+      height:60px;       /* <= altura pedida */
+      display:block;     /* evita “respiro” de inline img */
+      filter:none;       /* <= remove sombra */
+      margin:0;          /* zera offsets */
+    }
+    /* Se a imagem tiver bordinha dentro do PNG e “descentralizar”, pode usar este ajuste fino: */
+    /* .brand img{ margin-left:-6px; } */
+    
+    /* Menu */
+    nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
+    nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
+    nav a:hover{ background:#0000000f; }
 
     /* Hero */
     .hero{position:relative;min-height:100svh;display:grid;place-items:center;padding:88px 0}
