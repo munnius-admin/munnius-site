@@ -21,7 +21,7 @@
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:60px;       /* altura padronizada */
+      height:80px;       /* logo maior */
       display:block;     /* remove respiro de inline img */
       filter:none;       /* sem sombra */
       margin:0;
