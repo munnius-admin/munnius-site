@@ -31,66 +31,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
-
-  <style>
-    :root{
-      --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280;
-      --accent:#D4AF37; --border:#E5E7EB; --maxw:900px; --shadow:0 18px 48px rgba(0,0,0,.12)
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
-    a{text-decoration:none;color:inherit}
-    .container{width:min(var(--maxw),92vw);margin:0 auto}
-
-    /* Header */
-    header{
-      position:sticky; top:0; z-index:50;
-      background:#ffffffcc; backdrop-filter:blur(8px);
-      border-bottom:1px solid var(--border);
-    }
-    .nav{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:24px; padding:10px 0;
-    }
-
-    /* Marca / logo */
-    .brand{ display:flex; align-items:center; }
-    .brand img{
-      height:60px;       /* altura padronizada */
-      display:block;     /* remove respiro de inline img */
-      filter:none;       /* sem sombra */
-      margin:0;
-    }
-    /* Se a imagem tiver bordinha dentro do PNG:
-    .brand img{ margin-left:-6px; }
-    */
-
-    /* Menu */
-    nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
-    nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
-    nav a:hover{ background:#0000000f; }
-
-    /* Conteúdo */
-    main{padding:28px 0}
-    .card{background:#fff;border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:22px}
-    h1{color:var(--primary);margin:8px 0 6px}
-    h2{margin:10px 0 6px;color:var(--primary);font-size:20px;display:flex;gap:8px;align-items:center}
-    .muted{color:var(--muted)}
-    ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
-    .card + .card{margin-top:18px}
-
-    /* Footer */
-    footer{margin-top:28px;border-top:1px solid var(--border);background:#fff}
-    .footer-top{border-bottom:1px solid var(--border);padding:18px 0}
-    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px}
-    .footer-col h5{margin:0 0 8px;color:var(--primary);font-size:14px}
-    .footer-col a{display:block;padding:4px 0;color:var(--muted)}
-    .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
-    @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
-  </style>
+  <link rel="stylesheet" href="/assets/main.css">
 </head>
-<body>
+<body class="politicas">
   <header>
     <div class="container nav">
       <a class="brand" href="/" aria-label="Página inicial">
