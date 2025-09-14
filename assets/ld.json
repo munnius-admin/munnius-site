@@ -1,0 +1,7 @@
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Munnius",
+  "url": "https://munnius.com.br/",
+  "logo": "https://munnius.com.br/assets/logo.png"
+}
