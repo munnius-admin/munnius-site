@@ -23,7 +23,7 @@
   <meta property="og:image" content="/assets/og.jpg" />
 
   <!-- Segurança -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
@@ -32,7 +32,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="assets/util.css">
+  <link rel="stylesheet" href="assets/contato.css">
+
 </head>
 <body class="contato">
   <header>
@@ -63,7 +65,7 @@
         <input type="hidden" name="_template" value="table">
         <input type="hidden" name="_captcha" value="false">
         <input type="hidden" name="_next" value="https://munnius.com.br/obrigado.html">
-        <input type="text" name="_honey" style="display:none">
+        <input type="text" name="_honey" class="d-none">
 
         <input type="text"  name="name"  placeholder="Seu nome"  required autocomplete="name"  inputmode="text"  aria-label="Seu nome">
         <input type="email" name="email" placeholder="Seu e-mail" required autocomplete="email" inputmode="email" aria-label="Seu e-mail">
@@ -82,7 +84,7 @@
       <div class="container footer-grid">
         <div class="footer-col">
           <h5>Munnius</h5>
-          <p class="lead" style="margin:0;color:var(--muted)">Processos, IA aplicada e projetos internos.</p>
+          <p class="lead m0">Processos, IA aplicada e projetos internos.</p>
         </div>
         <div class="footer-col">
           <h5>Site</h5>
@@ -103,5 +105,6 @@
       <span><a href="/politicas.html">Privacidade & Termos</a></span>
     </div>
   </footer>
+  <script src="assets/main.js"></script>
 </body>
 </html>
