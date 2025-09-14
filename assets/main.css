@@ -23,7 +23,7 @@ header{
 /* Marca / logo */
 .brand{ display:flex; align-items:center; }
 .brand img{
-  height:60px;       /* <= altura pedida */
+  height:80px;       /* logo maior */
   display:block;     /* evita “respiro” de inline img */
   filter:none;       /* <= remove sombra */
   margin:0;          /* zera offsets */

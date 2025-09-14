@@ -20,7 +20,7 @@
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:60px;
+      height:80px;
       display:block;
       filter:none;
       margin:0;
