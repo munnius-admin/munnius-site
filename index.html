@@ -20,7 +20,7 @@
   <meta name="twitter:card" content="summary_large_image">
 
   <!-- Segurança -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self' 'sha256-2tsm54BFnEOt2uzmAkb3LbNrQ59CAWcGSI+U96eV6YE='; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
@@ -29,6 +29,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/util.css">
+  <link rel="stylesheet" href="assets/index.css">
 
   <!-- Organization JSON-LD -->
   <script type="application/ld+json">
@@ -41,122 +43,6 @@
   }
   </script>
 
-  <style>
-    :root{
-      --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280;
-      --accent:#D4AF37; --border:#E5E7EB; --maxw:1160px;
-      --r-lg:24px; --r-md:16px; --space:72px; --shadow:0 18px 48px rgba(0,0,0,.12);
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
-    img{max-width:100%;display:block}
-    a{color:inherit;text-decoration:none}
-    .container{width:min(var(--maxw),92vw);margin:0 auto}
-
-    /* Header */
-header{
-  position:sticky; top:0; z-index:50;
-  background:#ffffffcc; backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--border);
-}
-.nav{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:24px; padding:10px 0;
-}
-
-    /* Marca / logo */
-    .brand{ display:flex; align-items:center; }
-    .brand img{
-      height:60px;       /* <= altura pedida */
-      display:block;     /* evita “respiro” de inline img */
-      filter:none;       /* <= remove sombra */
-      margin:0;          /* zera offsets */
-    }
-    /* Se a imagem tiver bordinha dentro do PNG e “descentralizar”, pode usar este ajuste fino: */
-    /* .brand img{ margin-left:-6px; } */
-    
-    /* Menu */
-    nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
-    nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
-    nav a:hover{ background:#0000000f; }
-
-    /* Hero */
-    .hero{position:relative;min-height:100svh;display:grid;place-items:center;padding:88px 0}
-    .hero::before{
-      content:"";position:absolute;inset:0;z-index:-1;
-      background:url('assets/hero.jpg') center/cover no-repeat,
-                 radial-gradient(1000px 600px at 10% 0%, rgba(212,175,55,.18), transparent 60%),
-                 radial-gradient(900px 520px at 100% 10%, rgba(10,35,66,.25), transparent 60%);
-      opacity:.28;
-    }
-    .hero-card{width:min(var(--maxw),92vw);display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(16px,3.6vw,32px);
-      background:#ffffffd2;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 30px 80px rgba(0,0,0,.16);
-      padding:clamp(22px,4vw,40px);backdrop-filter:blur(6px)}
-    .kicker{text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--muted);margin-bottom:6px}
-    .hero-title{font-size:clamp(32px,5.4vw,56px);line-height:1.06;margin:0 0 10px;color:var(--primary)}
-    .hero-sub{font-size:clamp(15px,1.8vw,18px);color:var(--muted);margin:0 0 16px}
-    .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:#fff}
-    .btn.primary{background:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(10,35,66,.20)}
-    .btn.primary:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 10px 28px rgba(10,35,66,.28)}
-    .hero-photo{border-radius:18px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3}
-    .hero-photo img{width:100%;height:100%;object-fit:cover}
-
-    /* Seções */
-    section{padding:var(--space) 0}
-    .section-title{font-size:clamp(22px,2.8vw,30px);color:var(--primary);margin:0 0 8px}
-    .section-sub{color:var(--muted);margin:0 0 20px}
-    .card{background:#fff;border:1px solid var(--border);border-radius:var(--r-md);padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .grid{display:grid;gap:16px}
-    .grid-2{grid-template-columns:1.2fr .8fr}
-    .grid-3{grid-template-columns:repeat(3,1fr)}
-    @media (max-width: 960px){ .hero-card{grid-template-columns:1fr}.grid-2,.grid-3{grid-template-columns:1fr} }
-
-    /* Serviços */
-    .service h3{margin:10px 0 6px;display:flex;align-items:center;gap:8px}
-    .service h3 i{color:var(--accent)}
-    .service p{margin:0 0 10px;color:var(--muted)}
-    .service ul{list-style:none;padding:0;margin:0;display:grid;gap:6px;color:var(--muted)}
-    .svc-media{height:160px;border-radius:12px;border:1px solid var(--border);overflow:hidden}
-    .svc-media img{width:100%;height:100%;object-fit:cover}
-
-    /* Timeline */
-    .timeline{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:10px}
-    .timeline::before{content:"";position:absolute;top:28px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);opacity:.6}
-    .step{position:relative;padding-top:56px;text-align:center}
-    .step .dot{position:absolute;top:20px;left:50%;transform:translateX(-50%);width:16px;height:16px;background:var(--accent);border-radius:999px;box-shadow:0 0 0 6px rgba(212,175,55,.18)}
-    .step h4{margin:0 0 6px}.step p{margin:0;color:var(--muted)}
-    .step h4 i{color:var(--accent)}
-
-    /* Benefícios (seção própria) */
-    .benefits-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}
-    .benefits-grid{display:grid;gap:16px;grid-template-columns:repeat(4,1fr)}
-    .benefit{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04);display:grid;gap:8px}
-    .benefit i{color:var(--accent);font-size:22px}
-    .benefit h3{margin:0;font-size:16px;color:var(--primary)}
-    .benefit p{margin:0;color:var(--muted)}
-    @media (max-width:1024px){ .benefits-grid{grid-template-columns:repeat(2,1fr)} }
-    @media (max-width:580px){ .benefits-grid{grid-template-columns:1fr} .benefits-head{flex-direction:column;align-items:flex-start} }
-
-    /* CTA + Footer */
-    .cta-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px;border-radius:16px;border:1px solid var(--border);background:#fff;box-shadow:var(--shadow)}
-    @media (max-width:700px){ .cta-card{flex-direction:column;align-items:flex-start} }
-
-    footer{margin-top:10px;border-top:1px solid var(--border);background:#fff}
-    .footer-top{border-bottom:1px solid var(--border);padding:18px 0}
-    .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px}
-    .footer-col h5{margin:0 0 8px;color:var(--primary);font-size:14px}
-    .footer-col a{display:block;padding:4px 0;color:var(--muted)}
-    .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-
-    /* Animações suaves */
-    .reveal{opacity:1;transform:none}
-    @media (prefers-reduced-motion: no-preference){
-      .reveal{opacity:.001; transform:translateY(12px); will-change:opacity,transform}
-      .reveal.show{opacity:1; transform:none; transition:opacity .6s cubic-bezier(.22,.61,.36,1), transform .6s cubic-bezier(.22,.61,.36,1)}
-      .fade-img{opacity:.001; transform:translateY(6px); filter:saturate(.96); will-change:opacity,transform}
-      .fade-img.loaded{opacity:1; transform:none; filter:saturate(1); transition:opacity .5s cubic-bezier(.22,.61,.36,1), transform .5s cubic-bezier(.22,.61,.36,1), filter .6s ease}
-    }
-  </style>
 </head>
 <body>
   <!-- Header -->
@@ -203,11 +89,11 @@ header{
       </div>
 
       <div class="card reveal">
-        <h4 class="section-title" style="margin-top:0">Por que isso funciona</h4>
-        <ul style="list-style:none;margin:0;padding:0;display:grid;gap:10px;color:var(--muted)">
-          <li><i class="ri-checkbox-circle-line" style="color:var(--accent)"></i> <strong>Pragmatismo:</strong> foco no essencial que gera tração e evita burocracia.</li>
-          <li><i class="ri-checkbox-circle-line" style="color:var(--accent)"></i> <strong>Processo + IA:</strong> método simples e automações que liberam tempo.</li>
-          <li><i class="ri-checkbox-circle-line" style="color:var(--accent)"></i> <strong>Execução:</strong> ritos curtos, prioridades claras e aprendizado contínuo.</li>
+        <h4 class="section-title mt0">Por que isso funciona</h4>
+        <ul class="why-list">
+          <li><i class="ri-checkbox-circle-line text-accent"></i> <strong>Pragmatismo:</strong> foco no essencial que gera tração e evita burocracia.</li>
+          <li><i class="ri-checkbox-circle-line text-accent"></i> <strong>Processo + IA:</strong> método simples e automações que liberam tempo.</li>
+          <li><i class="ri-checkbox-circle-line text-accent"></i> <strong>Execução:</strong> ritos curtos, prioridades claras e aprendizado contínuo.</li>
         </ul>
       </div>
     </div>
@@ -223,7 +109,7 @@ header{
         <div class="card service reveal">
           <div class="svc-media">
             <img class="fade-img" src="assets/svc-processos.jpg" alt="Consultoria em Processos"
-                 loading="lazy" decoding="async" onload="this.classList.add('loaded')" width="1200" height="600">
+                 loading="lazy" decoding="async" width="1200" height="600">
           </div>
           <h3><i class="ri-clipboard-line"></i> Consultoria em Processos</h3>
           <p>Diagnóstico enxuto, mapeamento as-is → to-be e padronização do essencial.</p>
@@ -237,7 +123,7 @@ header{
         <div class="card service reveal">
           <div class="svc-media">
             <img class="fade-img" src="assets/svc-ia.jpg" alt="Automação com IA"
-                 loading="lazy" decoding="async" onload="this.classList.add('loaded')" width="1200" height="600">
+                 loading="lazy" decoding="async" width="1200" height="600">
           </div>
           <h3><i class="ri-robot-line"></i> Automação com IA</h3>
           <p>IA pragmática para reduzir custos, ganhar velocidade e diminuir erros.</p>
@@ -251,7 +137,7 @@ header{
         <div class="card service reveal">
           <div class="svc-media">
             <img class="fade-img" src="assets/svc-projetos.jpg" alt="Gestão de Projetos"
-                 loading="lazy" decoding="async" onload="this.classList.add('loaded')" width="1200" height="600">
+                 loading="lazy" decoding="async" width="1200" height="600">
           </div>
           <h3><i class="ri-task-line"></i> Gestão de Projetos</h3>
           <p>Assessoria para tirar o plano do papel com ritmo e previsibilidade.</p>
@@ -270,8 +156,8 @@ header{
     <div class="container">
       <div class="benefits-head">
         <div>
-          <h3 class="section-title" style="margin:0">O que você ganha rapidamente</h3>
-          <p class="section-sub" style="margin:6px 0 0">Resultados práticos nas primeiras semanas — claros, mensuráveis e sustentáveis.</p>
+          <h3 class="section-title m0">O que você ganha rapidamente</h3>
+          <p class="section-sub mt6 mb0">Resultados práticos nas primeiras semanas — claros, mensuráveis e sustentáveis.</p>
         </div>
         <a class="btn" href="/contato.html" rel="nofollow"><i class="ri-mail-send-line"></i> Diagnóstico gratuito</a>
       </div>
@@ -330,8 +216,8 @@ header{
     <div class="container">
       <div class="cta-card reveal">
         <div>
-          <h3 class="section-title" style="margin:0">Vamos organizar sua operação?</h3>
-          <p class="section-sub" style="margin:6px 0 0">Comece com um diagnóstico gratuito — sem compromisso.</p>
+          <h3 class="section-title m0">Vamos organizar sua operação?</h3>
+          <p class="section-sub mt6 mb0">Comece com um diagnóstico gratuito — sem compromisso.</p>
         </div>
         <a class="btn primary" href="/contato.html" rel="nofollow"><i class="ri-mail-send-line"></i> Falar com a Munnius</a>
       </div>
@@ -344,7 +230,7 @@ header{
       <div class="container footer-grid">
         <div class="footer-col">
           <h5>Munnius</h5>
-          <p class="section-sub" style="margin:0">Processos, IA aplicada e gestão de projetos internos.</p>
+          <p class="section-sub m0">Processos, IA aplicada e gestão de projetos internos.</p>
         </div>
         <div class="footer-col">
           <h5>Site</h5>
@@ -366,16 +252,6 @@ header{
     </div>
   </footer>
 
-  <script>
-    // scroll suave só para âncoras internas
-    document.addEventListener('click',(e)=>{
-      const a=e.target.closest('a[href^="#"]'); if(!a) return;
-      const id=a.getAttribute('href'); if(id.length>1){ e.preventDefault(); const el=document.querySelector(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
-    });
-
-    // reveal
-    const io=new IntersectionObserver((entries)=>{entries.forEach(en=>{if(en.isIntersecting) en.target.classList.add('show')})},{threshold:.12});
-    document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-  </script>
+  <script src="assets/main.js"></script>
 </body>
 </html>
