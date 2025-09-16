@@ -2,6 +2,7 @@
     *{box-sizing:border-box}
     body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
     a{text-decoration:none;color:inherit}
+    a:visited{color:inherit}
     .container{width:min(var(--maxw),92vw);margin:0 auto}
 
     /* Header */
@@ -18,9 +19,9 @@
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:80px;       /* logo maior */
+      height:clamp(64px,14vw,96px);       /* logo responsiva e maior */
       display:block;     /* evita “respiro” de inline img */
-      filter:none;       
+      filter:none;
       margin:0;
     }
     /* Se a imagem tiver bordinha no PNG e parecer fora do alinhamento:
@@ -30,6 +31,11 @@
     nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
     nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
     nav a:hover{ background:#0000000f; }
+    @media (max-width:720px){
+      .nav{flex-direction:column;align-items:flex-start;gap:12px}
+      nav ul{flex-wrap:wrap;gap:12px;justify-content:flex-start}
+      nav a{padding:8px 10px}
+    }
 
     /* Conteúdo */
     main{padding:28px 0}
