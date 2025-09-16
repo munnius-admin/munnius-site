@@ -7,6 +7,7 @@
     body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
     img{max-width:100%;display:block}
     a{color:inherit;text-decoration:none}
+    a:visited{color:inherit}
     .container{width:min(var(--maxw),92vw);margin:0 auto}
 
     /* Header */
@@ -23,7 +24,7 @@ header{
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:80px;       /* logo maior */
+      height:clamp(64px,14vw,96px); /* logo responsiva e maior */
       display:block;     /* evita “respiro” de inline img */
       filter:none;       /* <= remove sombra */
       margin:0;          /* zera offsets */
@@ -35,6 +36,11 @@ header{
     nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
     nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
     nav a:hover{ background:#0000000f; }
+    @media (max-width:720px){
+      .nav{flex-direction:column;align-items:flex-start;gap:12px}
+      nav ul{flex-wrap:wrap;gap:12px;justify-content:flex-start}
+      nav a{padding:8px 10px}
+    }
 
     /* Hero */
     .hero{position:relative;min-height:100svh;display:grid;place-items:center;padding:88px 0}
