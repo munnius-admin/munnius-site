@@ -24,7 +24,7 @@ header{
 /* Marca / logo */
 .brand{ display:flex; align-items:center; }
 .brand img{
-  height:clamp(64px,14vw,96px); /* logo responsiva e maior */
+  height:clamp(80px,20vw,140px); /* logo responsiva maior */
   display:block;     /* evita “respiro” de inline img */
   filter:none;       /* <= remove sombra */
   margin:0;          /* zera offsets */
@@ -34,7 +34,8 @@ header{
 
 /* Menu */
 nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
-nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
+nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; color:var(--ink); }
+nav a:visited{ color:var(--ink); }
 nav a:hover{ background:#0000000f; }
 @media (max-width:720px){
   .nav{flex-direction:column;align-items:flex-start;gap:12px}
@@ -110,7 +111,7 @@ footer{margin-top:10px;border-top:1px solid var(--border);background:#fff}
 .footer-col a{display:block;padding:4px 0;color:var(--muted)}
 .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
-@media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
+@media (max-width:600px){ .footer-grid{grid-template-columns:1fr} .footer-bottom{flex-direction:column;align-items:flex-start;gap:8px} }
 
 /* Animações suaves */
 .reveal{opacity:1;transform:none}
