@@ -9,12 +9,25 @@ document.addEventListener('click',e=>{
   }
 });
 
-const io=new IntersectionObserver(entries=>{
-  entries.forEach(en=>{if(en.isIntersecting) en.target.classList.add('show');});
+const io=new IntersectionObserver((entries,observer)=>{
+  entries.forEach(en=>{
+    if(!en.isIntersecting) return;
+    en.target.classList.add('show');
+    observer.unobserve(en.target);
+  });
 },{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
+const finishLoad=img=>{
+  const apply=()=>requestAnimationFrame(()=>img.classList.add('loaded'));
+  if('decode' in img){img.decode().catch(()=>{}).then(apply);} else{apply();}
+};
+
 document.querySelectorAll('img.fade-img').forEach(img=>{
-  if(img.complete){img.classList.add('loaded');}
-  else{img.addEventListener('load',()=>img.classList.add('loaded'));}
+  if(img.complete){
+    if(img.naturalWidth>0){finishLoad(img);} else{img.classList.add('loaded');}
+    return;
+  }
+  img.addEventListener('load',()=>finishLoad(img),{once:true});
+  img.addEventListener('error',()=>img.classList.add('loaded'),{once:true});
 });

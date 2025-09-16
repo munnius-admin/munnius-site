@@ -21,14 +21,15 @@
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:clamp(64px,14vw,96px);
+      height:clamp(80px,20vw,140px);
       display:block;
       filter:none;
       margin:0;
     }
     /* Menu */
     nav ul{ list-style:none; display:flex; gap:18px; margin:0; padding:0; align-items:center; }
-    nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; }
+    nav a{ padding:10px 12px; border-radius:12px; transition:background .2s; color:var(--ink); }
+    nav a:visited{ color:var(--ink); }
     nav a:hover{ background:#0000000f; }
     @media (max-width:720px){
       .nav{flex-direction:column;align-items:flex-start;gap:12px}
@@ -60,4 +61,4 @@
     .footer-col a{display:block;padding:4px 0;color:var(--muted)}
     .footer-bottom{padding:14px 0;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
     @media (max-width:900px){ .footer-grid{grid-template-columns:1fr 1fr} }
-    @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} }
+    @media (max-width:600px){ .footer-grid{grid-template-columns:1fr} .footer-bottom{flex-direction:column;align-items:flex-start;gap:8px} }
