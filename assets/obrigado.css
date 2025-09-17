@@ -20,7 +20,8 @@
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:clamp(80px,20vw,140px);       /* logo responsiva maior */
+      height:clamp(44px,12vw,84px);       /* suporte para marca retangular */
+      width:auto;
       display:block;     /* evita “respiro” de inline img */
       filter:none;
       margin:0;
