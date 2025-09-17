@@ -2,6 +2,11 @@
       --primary:#0A2342; --bg:#F9FAFB; --ink:#1C1C1C; --muted:#6B7280;
       --accent:#D4AF37; --border:#E5E7EB; --maxw:1160px;
       --r-lg:24px; --r-md:16px; --space:72px; --shadow:0 18px 48px rgba(0,0,0,.12);
+
+      --bg-soft:#EEF2F8; --bg-soft-strong:#E2E8F3;
+      --bg-cream:#F4E8C2; --bg-cream-strong:#F0D89B;
+      --bg-night:#07182E; --muted-on-dark:rgba(249,250,251,.72);
+      --surface-mist:#F3F6FB; --surface-light:#FFFDF6;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:'Inter',ui-sans-serif,system-ui;background:var(--bg);color:var(--ink);line-height:1.6}
@@ -24,10 +29,11 @@ header{
     /* Marca / logo */
     .brand{ display:flex; align-items:center; }
     .brand img{
-      height:clamp(80px,20vw,140px); /* logo responsiva maior */
-      display:block;     /* evita “respiro” de inline img */
-      filter:none;       /* <= remove sombra */
-      margin:0;          /* zera offsets */
+      height:clamp(44px,12vw,84px);
+      width:auto;
+      display:block;
+      filter:none;
+      margin:0;
     }
     /* Se a imagem tiver bordinha dentro do PNG e “descentralizar”, pode usar este ajuste fino: */
     /* .brand img{ margin-left:-6px; } */
@@ -74,6 +80,65 @@ header{
     .grid-3{grid-template-columns:repeat(3,1fr)}
     @media (max-width: 960px){ .hero-card{grid-template-columns:1fr}.grid-2,.grid-3{grid-template-columns:1fr} }
 
+    .section-soft,
+    .section-accent,
+    .section-split,
+    .section-dark,
+    .cta-section{
+      position:relative;
+      overflow:visible;
+      background:var(--bg);
+    }
+
+    .card-sky{
+      background:linear-gradient(150deg,#fff 0%,var(--bg-soft) 100%);
+      border:1px solid rgba(10,35,66,.12);
+      box-shadow:0 22px 52px rgba(10,35,66,.10);
+    }
+    .card-sand{
+      background:linear-gradient(150deg,#fff 0%,var(--bg-cream) 100%);
+      border:1px solid rgba(212,175,55,.28);
+      box-shadow:0 22px 52px rgba(212,175,55,.18);
+    }
+
+    .section-accent .section-sub{color:var(--muted)}
+    .service{padding:22px;position:relative;overflow:hidden;box-shadow:0 24px 58px rgba(10,35,66,.12)}
+    .service::after{
+      content:"";position:absolute;inset:-40% -40% 60%;z-index:0;
+      background:radial-gradient(320px 220px at 20% 12%,rgba(10,35,66,.18),transparent 70%);
+      opacity:.18;pointer-events:none;
+    }
+    .service > *{position:relative;z-index:1}
+    .service-processos{background:linear-gradient(155deg,rgba(238,242,248,.92) 0%,#fff 70%);border:1px solid rgba(10,35,66,.16)}
+    .service-ia{background:linear-gradient(155deg,rgba(212,175,55,.22) 0%,#fff 70%);border:1px solid rgba(212,175,55,.28)}
+    .service-projetos{background:linear-gradient(155deg,rgba(10,35,66,.12) 0%,#fff 70%);border:1px solid rgba(10,35,66,.18);color:var(--ink)}
+    .service h3{color:var(--primary)}
+    .service ul{color:rgba(28,28,28,.78)}
+
+    .section-split .benefit{border:1px solid rgba(10,35,66,.12);box-shadow:0 18px 44px rgba(10,35,66,.10)}
+    .benefit-clarity{background:linear-gradient(155deg,#fff 0%,var(--bg-soft) 100%)}
+    .benefit-speed{background:linear-gradient(155deg,#fff 0%,rgba(212,175,55,.18) 100%)}
+    .benefit-execution{background:linear-gradient(155deg,#fff 0%,rgba(10,35,66,.12) 100%)}
+    .benefit-metrics{background:linear-gradient(155deg,#fff 0%,var(--surface-light) 100%)}
+
+    .section-dark{color:var(--ink)}
+    .section-dark .section-title{color:var(--primary)}
+    .section-dark .section-sub{color:var(--muted)}
+    .section-dark .timeline{margin-top:28px;gap:20px}
+    .section-dark .timeline::before{background:linear-gradient(90deg,rgba(212,175,55,.6),transparent);opacity:1;top:36px}
+    .section-dark .step{padding:74px 26px 28px;border-radius:22px;background:linear-gradient(160deg,#fff 0%,rgba(10,35,66,.1) 100%);border:1px solid rgba(10,35,66,.16);text-align:center;display:grid;gap:12px;box-shadow:0 20px 46px rgba(10,35,66,.12)}
+    .section-dark .step .dot{top:28px;width:18px;height:18px;background:var(--accent);box-shadow:0 0 0 10px rgba(212,175,55,.18)}
+    .section-dark .step h4{color:var(--primary)}
+    .section-dark .step p{color:var(--muted)}
+    .section-dark .step h4 i{color:var(--accent)}
+
+    .cta-section{background:var(--bg)}
+    .cta-section .cta-card{background:linear-gradient(140deg,var(--primary) 0%,#133156 100%);color:#fff;border:0;box-shadow:0 32px 70px rgba(10,35,66,.28)}
+    .cta-section .section-title{color:#fff}
+    .cta-section .section-sub{color:var(--muted-on-dark)}
+    .cta-section .btn.primary{background:var(--accent);color:#0A2342;box-shadow:0 12px 30px rgba(212,175,55,.34);border:0}
+    .cta-section .btn.primary:hover{box-shadow:0 18px 40px rgba(212,175,55,.46)}
+
     /* Serviços */
     .service h3{margin:10px 0 6px;display:flex;align-items:center;gap:8px}
     .service h3 i{color:var(--accent)}
@@ -93,7 +158,7 @@ header{
     /* Benefícios (seção própria) */
     .benefits-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}
     .benefits-grid{display:grid;gap:16px;grid-template-columns:repeat(4,1fr)}
-    .benefit{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04);display:grid;gap:8px}
+    .benefit{border-radius:16px;padding:18px;display:grid;gap:8px}
     .benefit i{color:var(--accent);font-size:22px}
     .benefit h3{margin:0;font-size:16px;color:var(--primary)}
     .benefit p{margin:0;color:var(--muted)}
