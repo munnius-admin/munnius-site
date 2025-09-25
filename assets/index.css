@@ -65,7 +65,7 @@ header{
     .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:#fff}
     .btn.primary{background:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(10,35,66,.20)}
     .btn.primary:hover{transform:translateY(-1px) scale(1.01);box-shadow:0 10px 28px rgba(10,35,66,.28)}
-    .hero-photo{border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.32);aspect-ratio:4/3;box-shadow:0 26px 60px rgba(7,24,46,.36);height:100%;min-height:280px}
+    .hero-photo{border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.32);aspect-ratio:4/3;box-shadow:0 26px 60px rgba(7,24,46,.36);min-height:280px;align-self:center}
     .hero-photo img{width:100%;height:100%;object-fit:cover;object-position:center}
     .hero-card .kicker{color:var(--muted)}
     .hero-card .hero-title{color:var(--ink)}
