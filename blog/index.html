@@ -84,6 +84,23 @@
           <h2 id="ultimos-artigos">Últimos artigos</h2>
           <p>Resumo rápido dos conteúdos mais recentes publicados pela Munnius.</p>
         </div>
+        <section class="blog-toolbar" id="blog-toolbar" aria-label="Ferramentas para explorar os artigos">
+          <div class="toolbar-row">
+            <label class="toolbar-label" for="blog-search">Buscar</label>
+            <input id="blog-search" name="search" type="search" placeholder="Busque por título ou resumo" autocomplete="off" />
+          </div>
+          <div class="toolbar-row toolbar-tags">
+            <span class="toolbar-label">Filtrar por temas</span>
+            <div class="tag-buttons" id="tag-filters" role="group" aria-label="Filtrar artigos por tags">
+              <span class="toolbar-hint" id="tags-loading">Carregando tags…</span>
+            </div>
+            <button type="button" class="toolbar-reset" id="clear-filters" disabled aria-disabled="true">
+              <i class="ri-close-circle-line" aria-hidden="true"></i>
+              Limpar filtros
+            </button>
+          </div>
+          <p class="results-info" id="results-count" role="status" aria-live="polite">Mostrando os artigos mais recentes.</p>
+        </section>
         <div class="post-grid" id="blog-feed">
           <!-- posts:start -->
 
@@ -124,6 +141,13 @@
           </article>
           <!-- posts:end -->
         </div>
+        <p class="no-results" id="no-results" hidden>Nenhum artigo encontrado com os filtros atuais.</p>
+        <div class="feed-actions">
+          <button type="button" class="btn primary" id="load-more" data-step="9" hidden>
+            <i class="ri-arrow-down-line" aria-hidden="true"></i>
+            Carregar mais artigos
+          </button>
+        </div>
       </div>
     </section>
 
@@ -157,5 +181,6 @@
   </footer>
 
   <script src="../assets/main.js"></script>
+  <script src="../assets/blog.js" defer></script>
 </body>
 </html>
