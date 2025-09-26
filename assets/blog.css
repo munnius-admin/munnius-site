@@ -64,12 +64,12 @@ nav a:hover{background:#0000000f}
 
 /* Feed */
 .post-feed{padding:48px 0}
-.feed-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
-.feed-head h2{margin:0;color:var(--primary);font-size:clamp(24px,3vw,30px)}
-.feed-head p{margin:0;color:var(--muted);max-width:48ch}
+.feed-head{display:flex;align-items:flex-start;justify-content:flex-start;gap:clamp(16px,4vw,48px);margin-bottom:22px;flex-wrap:wrap}
+.feed-head h2{margin:0;color:var(--primary);font-size:clamp(24px,3vw,30px);flex:0 0 auto}
+.feed-head p{margin:0;color:var(--muted);max-width:48ch;flex:1 1 320px}
 .blog-toolbar{
   position:sticky;
-  top:84px;
+  top:var(--toolbar-offset,96px);
   z-index:120;
   display:grid;
   gap:16px;
@@ -130,6 +130,7 @@ nav a:hover{background:#0000000f}
 .toolbar-reset:not([disabled]):hover,
 .toolbar-reset:not([disabled]):focus-visible{color:var(--primary)}
 .toolbar-reset[disabled]{cursor:not-allowed;color:rgba(107,114,128,.6)}
+.toolbar-reset[hidden]{display:none!important}
 .results-info{margin:0;font-size:14px;color:var(--muted)}
 .post-grid{display:grid;gap:20px;grid-template-columns:repeat(3,1fr);align-items:stretch;grid-auto-rows:1fr}
 .post-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px;height:100%;min-height:280px;box-shadow:0 14px 36px rgba(17,24,39,.1);transition:transform .12s ease,box-shadow .12s ease;color:var(--ink)}
@@ -144,14 +145,15 @@ nav a:hover{background:#0000000f}
 .tag-list li{padding:4px 10px;border-radius:999px;background:rgba(10,35,66,.08);color:var(--primary);font-size:13px;font-weight:600}
 .feed-actions{display:flex;justify-content:center;margin-top:28px}
 #load-more{display:inline-flex;align-items:center;gap:10px}
+#load-more[hidden]{display:none!important}
 .no-results{margin:24px 0 0;text-align:center;color:var(--muted);font-weight:600}
 @media (max-width:1024px){.post-grid{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:780px){
-  .blog-toolbar{top:72px;padding:16px;gap:14px}
+  .blog-toolbar{top:var(--toolbar-offset,72px);padding:16px;gap:14px}
   .toolbar-label{font-size:14px}
 }
 @media (max-width:620px){
-  .blog-toolbar{position:sticky;top:68px;padding:14px}
+  .blog-toolbar{position:sticky;top:var(--toolbar-offset,68px);padding:14px}
   .toolbar-row{align-items:stretch}
   .toolbar-label{min-width:auto}
   .tag-buttons{gap:8px}
