@@ -90,6 +90,14 @@ header{
     .grid-2{grid-template-columns:1.2fr .8fr}
     .grid-3{grid-template-columns:repeat(3,1fr)}
     @media (max-width: 960px){ .hero-card{grid-template-columns:1fr}.grid-2,.grid-3{grid-template-columns:1fr} }
+    @media (max-width:720px){
+      .hero{padding:72px 0 52px}
+      .hero-card{padding:26px 20px;text-align:center}
+      .hero-card > div:first-child{justify-items:center}
+      .hero-card .btn{justify-content:center}
+      .hero-photo{max-width:min(100%,340px);margin:12px auto 0;aspect-ratio:auto;min-height:0}
+      .hero-photo img{height:auto}
+    }
 
     .section-soft,
     .section-accent,
