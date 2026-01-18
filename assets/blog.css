@@ -26,8 +26,8 @@ header{position:sticky;top:0;z-index:140;background:rgba(244,241,236,.82);backdr
 nav ul{list-style:none;display:flex;gap:16px;align-items:center;margin:0;padding:0;flex-wrap:wrap}
 nav a{padding:10px 14px;border-radius:999px;transition:background .2s ease;font-weight:500}
 nav a:hover{background:rgba(24,32,34,.08)}
-.nav-cta{background:var(--accent);color:#fff;border-radius:999px;padding:10px 18px;font-weight:600;box-shadow:0 10px 24px rgba(47,111,109,.2)}
-.nav-cta:hover{background:#275b5a}
+.nav-cta{background:#1f5b59;color:#fff;border-radius:999px;padding:10px 18px;font-weight:600;border:1px solid #184645;box-shadow:0 10px 24px rgba(31,91,89,.28)}
+.nav-cta:hover{background:#184645}
 
 .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;border:1px solid var(--border);font-weight:600}
 .btn.primary{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 16px 32px rgba(47,111,109,.22)}
@@ -48,7 +48,7 @@ nav a:hover{background:rgba(24,32,34,.08)}
 .feed-head h2{margin:0;font-size:clamp(24px,3.2vw,34px)}
 .feed-head p{margin:0;color:var(--muted);max-width:50ch}
 
-.blog-toolbar{position:sticky;top:96px;z-index:120;display:grid;gap:16px;padding:18px;border:1px solid var(--border);border-radius:20px;background:#fff;box-shadow:var(--shadow-soft)}
+.blog-toolbar{position:sticky;top:96px;z-index:120;display:grid;gap:16px;padding:18px;margin-bottom:24px;border:1px solid var(--border);border-radius:20px;background:#fff;box-shadow:var(--shadow-soft)}
 .toolbar-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px}
 .toolbar-label{font-weight:600;color:var(--ink);font-size:15px;min-width:max-content}
 #blog-search{flex:1 1 240px;padding:12px 16px;border-radius:14px;border:1px solid var(--border);background:#fdfbf9;font-size:15px}
