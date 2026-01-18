@@ -18,18 +18,20 @@ img{max-width:100%;display:block}
 a{text-decoration:none;color:inherit}
 a:visited{color:inherit}
 .container{width:min(var(--maxw),92vw);margin:0 auto}
+header .container{width:min(1180px,92vw)}
 
 header{position:sticky;top:0;z-index:140;background:rgba(244,241,236,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
 .nav{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:12px 0}
 .brand{display:flex;align-items:center}
 .brand img{height:clamp(42px,10vw,74px);width:auto;display:block}
+.brand-text{font-size:clamp(20px,2.6vw,30px);font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink)}
 nav ul{list-style:none;display:flex;gap:16px;align-items:center;margin:0;padding:0;flex-wrap:wrap}
-nav a{padding:10px 14px;border-radius:999px;transition:background .2s ease;font-weight:500}
+nav a{padding:10px 14px;border-radius:999px;transition:background .2s ease;font-weight:500;color:var(--ink)}
 nav a:hover{background:rgba(24,32,34,.08)}
 .nav-cta{background:#1f5b59;color:#fff;border-radius:999px;padding:10px 18px;font-weight:600;border:1px solid #184645;box-shadow:0 10px 24px rgba(31,91,89,.28)}
 .nav-cta:hover{background:#184645}
 
-.btn{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;border:1px solid var(--border);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;border:1px solid var(--border);font-weight:600;transition:transform .2s ease,box-shadow .2s ease}
 .btn.primary{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 16px 32px rgba(47,111,109,.22)}
 .btn.primary:hover{transform:translateY(-1px)}
 .btn.ghost{background:transparent;color:var(--accent)}
@@ -65,7 +67,7 @@ nav a:hover{background:rgba(24,32,34,.08)}
 .results-info{margin:0;font-size:14px;color:var(--muted)}
 
 .post-grid{display:grid;gap:20px;grid-template-columns:repeat(3,1fr);align-items:stretch}
-.post-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;height:100%;box-shadow:var(--shadow-soft);transition:transform .15s ease,box-shadow .15s ease}
+.post-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;height:100%;box-shadow:var(--shadow-soft);transition:transform .25s ease,box-shadow .25s ease}
 .post-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
 .post-card h3{margin:0;font-size:18px}
 .post-card p{margin:0;color:var(--muted)}
@@ -81,14 +83,16 @@ nav a:hover{background:rgba(24,32,34,.08)}
 .breadcrumbs li+li::before{content:"/";color:rgba(24,32,34,.4)}
 .breadcrumbs a{color:var(--accent)}
 
-.post-hero{padding:48px;border-radius:var(--radius-lg);border:1px solid var(--border);background:#fff;box-shadow:var(--shadow);margin-bottom:32px}
+.post-hero{padding:48px;border-radius:var(--radius-lg);border:1px solid var(--border);background:#fff;box-shadow:var(--shadow);margin-bottom:32px;transition:transform .25s ease,box-shadow .25s ease}
+.post-hero:hover{transform:translateY(-3px);box-shadow:0 28px 70px rgba(15,23,30,.2)}
 .post-hero .kicker{text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--muted);margin:0 0 10px}
 .post-hero h1{margin:0 0 18px;font-size:clamp(30px,4vw,44px)}
 .post-hero .post-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:14px;color:var(--muted)}
 .post-hero .post-meta time{padding:6px 14px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
 .post-hero .post-meta span{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:#fdfbf9;display:inline-flex;align-items:center;gap:8px}
 
-.post-content{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;box-shadow:var(--shadow-soft);display:grid;gap:18px}
+.post-content{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;box-shadow:var(--shadow-soft);display:grid;gap:18px;transition:transform .25s ease,box-shadow .25s ease}
+.post-content:hover{transform:translateY(-3px);box-shadow:0 24px 56px rgba(15,23,30,.18)}
 .post-content h2{margin:16px 0 6px;font-size:22px}
 .post-content p{margin:0;color:var(--muted)}
 .post-content ul{margin:0;padding-left:20px;color:var(--muted);display:grid;gap:8px}

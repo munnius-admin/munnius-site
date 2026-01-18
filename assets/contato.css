@@ -17,6 +17,7 @@ body{margin:0;font-family:'Manrope',system-ui,ui-sans-serif;background:var(--bg)
 a{text-decoration:none;color:inherit}
 a:visited{color:inherit}
 .container{width:min(var(--maxw),92vw);margin:0 auto}
+header .container{width:min(1180px,92vw)}
 
 header{
   position:sticky;top:0;z-index:140;background:rgba(244,241,236,.82);
@@ -25,8 +26,9 @@ header{
 .nav{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:12px 0}
 .brand{display:flex;align-items:center}
 .brand img{height:clamp(42px,10vw,74px);width:auto;display:block}
+.brand-text{font-size:clamp(20px,2.6vw,30px);font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--ink)}
 nav ul{list-style:none;display:flex;gap:16px;align-items:center;margin:0;padding:0;flex-wrap:wrap}
-nav a{padding:10px 14px;border-radius:999px;transition:background .2s ease;font-weight:500}
+nav a{padding:10px 14px;border-radius:999px;transition:background .2s ease;font-weight:500;color:var(--ink)}
 nav a:hover{background:rgba(24,32,34,.08)}
 .nav-cta{background:#1f5b59;color:#fff;border-radius:999px;padding:10px 18px;font-weight:600;border:1px solid #184645;box-shadow:0 10px 24px rgba(31,91,89,.28)}
 .nav-cta:hover{background:#184645}
@@ -37,18 +39,20 @@ main{padding:72px 0 96px}
 .contact-info p{margin:0 0 20px;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent);padding:6px 14px;border-radius:999px;font-weight:600;font-size:13px}
 .info-cards{display:grid;gap:14px}
-.info-cards div{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-soft)}
+.info-cards div{background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-soft);transition:transform .25s ease,box-shadow .25s ease}
+.info-cards div:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
 .info-cards h3{margin:0 0 6px;font-size:16px}
 .info-cards p{margin:0;color:var(--muted)}
 
-.contact-form{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow)}
+.contact-form{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px;box-shadow:var(--shadow);transition:transform .25s ease,box-shadow .25s ease}
+.contact-form:hover{transform:translateY(-3px);box-shadow:0 28px 70px rgba(15,23,30,.2)}
 .contact-form h2{margin:0 0 8px;font-size:22px}
 .contact-form p{margin:0 0 18px;color:var(--muted)}
 form{display:grid;gap:14px}
 label{display:grid;gap:8px;font-weight:600;color:var(--ink)}
 input,textarea{padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:#fdfbf9;font:inherit;color:var(--ink)}
 textarea{min-height:140px;resize:vertical}
-button{display:inline-flex;align-items:center;gap:10px;justify-content:center;padding:12px 18px;border-radius:999px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;box-shadow:0 14px 28px rgba(47,111,109,.24);transition:transform .15s ease,box-shadow .15s ease}
+button{display:inline-flex;align-items:center;gap:10px;justify-content:center;padding:12px 18px;border-radius:999px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;box-shadow:0 14px 28px rgba(47,111,109,.24);transition:transform .2s ease,box-shadow .2s ease}
 button:hover{transform:translateY(-1px);box-shadow:0 18px 36px rgba(47,111,109,.32)}
 .meta{margin-top:14px;font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px}
 
