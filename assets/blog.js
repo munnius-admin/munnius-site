@@ -76,13 +76,13 @@
     if (!toolbar) return;
     const header = document.querySelector('header');
     if (!header) {
-      toolbar.style.removeProperty('--toolbar-offset');
+      document.documentElement.style.removeProperty('--toolbar-offset');
       return;
     }
     const rect = header.getBoundingClientRect();
     const height = Math.max(rect.height, header.offsetHeight || 0);
     if (!height) return;
-    toolbar.style.setProperty('--toolbar-offset', `${Math.ceil(height + 16)}px`);
+    document.documentElement.style.setProperty('--toolbar-offset', `${Math.ceil(height + 16)}px`);
   };
 
   const syncTagButtons = () => {
