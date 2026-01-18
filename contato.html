@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Contato — Munnius</title>
-  <meta name="description" content="Fale com a Munnius e agende seu diagnóstico gratuito. Processos claros, automação com IA e gestão de projetos." />
+  <meta name="description" content="Fale com a Munnius e agende seu diagnóstico gratuito. Consultoria em gestão de projetos e consultoria empresarial." />
   <link rel="canonical" href="https://munnius.com.br/contato.html" />
   <meta name="robots" content="index, follow" />
 
@@ -15,8 +15,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <meta name="theme-color" content="#0A2342">
-  <meta name="msapplication-TileColor" content="#0A2342">
+  <meta name="theme-color" content="#182022">
+  <meta name="msapplication-TileColor" content="#182022">
   <meta name="msapplication-TileImage" content="/android-chrome-192x192.png">
   <meta name="msapplication-config" content="/browserconfig.xml">
 
@@ -40,7 +40,7 @@
   <!-- Tipografia + Ícones -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
   <link rel="stylesheet" href="assets/util.css">
   <link rel="stylesheet" href="assets/contato.css">
@@ -56,38 +56,62 @@
         <ul>
           <li><a href="/#sobre">Sobre</a></li>
           <li><a href="/#servicos">Serviços</a></li>
-          <li><a href="/#processo">Como trabalhamos</a></li>
-          <li><a href="/#beneficios">Resultados</a></li>
+          <li><a href="/#metodologia">Metodologia</a></li>
+          <li><a href="/#resultados">Resultados</a></li>
           <li><a href="/blog/">Blog</a></li>
-          <li><a href="/contato.html" rel="nofollow">Contato</a></li>
-          <li><a href="/politicas.html">Políticas</a></li>
+          <li><a class="nav-cta" href="/contato.html" rel="nofollow">Agendar conversa</a></li>
         </ul>
       </nav>
     </div>
   </header>
 
   <main class="container">
-    <div class="card">
-      <div class="hint"><i class="ri-calendar-check-line"></i> Diagnóstico gratuito</div>
-      <h1>Vamos conversar?</h1>
-      <p class="lead">Conte brevemente seu desafio. Retornamos com rapidez para alinhar o diagnóstico e os próximos passos.</p>
+    <div class="contact-grid">
+      <div class="contact-info">
+        <span class="pill"><i class="ri-calendar-check-line"></i> Diagnóstico gratuito</span>
+        <h1>Vamos estruturar seus projetos?</h1>
+        <p>Conte sobre seus desafios de gestão e operação. A Munnius responde rapidamente com um plano inicial para priorizar entregas e gerar previsibilidade.</p>
+        <div class="info-cards">
+          <div>
+            <h3>Tempo de resposta</h3>
+            <p>Retorno em até 1 dia útil com próximos passos sugeridos.</p>
+          </div>
+          <div>
+            <h3>Formato</h3>
+            <p>Consultoria remota com encontros executivos e acompanhamento contínuo.</p>
+          </div>
+          <div>
+            <h3>Contato direto</h3>
+            <p><a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a></p>
+          </div>
+        </div>
+      </div>
+      <div class="contact-form">
+        <h2>Envie sua mensagem</h2>
+        <p>Informações essenciais para entendermos seu momento.</p>
+        <!-- FormSubmit -->
+        <form action="https://formsubmit.co/contato@munnius.com.br" method="POST" autocomplete="off" novalidate>
+          <input type="hidden" name="_subject" value="Novo contato — Munnius">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_next" value="https://munnius.com.br/obrigado.html">
+          <input type="text" name="_honey" class="d-none">
 
-      <!-- FormSubmit -->
-      <form action="https://formsubmit.co/contato@munnius.com.br" method="POST" autocomplete="off" novalidate>
-        <input type="hidden" name="_subject" value="Novo contato — Munnius">
-        <input type="hidden" name="_template" value="table">
-        <input type="hidden" name="_captcha" value="false">
-        <input type="hidden" name="_next" value="https://munnius.com.br/obrigado.html">
-        <input type="text" name="_honey" class="d-none">
-
-        <input type="text"  name="name"  placeholder="Seu nome"  required autocomplete="name"  inputmode="text"  aria-label="Seu nome">
-        <input type="email" name="email" placeholder="Seu e-mail" required autocomplete="email" inputmode="email" aria-label="Seu e-mail">
-        <textarea name="message" placeholder="Descreva brevemente seu desafio" required aria-label="Sua mensagem"></textarea>
-        <button type="submit"><i class="ri-mail-send-line"></i> Enviar</button>
-      </form>
-
-      <div class="meta">
-        <span><i class="ri-lock-2-line"></i> Seus dados são usados apenas para retornar o contato.</span>
+          <label>
+            Nome completo
+            <input type="text" name="name" placeholder="Seu nome" required autocomplete="name" inputmode="text">
+          </label>
+          <label>
+            E-mail profissional
+            <input type="email" name="email" placeholder="seu@email.com" required autocomplete="email" inputmode="email">
+          </label>
+          <label>
+            Mensagem
+            <textarea name="message" placeholder="Conte brevemente seu desafio" required></textarea>
+          </label>
+          <button type="submit"><i class="ri-mail-send-line"></i> Enviar mensagem</button>
+        </form>
+        <p class="meta"><i class="ri-lock-2-line"></i> Seus dados são usados apenas para retornar o contato.</p>
       </div>
     </div>
   </main>
@@ -97,19 +121,19 @@
       <div class="container footer-grid">
         <div class="footer-col">
           <h5>Munnius</h5>
-          <p class="section-sub m0">Processos, IA aplicada e gestão de projetos internos.</p>
+          <p>Consultoria em gestão de projetos e consultoria empresarial para médias empresas.</p>
         </div>
         <div class="footer-col">
           <h5>Site</h5>
-          <a href="/#sobre">Sobre</a><a href="/#servicos">Serviços</a><a href="/#processo">Como trabalhamos</a><a href="/blog/">Blog</a>
+          <a href="/#sobre">Sobre</a><a href="/#servicos">Serviços</a><a href="/#metodologia">Metodologia</a><a href="/blog/">Blog</a>
         </div>
         <div class="footer-col">
           <h5>Institucional</h5>
           <a href="/politicas.html">Privacidade & Termos</a><a href="/contato.html" rel="nofollow">Contato</a>
         </div>
         <div class="footer-col">
-          <h5>Utilidades</h5>
-          <a href="/" rel="noopener">Início</a>
+          <h5>Redes</h5>
+          <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>
         </div>
       </div>
     </div>
