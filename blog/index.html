@@ -79,27 +79,29 @@
 
     <section class="post-feed" aria-labelledby="ultimos-artigos">
       <div class="container">
-        <div class="feed-head">
-          <h2 id="ultimos-artigos">Últimos artigos</h2>
-          <p>Explore conteúdos recentes e encontre o que faz sentido para o seu momento.</p>
-        </div>
-        <section class="blog-toolbar" id="blog-toolbar" aria-label="Ferramentas para explorar os artigos">
-          <div class="toolbar-row">
-            <label class="toolbar-label" for="blog-search">Buscar</label>
-            <input id="blog-search" name="search" type="search" placeholder="Busque por título ou resumo" autocomplete="off" />
+        <div class="feed-sticky">
+          <div class="feed-head">
+            <h2 id="ultimos-artigos">Últimos artigos</h2>
+            <p>Explore conteúdos recentes e encontre o que faz sentido para o seu momento.</p>
           </div>
-          <div class="toolbar-row toolbar-tags">
-            <span class="toolbar-label">Filtrar por temas</span>
-            <div class="tag-buttons" id="tag-filters" role="group" aria-label="Filtrar artigos por tags">
-              <span class="toolbar-hint" id="tags-loading">Carregando tags…</span>
+          <section class="blog-toolbar" id="blog-toolbar" aria-label="Ferramentas para explorar os artigos">
+            <div class="toolbar-row">
+              <label class="toolbar-label" for="blog-search">Buscar</label>
+              <input id="blog-search" name="search" type="search" placeholder="Busque por título ou resumo" autocomplete="off" />
             </div>
-            <button type="button" class="toolbar-reset" id="clear-filters" disabled aria-disabled="true" hidden>
-              <i class="ri-close-circle-line" aria-hidden="true"></i>
-              Limpar filtros
-            </button>
-          </div>
-          <p class="results-info" id="results-count" role="status" aria-live="polite">Mostrando os artigos mais recentes.</p>
-        </section>
+            <div class="toolbar-row toolbar-tags">
+              <span class="toolbar-label">Filtrar por temas</span>
+              <div class="tag-buttons" id="tag-filters" role="group" aria-label="Filtrar artigos por tags">
+                <span class="toolbar-hint" id="tags-loading">Carregando tags…</span>
+              </div>
+              <button type="button" class="toolbar-reset" id="clear-filters" disabled aria-disabled="true" hidden>
+                <i class="ri-close-circle-line" aria-hidden="true"></i>
+                Limpar filtros
+              </button>
+            </div>
+            <p class="results-info" id="results-count" role="status" aria-live="polite">Mostrando os artigos mais recentes.</p>
+          </section>
+        </div>
         <div class="post-grid" id="blog-feed">
 <!-- posts:start -->
 <article class="post-card" data-slug="teste-e-ajuste-suas-campanhas-locais-em-tempo-real">
