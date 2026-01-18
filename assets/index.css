@@ -11,7 +11,7 @@
   --radius-md:20px;
   --shadow:0 24px 60px rgba(15,23,30,.12);
   --shadow-soft:0 14px 40px rgba(15,23,30,.08);
-  --space:96px;
+  --space:clamp(96px,12vh,150px);
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:'Manrope',system-ui,ui-sans-serif;background:var(--bg);color:var(--ink);line-height:1.7}
@@ -40,8 +40,8 @@ header{
 nav ul{list-style:none;display:flex;gap:16px;align-items:center;margin:0;padding:0;flex-wrap:wrap}
 nav a{padding:10px 14px;border-radius:999px;transition:background .2s ease;color:var(--ink);font-weight:500}
 nav a:hover{background:rgba(24,32,34,.08)}
-.nav-cta{background:var(--accent);color:#fff;border-radius:999px;padding:10px 18px;font-weight:600;box-shadow:0 10px 24px rgba(47,111,109,.2)}
-.nav-cta:hover{background:#275b5a}
+.nav-cta{background:#1f5b59;color:#fff;border-radius:999px;padding:10px 18px;font-weight:600;border:1px solid #184645;box-shadow:0 10px 24px rgba(31,91,89,.28)}
+.nav-cta:hover{background:#184645}
 @media (max-width:860px){
   .nav{flex-direction:column;align-items:flex-start}
   nav ul{gap:10px}
@@ -123,7 +123,9 @@ section{padding:var(--space) 0;scroll-margin-top:120px}
 .blog-card .post-meta{font-size:14px;color:var(--muted)}
 .blog-card .post-link{font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:6px}
 
-.cta-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:30px;display:flex;align-items:center;justify-content:space-between;gap:22px;box-shadow:var(--shadow)}
+.cta-card{background:var(--bg-alt);border:1px solid rgba(47,111,109,.2);border-radius:var(--radius-lg);padding:30px;display:flex;align-items:center;justify-content:space-between;gap:22px;box-shadow:0 24px 60px rgba(15,23,30,.18)}
+.cta-card .btn.primary{background:#1f5b59;box-shadow:0 16px 32px rgba(31,91,89,.32)}
+.cta-card .btn.primary:hover{background:#184645;box-shadow:0 20px 38px rgba(31,91,89,.4)}
 .cta-card h2{margin:0 0 12px;font-size:clamp(26px,3.4vw,36px)}
 
 footer{border-top:1px solid var(--border);background:var(--bg-alt)}
