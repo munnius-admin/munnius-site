@@ -1,365 +1,79 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <title>Munnius — Consultoria em gestão de projetos e consultoria empresarial</title>
-  <meta name="description" content="Consultoria de gestão de projetos e consultoria empresarial para médias empresas. Estrutura, ritmo e execução com resultados reais.">
-  <link rel="canonical" href="https://munnius.com.br/">
-  <meta name="robots" content="index, follow, max-image-preview:large" />
-
-  <!-- Favicons -->
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="alternate icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
-  <meta name="theme-color" content="#182022">
-  <meta name="msapplication-TileColor" content="#182022">
-  <meta name="msapplication-TileImage" content="/android-chrome-192x192.png">
-  <meta name="msapplication-config" content="/browserconfig.xml">
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Munnius — Consultoria em gestão de projetos e consultoria empresarial">
-  <meta property="og:description" content="Consultoria de gestão de projetos e consultoria empresarial para médias empresas. Estrutura, ritmo e execução com resultados reais.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://munnius.com.br/">
-  <meta property="og:image" content="https://munnius.com.br/og-image.png">
-  <meta property="og:site_name" content="Munnius">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Munnius — Consultoria em gestão de projetos e consultoria empresarial">
-  <meta name="twitter:description" content="Consultoria de gestão de projetos e consultoria empresarial para médias empresas. Estrutura, ritmo e execução com resultados reais.">
-  <meta name="twitter:image" content="https://munnius.com.br/og-image.png">
-
-  <!-- Segurança -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https:; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; script-src 'self' 'sha256-2tsm54BFnEOt2uzmAkb3LbNrQ59CAWcGSI+U96eV6YE='; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'">
-  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
-
-  <!-- Tipografia + Ícones (Remix Icon) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/util.css">
-  <link rel="stylesheet" href="assets/index.css">
-
-  <!-- Organization JSON-LD -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Munnius",
-    "url": "https://munnius.com.br/",
-    "logo": "https://munnius.com.br/assets/logo.png"
-  }
-  </script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Munnius | Projetos que saem do papel</title>
+  <meta name="description" content="Consultoria em gestão de projetos, PMO e automação com IA para médias empresas brasileiras." />
+  <meta property="og:title" content="Munnius | Projetos que saem do papel" />
+  <meta property="og:description" content="Governança enxuta, previsibilidade e execução aplicada para operações de média empresa." />
+  <meta property="og:image" content="og-image.png" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{--onyx:#0D0F12;--volt:#C8F04A;--graphite:#1E2228;--sand:#F6F5F0;--muted:#888780;--white:#fff;--body:'DM Sans',system-ui,sans-serif;--display:Georgia,serif}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;font-family:var(--body);background:var(--sand);color:var(--onyx);line-height:1.7}
+    a{text-decoration:none;color:inherit}.container{width:min(1120px,92%);margin:auto}.section{padding:72px 0}
+    h1,h2,h3{font-family:var(--display);letter-spacing:-.03em;line-height:1.1;margin:0 0 16px}
+    h1{font-size:clamp(2.6rem,7vw,4rem);color:var(--white)} h2{font-size:clamp(2rem,4.5vw,2.75rem)} h3{font-size:1.5rem}
+    .site-header{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(13,15,18,.9);transition:.25s}.site-header.scrolled{backdrop-filter:blur(12px);border-bottom:1px solid rgba(200,240,74,.15)}
+    .nav-wrap{display:flex;justify-content:space-between;align-items:center;height:78px}.logo{display:flex;align-items:center;gap:12px;font-family:var(--display);font-size:1.55rem;color:var(--white)}
+    .menu{display:none;gap:24px;color:var(--white)} .menu a{font-size:.96rem}.menu-btn{background:none;border:1px solid rgba(255,255,255,.25);color:var(--white);padding:8px 10px}
+    .cta{display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:4px;font-weight:500}.cta-primary{background:var(--volt);color:var(--onyx)}.cta-outline{border:1px solid rgba(255,255,255,.6);color:var(--white)}
+    .mobile-panel{position:fixed;inset:0;background:rgba(13,15,18,.95);display:none;padding:96px 4%}.mobile-panel.open{display:block}.mobile-panel a{display:block;color:var(--white);padding:14px 0;font-size:1.2rem}
+    .hero{background:var(--onyx);padding:140px 0 56px;border-bottom:1px solid rgba(200,240,74,.2)}.hero-grid{display:grid;gap:32px;align-items:center}
+    .hero p{color:var(--muted);font-size:1.08rem;max-width:64ch}.hero-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px}
+    .cred{margin-top:18px;padding-top:16px;border-top:1px solid rgba(200,240,74,.2);color:var(--muted);font-size:13px}
+    .animate{opacity:0;transform:translateY(20px);animation:enter .6s ease-out forwards}.d2{animation-delay:.15s}.d3{animation-delay:.3s}@keyframes enter{to{opacity:1;transform:none}}
+    .logos{background:var(--graphite);color:var(--muted)}.logos p{font-size:11px;letter-spacing:.17em;text-transform:uppercase}.logos-row{display:flex;flex-wrap:wrap;gap:18px;color:rgba(255,255,255,.4)}.logos-row span:hover{color:#fff}
+    .pain p{color:#5F5E5A}.pain-grid,.svc-grid,.steps,.results,.blog-grid,.metrics{display:grid;gap:24px}.pain-item svg{margin-bottom:10px}
+    .services,.method{background:var(--onyx);color:var(--white)}.svc-card{background:var(--graphite);border:1px solid rgba(200,240,74,.15);padding:24px;transition:.25s}.svc-card:hover{transform:translateY(-4px);border-color:rgba(200,240,74,.5)}.svc-no{font-size:11px;color:var(--volt);text-transform:uppercase;letter-spacing:.14em}
+    .about-img{width:100%;border-radius:8px;aspect-ratio:1/1;object-fit:cover}.metrics{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:18px}.metric strong{font-family:var(--display);font-size:2rem;display:block}
+    .step{position:relative;padding-top:12px}.step .num{font-family:var(--display);font-size:48px;color:var(--volt)} .step p{color:var(--muted);font-size:14px}
+    .result-sec{background:var(--graphite);color:var(--white)}.result strong{display:block;font-size:52px;font-family:var(--display);color:var(--volt);line-height:1}
+    .blog-card{background:#fff;border-bottom:3px solid transparent;padding:20px;transition:.2s}.blog-card:hover{border-bottom-color:var(--volt)}.meta{font-size:12px;color:#5F5E5A;letter-spacing:.07em;text-transform:uppercase}
+    .final-cta{background:var(--volt);padding:76px 0}.final-cta h2{color:var(--onyx)}
+    .site-footer{background:var(--onyx);color:var(--white);padding:56px 0}.foot-top{display:grid;gap:20px;padding-bottom:22px;border-bottom:1px solid rgba(200,240,74,.2)}.muted{color:var(--muted)}.foot-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;color:var(--muted)}
+    @media (min-width:768px){.hero-grid,.about-grid{grid-template-columns:1.15fr .85fr}.menu{display:flex}.menu-btn{display:none}.pain-grid,.svc-grid,.steps,.blog-grid{grid-template-columns:repeat(3,1fr)}.results{grid-template-columns:repeat(2,1fr)}.foot-top{grid-template-columns:2fr 1fr}}
+    @media (min-width:1024px){.steps{grid-template-columns:repeat(4,1fr)}.step::after{content:'';position:absolute;top:42px;left:70px;right:-16px;height:1px;background:rgba(200,240,74,.5)}.step:last-child::after{display:none}}
+    @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
 </head>
 <body>
-  <!-- Header -->
-  <header>
-    <div class="container nav">
-      <a class="brand" href="/" aria-label="Página inicial">
-        <span class="brand-text">Munnius</span>
-      </a>
-      <nav aria-label="Principal">
-        <ul>
-          <li><a href="#sobre">Sobre</a></li>
-          <li><a href="#servicos">Serviços</a></li>
-          <li><a href="#metodologia">Metodologia</a></li>
-          <li><a href="#resultados">Resultados</a></li>
-          <li><a href="/blog/">Blog</a></li>
-          <li><a class="nav-cta" href="/contato.html" rel="nofollow">Agendar conversa</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <!-- Hero -->
-  <section class="hero">
-    <div class="container hero-grid">
-      <div class="hero-content reveal">
-        <span class="pill">Consultoria para médias empresas</span>
-        <h1>Gestão de projetos e consultoria empresarial para executar com ritmo.</h1>
-        <p>Estruturamos processos, priorizamos portfólios e aceleramos entregas para médias empresas que precisam de previsibilidade sem perder agilidade.</p>
-        <div class="hero-actions">
-          <a class="btn primary" href="#servicos"><i class="ri-compass-3-line"></i> Ver soluções</a>
-          <a class="btn ghost" href="#metodologia"><i class="ri-rocket-line"></i> Conhecer metodologia</a>
-        </div>
-        <div class="hero-trust">
-          <span>Expertise aplicada em operações de alto impacto</span>
-          <ul>
-            <li>PMO estratégico</li>
-            <li>Gestão de mudanças</li>
-            <li>Eficiência operacional</li>
-          </ul>
-        </div>
-      </div>
-      <div class="hero-panel reveal">
-        <div class="hero-photo">
-          <img src="assets/foto_munhoz.jpg" alt="Gabriel R. Munhoz" width="1200" height="900">
-        </div>
-        <div class="hero-card">
-          <h3>O que entregamos em 60 dias</h3>
-          <ul>
-            <li><i class="ri-checkbox-circle-line"></i> Portfolio de projetos com prioridades claras</li>
-            <li><i class="ri-checkbox-circle-line"></i> Ritmo semanal de acompanhamento executivo</li>
-            <li><i class="ri-checkbox-circle-line"></i> Processos críticos documentados e mensurados</li>
-          </ul>
-        </div>
-        <div class="hero-highlight">
-          <div>
-            <strong>+20%</strong>
-            <span>Eficiência percebida em times operacionais</span>
-          </div>
-          <div>
-            <strong>3-5</strong>
-            <span>frentes prioritárias alinhadas por trimestre</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Sobre -->
-  <section id="sobre" class="section section-soft">
-    <div class="container grid-2">
-      <div class="section-block reveal">
-        <p class="kicker">Nossa essência</p>
-        <h2>Consultoria com visão de negócio e execução aplicada.</h2>
-        <p>A Munnius trabalha ao lado da liderança para transformar objetivos estratégicos em rotinas de entrega. Somos especialistas em organizar portfólios, alinhar times e criar governança enxuta para decisões rápidas.</p>
-        <p>Atuamos com médias empresas em crescimento que precisam de previsibilidade operacional, mantendo flexibilidade para escalar.</p>
-      </div>
-      <div class="stats-card reveal">
+  <header id="site-header"></header>
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
         <div>
-          <span class="label">Experiência</span>
-          <strong>4 anos</strong>
-          <p>gerenciando projetos de grandes empresas, incluindo Vale, Iveco, Intelbras, Viveo, Grupo Nutrien e John Deere.</p>
-        </div>
-        <div>
-          <span class="label">Tempo de resposta</span>
-          <strong>72h</strong>
-          <p>para diagnóstico e plano inicial de ações.</p>
-        </div>
-        <div>
-          <span class="label">Estilo de trabalho</span>
-          <strong>Hands-on</strong>
-          <p>consultoria próxima para garantir execução.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Serviços -->
-  <section id="servicos" class="section">
-    <div class="container">
-      <div class="section-head reveal">
-        <div>
-          <p class="kicker">Soluções</p>
-          <h2>Consultorias desenhadas para médias empresas.</h2>
-        </div>
-        <a class="btn ghost" href="#metodologia"><i class="ri-flow-chart-line"></i> Ver metodologia</a>
-      </div>
-      <div class="grid-3">
-        <article class="service-card reveal">
-          <div class="service-media">
-            <img class="fade-img" src="assets/svc-projetos.jpg" alt="Gestão de projetos" loading="lazy" width="1200" height="600">
+          <h1 class="animate">Projetos que saem do papel.</h1>
+          <p class="animate d2">Estruturamos portfólios, alinhamos times e criamos governança enxuta para médias empresas que precisam de previsibilidade sem perder agilidade.</p>
+          <div class="animate d3" style="display:flex;gap:12px;flex-wrap:wrap;margin:28px 0 8px">
+            <a aria-label="Agendar diagnóstico gratuito" class="cta cta-primary" href="contato.html">Agendar diagnóstico gratuito →</a>
+            <a aria-label="Ver metodologia" class="cta cta-outline" href="#metodologia">Ver metodologia</a>
           </div>
-          <h3>Gestão de Projetos & PMO</h3>
-          <p>Estruturamos portfólios, definimos ritos e garantimos visibilidade para decisões.</p>
-          <ul>
-            <li>Roadmap trimestral e metas por área</li>
-            <li>Governança de projetos e riscos</li>
-            <li>Gestão de stakeholders e comunicação</li>
-          </ul>
-        </article>
-        <article class="service-card reveal">
-          <div class="service-media">
-            <img class="fade-img" src="assets/svc-processos.jpg" alt="Consultoria empresarial" loading="lazy" width="1200" height="600">
-          </div>
-          <h3>Consultoria Empresarial</h3>
-          <p>Mapeamos processos críticos e reposicionamos estrutura para escalar com segurança.</p>
-          <ul>
-            <li>Mapeamento de processos-chave</li>
-            <li>KPIs estratégicos para direção</li>
-            <li>Planos de melhoria contínua</li>
-          </ul>
-        </article>
-        <article class="service-card reveal">
-          <div class="service-media">
-            <img class="fade-img" src="assets/svc-ia.jpg" alt="Automação e dados" loading="lazy" width="1200" height="600">
-          </div>
-          <h3>Automação & Inteligência</h3>
-          <p>Aplicamos automações e IA pragmática para reduzir esforço manual e ampliar controle.</p>
-          <ul>
-            <li>Dashboards executivos e alertas</li>
-            <li>Automação de rotinas operacionais</li>
-            <li>Treinamento do time para uso contínuo</li>
-          </ul>
-        </article>
+          <div class="cred">Vale · John Deere · Iveco · Intelbras · Azul · Nutrien</div>
+        </div>
+        <img class="hero-img" src="assets/foto_munhoz.jpg" alt="Gabriel Munhoz" loading="lazy" />
       </div>
-    </div>
-  </section>
-
-  <!-- Metodologia -->
-  <section id="metodologia" class="section section-soft">
-    <div class="container reveal">
-      <div class="section-head">
-        <div>
-          <p class="kicker">Metodologia</p>
-          <h2>Da estratégia à entrega com acompanhamento constante.</h2>
-          <p class="section-sub">Um fluxo simples para tirar projetos do papel sem perder controle e governança.</p>
-        </div>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <span>01</span>
-          <div>
-            <h3>Diagnóstico executivo</h3>
-            <p>Entendimento rápido da operação, dores críticas e prioridades de negócios.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span>02</span>
-          <div>
-            <h3>Plano de ação e governança</h3>
-            <p>Definição de entregas, responsáveis, indicadores e cadência de acompanhamento.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span>03</span>
-          <div>
-            <h3>Execução assistida</h3>
-            <p>Atuação junto ao time para remover bloqueios e garantir tração constante.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span>04</span>
-          <div>
-            <h3>Transferência e evolução</h3>
-            <p>Capacitação interna para manter o ritmo e evoluir o modelo.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Resultados -->
-  <section id="resultados" class="section">
-    <div class="container">
-      <div class="section-head reveal">
-        <div>
-          <p class="kicker">Resultados</p>
-          <h2>Indicadores práticos que a liderança enxerga.</h2>
-          <p class="section-sub">Mensuramos eficiência, entregas e clareza para que o negócio avance com segurança.</p>
-        </div>
-      </div>
-      <div class="result-grid reveal">
-        <div class="result-card">
-          <h3>+30%</h3>
-          <p>Redução média de retrabalho em processos críticos.</p>
-        </div>
-        <div class="result-card">
-          <h3>Até 6 semanas</h3>
-          <p>Para implementar ritos de gestão e indicadores essenciais.</p>
-        </div>
-        <div class="result-card">
-          <h3>Visibilidade total</h3>
-          <p>Portfólio com status e próximos passos em um painel único.</p>
-        </div>
-        <div class="result-card">
-          <h3>Equipe alinhada</h3>
-          <p>Comunicação clara entre diretoria e operação.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Blog -->
-  <section class="section section-soft">
-    <div class="container reveal">
-      <div class="section-head">
-        <div>
-          <p class="kicker">Blog</p>
-          <h2>Insights sobre projetos e gestão empresarial.</h2>
-          <p class="section-sub">Conteúdos práticos para líderes que querem operar com disciplina e inovação.</p>
-        </div>
-        <a class="btn ghost" href="/blog/"><i class="ri-article-line"></i> Ver todos</a>
-      </div>
-      <div class="grid-3 blog-grid">
-        <article class="blog-card">
-          <a href="/blog/teste-e-ajuste-suas-campanhas-locais-em-tempo-real.html">
-            <p class="post-meta"><time datetime="2025-12-17">17 dez 2025</time> · Leitura de 3 min</p>
-            <h3>Teste e ajuste suas campanhas locais em tempo real</h3>
-            <p>Microtestes são a forma mais rápida e econômica para donos de PMEs locais melhorarem campanhas de vendas e atendimento.</p>
-            <span class="post-link">Ler artigo</span>
-          </a>
-        </article>
-        <article class="blog-card">
-          <a href="/blog/precificacao-inteligente-equilibrando-custo-e-valor-na-pratica.html">
-            <p class="post-meta"><time datetime="2025-12-15">15 dez 2025</time> · Leitura de 3 min</p>
-            <h3>Precificação Inteligente: Equilibrando Custo e Valor na Prática</h3>
-            <p>Mostramos como ajustar seu preço combinando custos, posicionamento e percepção de valor.</p>
-            <span class="post-link">Ler artigo</span>
-          </a>
-        </article>
-        <article class="blog-card">
-          <a href="/blog/venda-mais-pelo-whatsapp-sem-perder-tempo-ou-clientes.html">
-            <p class="post-meta"><time datetime="2025-12-15">15 dez 2025</time> · Leitura de 3 min</p>
-            <h3>Venda mais pelo WhatsApp sem perder tempo ou clientes</h3>
-            <p>Crie rotinas simples para atendimento ágil e aumente conversões sem perder qualidade.</p>
-            <span class="post-link">Ler artigo</span>
-          </a>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="section">
-    <div class="container">
-      <div class="cta-card reveal">
-        <div>
-          <p class="kicker">Vamos conversar</p>
-          <h2>Pronto para destravar seus projetos e sua operação?</h2>
-          <p class="section-sub">Agende um diagnóstico gratuito e receba um plano inicial de execução.</p>
-        </div>
-        <a class="btn primary" href="/contato.html" rel="nofollow"><i class="ri-calendar-check-line"></i> Agendar conversa</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <div class="footer-top">
-      <div class="container footer-grid">
-        <div class="footer-col">
-          <h5>Munnius</h5>
-          <p>Consultoria em gestão de projetos e consultoria empresarial para médias empresas.</p>
-        </div>
-        <div class="footer-col">
-          <h5>Site</h5>
-          <a href="#sobre">Sobre</a><a href="#servicos">Serviços</a><a href="#metodologia">Metodologia</a><a href="/blog/">Blog</a>
-        </div>
-        <div class="footer-col">
-          <h5>Institucional</h5>
-          <a href="/politicas.html">Privacidade & Termos</a><a href="/contato.html" rel="nofollow">Contato</a>
-        </div>
-        <div class="footer-col">
-          <h5>Redes</h5>
-          <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>
-        </div>
-      </div>
-    </div>
-    <div class="container footer-bottom">
-      <span>© 2025 Munnius Consultoria — Todos os direitos reservados</span>
-      <span><a href="/contato.html" rel="nofollow">Fale conosco</a></span>
-    </div>
-  </footer>
-
-  <script src="assets/main.js"></script>
+    </section>
+    <section class="section logos"><div class="container"><p>Experiência aplicada em:</p><div class="logos-row"><span>Vale</span><span>John Deere</span><span>Iveco</span><span>Intelbras</span><span>Azul</span><span>Nutrien</span></div></div></section>
+    <section class="section pain"><div class="container"><h2>Projetos aprovados que não saem do papel?</h2><div class="pain-grid"><article class="pain-item"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 18L9 12L13 15L21 6" stroke="#C8F04A" stroke-width="1.7"/></svg><h3>Portfólio sem prioridade</h3><p>Times executando o que grita mais alto, não o que gera mais valor.</p></article><article class="pain-item"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#C8F04A" stroke-width="1.7"/><path d="M12 8V12L15 14" stroke="#C8F04A" stroke-width="1.7"/></svg><h3>Visibilidade zero</h3><p>Diretoria toma decisão sem dados, operando no escuro.</p></article><article class="pain-item"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 6H20V18H4z" stroke="#C8F04A" stroke-width="1.7"/><path d="M7 9H17M7 13H14" stroke="#C8F04A" stroke-width="1.7"/></svg><h3>Retrabalho constante</h3><p>Projetos reiniciados, escopo cresce e prazo sempre estica.</p></article></div></div></section>
+    <section class="section services"><div class="container"><h2>Consultorias desenhadas para médias empresas.</h2><div class="svc-grid"><article class="svc-card"><span class="svc-no">01</span><h3>Gestão de Projetos & PMO</h3><p>Roadmap trimestral · Governança de projetos e riscos · Gestão de stakeholders e comunicação.</p></article><article class="svc-card"><span class="svc-no">02</span><h3>Consultoria Empresarial</h3><p>Mapeamento de processos-chave · KPIs estratégicos · Planos de melhoria contínua.</p></article><article class="svc-card"><span class="svc-no">03</span><h3>Automação & Inteligência</h3><p>Dashboards executivos · Automação de rotinas operacionais · Treinamento do time para uso contínuo.</p></article></div></div></section>
+    <section class="section"><div class="container about-grid" style="display:grid;gap:28px"><img class="about-img" src="assets/foto_munhoz.jpg" alt="Gabriel Munhoz em consultoria" loading="lazy"><div><h2>Consultoria com visão de negócio e execução aplicada.</h2><p>A Munnius é liderada por Gabriel Munhoz, engenheiro de produção com MBA em Gestão de Projetos e mais de 3 anos liderando implantações enterprise SaaS B2B. Recuperou projeto crítico da Vale com mais de 1 ano de atraso. Conduziu implantações com SAP ECC/S4, Oracle Cloud e TOTVS Protheus em clientes como Iveco, Azul e Nutrien.</p><div class="metrics"><div class="metric"><strong>3+ anos</strong><span>Experiência em projetos enterprise</span></div><div class="metric"><strong>72h</strong><span>Para diagnóstico e plano de ação</span></div><div class="metric"><strong>Hands-on</strong><span>Consultoria próxima, não teórica</span></div></div></div></div></section>
+    <section class="section method" id="metodologia"><div class="container"><h2>Metodologia de execução orientada a resultado.</h2><div class="steps"><article class="step"><span class="num">01</span><h3>Diagnóstico executivo</h3><p>Levantamento de gargalos, prioridades e impacto financeiro.</p></article><article class="step"><span class="num">02</span><h3>Plano de ação e governança</h3><p>Ritos, metas e cadência de acompanhamento com a diretoria.</p></article><article class="step"><span class="num">03</span><h3>Execução assistida</h3><p>Implementação com acompanhamento próximo e ajustes rápidos.</p></article><article class="step"><span class="num">04</span><h3>Transferência e evolução</h3><p>Capacitação do time interno para sustentar ganhos no longo prazo.</p></article></div></div></section>
+    <section class="section result-sec"><div class="container results"><article class="result"><strong>+30%</strong><p>redução média de retrabalho em processos críticos</p></article><article class="result"><strong>6 semanas</strong><p>para implementar ritos de gestão e indicadores</p></article><article class="result"><strong>Visibilidade total</strong><p>portfólio com status em painel único</p></article><article class="result"><strong>Equipe alinhada</strong><p>comunicação clara entre diretoria e operação</p></article></div></section>
+    <section class="section"><div class="container"><h2>Conteúdo prático para líderes de operação.</h2><div class="blog-grid"><article class="blog-card"><div class="meta">02 Abr 2026 · Operações</div><h3>Operação em 90 dias: como priorizar sem travar o time</h3><p>Framework direto para estruturar backlog executivo com foco no que gera caixa.</p><a aria-label="Ler artigo operação em 90 dias" href="blog/operacao-em-90-dias.html" style="color:#9CBF28">Ler artigo →</a></article><article class="blog-card"><div class="meta">25 Mar 2026 · IA aplicada</div><h3>Playbook de atendimento com IA para média empresa</h3><p>Como combinar automação e pessoas para elevar SLA sem perder qualidade.</p><a aria-label="Ler playbook atendimento IA" href="blog/playbook-atendimento-ia.html" style="color:#9CBF28">Ler artigo →</a></article><article class="blog-card"><div class="meta">18 Mar 2026 · Gestão</div><h3>Como IA transforma processos com governança enxuta</h3><p>Exemplos práticos de padronização e visibilidade para diretoria.</p><a aria-label="Ler artigo IA transforma processos" href="blog/como-ia-transforma-processos.html" style="color:#9CBF28">Ler artigo →</a></article></div></div></section>
+    <section class="final-cta"><div class="container"><h2>Pronto para destravar seus projetos?</h2><p style="max-width:60ch">Agende um diagnóstico gratuito e receba um plano inicial de execução em até 72 horas.</p><a aria-label="Agendar conversa final" class="cta" style="background:var(--onyx);color:var(--volt)" href="contato.html">Agendar conversa →</a></div></section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script>
+    const headerTpl=`<div class="site-header" id="hdr"><div class="container nav-wrap"><a aria-label="Ir para home" class="logo" href="index.html"><svg width="32" height="32" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="10" fill="#C8F04A"/><path d="M11 44 L11 12 L28 34 L45 12 L45 44" stroke="#0D0F12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span>munnius</span></a><nav class="menu" aria-label="Navegação principal"><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a><a class="cta cta-primary" href="contato.html">Agendar conversa →</a></nav><button id="menuBtn" class="menu-btn" aria-label="Abrir menu">☰</button></div></div><div id="mob" class="mobile-panel"><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a><a class="cta cta-primary" href="contato.html">Agendar conversa →</a></div>`;
+    const footerTpl=`<div class="site-footer"><div class="container"><div class="foot-top"><div><div class="logo" style="font-size:1.15rem"><svg width="32" height="32" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="10" fill="#C8F04A"/><path d="M11 44 L11 12 L28 34 L45 12 L45 44" stroke="#0D0F12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span>munnius.com.br</span></div><p class="muted">Consultoria em gestão de projetos<br/>e automação para médias empresas.</p></div><div><p>© 2025 Munnius Consultoria<br><span class="muted">contato@munnius.com.br</span><br><span class="muted">LinkedIn · YouTube · Instagram</span></p></div></div><div class="foot-links"><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a><a href="contato.html">Contato</a><a href="politicas.html">Privacidade & Termos</a></div></div></div>`;
+    document.getElementById('site-header').innerHTML=headerTpl; document.getElementById('site-footer').innerHTML=footerTpl;
+    const hdr=document.getElementById('hdr');const mob=document.getElementById('mob');document.getElementById('menuBtn').onclick=()=>mob.classList.toggle('open');
+    addEventListener('scroll',()=>hdr.classList.toggle('scrolled',scrollY>80));
+  </script>
 </body>
 </html>
