@@ -8,7 +8,7 @@
   <link rel="canonical" href="https://munnius.com.br/blog/aumente-seu-lucro-ajustando-precos-com-microtestes-rapidos.html" />
   <meta name="robots" content="index, follow" />
 
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="alternate icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -43,23 +43,24 @@
   <link rel="stylesheet" href="../assets/blog.css">
 </head>
 <body class="blog blog-post">
-  <header>
-    <div class="container nav">
-      <a class="brand" href="/" aria-label="Página inicial">
-        <span class="brand-text">Munnius</span>
-      </a>
-            <nav aria-label="Principal">
-        <ul>
-          <li><a href="/#sobre">Sobre</a></li>
-          <li><a href="/#servicos">Serviços</a></li>
-          <li><a href="/#metodologia">Metodologia</a></li>
-          <li><a href="/#resultados">Resultados</a></li>
-          <li><a href="/blog/">Blog</a></li>
-          <li><a class="nav-cta" href="/contato.html" rel="nofollow">Agendar conversa</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+  <header id="site-header">
+  <a href="/index.html" class="header-logo">
+    <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+      <rect width="56" height="56" rx="10" fill="#C8F04A"/>
+      <path d="M11 44 L11 12 L28 34 L45 12 L45 44" stroke="#0D0F12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <span>munnius</span>
+  </a>
+  <nav>
+    <a href="/sobre.html">Sobre</a>
+    <a href="/servicos.html">Serviços</a>
+    <a href="/blog/index.html">Blog</a>
+  </nav>
+  <a href="/contato.html" class="header-cta">Agendar conversa →</a>
+  <button class="menu-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</header>
 
   <main>
     <div class="container">
@@ -151,33 +152,47 @@
     </div>
   </main>
 
-    <footer>
-    <div class="footer-top">
-      <div class="container footer-grid">
-        <div class="footer-col">
-          <h5>Munnius</h5>
-          <p>Consultoria em gestão de projetos e consultoria empresarial para médias empresas.</p>
-        </div>
-        <div class="footer-col">
-          <h5>Site</h5>
-          <a href="/#sobre">Sobre</a><a href="/#servicos">Serviços</a><a href="/#metodologia">Metodologia</a><a href="/blog/">Blog</a>
-        </div>
-        <div class="footer-col">
-          <h5>Institucional</h5>
-          <a href="/politicas.html">Privacidade & Termos</a><a href="/contato.html" rel="nofollow">Contato</a>
-        </div>
-        <div class="footer-col">
-          <h5>Redes</h5>
-          <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>
-        </div>
+    <footer id="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="/index.html" class="header-logo" style="margin-bottom:12px;display:flex;">
+        <svg width="24" height="24" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="10" fill="#C8F04A"/>
+          <path d="M11 44 L11 12 L28 34 L45 12 L45 44" stroke="#0D0F12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span style="font-family:Georgia,serif;font-size:18px;color:#fff;margin-left:10px;letter-spacing:-0.02em;">munnius</span>
+      </a>
+      <p>Consultoria em gestão de projetos<br>e automação para médias empresas.</p>
+    </div>
+    <div class="footer-links">
+      <div>
+        <strong>Site</strong>
+        <a href="/sobre.html">Sobre</a>
+        <a href="/servicos.html">Serviços</a>
+        <a href="/blog/index.html">Blog</a>
+        <a href="/contato.html">Contato</a>
+      </div>
+      <div>
+        <strong>Contato</strong>
+        <a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a>
+        <a href="https://linkedin.com/in/grmunhoz" target="_blank">LinkedIn</a>
+        <a href="https://youtube.com/@munnius" target="_blank">YouTube</a>
+        <a href="https://instagram.com/munnius" target="_blank">Instagram</a>
       </div>
     </div>
-    <div class="container footer-bottom">
-      <span>© 2025 Munnius Consultoria — Todos os direitos reservados</span>
-      <span><a href="/contato.html" rel="nofollow">Fale conosco</a></span>
-    </div>
-  </footer>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 Munnius Consultoria — Todos os direitos reservados</p>
+    <a href="/politicas.html">Privacidade & Termos</a>
+  </div>
+</footer>
 
   <script src="../assets/main.js"></script>
+<script>
+const header = document.getElementById('site-header');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('scrolled', window.scrollY > 60);
+});
+</script>
 </body>
 </html>
