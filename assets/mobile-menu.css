@@ -1,0 +1,35 @@
+@media (max-width: 768px) {
+  #site-header {
+    position: fixed;
+  }
+
+  #site-header .menu-toggle {
+    cursor: pointer;
+    z-index: 120;
+  }
+
+  #site-header.nav-open nav {
+    display: flex !important;
+    position: absolute;
+    top: 68px;
+    left: 24px;
+    right: 24px;
+    flex-direction: column;
+    gap: 0;
+    background: #15191f;
+    border: 1px solid rgba(200, 240, 74, 0.22);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.38);
+  }
+
+  #site-header.nav-open nav a {
+    color: #fff !important;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  #site-header.nav-open nav a:last-child {
+    border-bottom: 0;
+  }
+}
