@@ -1,26 +1,26 @@
 [
   {
-    "titulo": "Operação em 90 dias: priorize sem travar o time",
-    "slug": "operacao-em-90-dias.html",
-    "data": "02 Abr 2026",
-    "categoria": "Operações",
-    "excerpt": "Como estruturar backlog, cadência e indicadores para acelerar entregas sem criar burocracia.",
-    "readTime": "7 min"
-  },
-  {
-    "titulo": "Playbook de atendimento com IA para PMEs",
-    "slug": "playbook-ia-atendimento.html",
-    "data": "25 Mar 2026",
-    "categoria": "IA aplicada",
-    "excerpt": "Fluxos que reduzem tempo de resposta e aumentam consistência operacional.",
-    "readTime": "5 min"
-  },
-  {
-    "titulo": "Como IA transforma processos sem burocracia",
-    "slug": "ia-processos-sem-burocracia.html",
-    "data": "18 Mar 2026",
+    "titulo": "O que é PMO e para que serve? Guia para PMEs brasileiras",
+    "slug": "2026-04-20-o-que-e-pmo-para-pmes.html",
+    "data": "20 Abr 2026",
     "categoria": "Gestão",
-    "excerpt": "Casos diretos para ganhar visibilidade e controle em áreas críticas.",
-    "readTime": "6 min"
+    "excerpt": "PMO organiza projetos em PMEs sem burocracia: evite atrasos e desperdício. Guia prático com exemplos BR.",
+    "readTime": "8 min"
+  },
+  {
+    "titulo": "O que é Agile e como aplicar em PMEs brasileiras?",
+    "slug": "2026-04-22-o-que-e-agile-para-pmes.html",
+    "data": "22 Abr 2026",
+    "categoria": "Operações",
+    "excerpt": "Agile flexível pra PMEs: entregas rápidas sem rigidez. Guia com exemplos e ferramentas BR.",
+    "readTime": "9 min"
+  },
+  {
+    "titulo": "O que é ERP e melhores opções para PMEs no Brasil",
+    "slug": "2026-04-25-o-que-e-erp-para-pmes-brasil.html",
+    "data": "25 Abr 2026",
+    "categoria": "Gestão",
+    "excerpt": "ERP integra tudo em PMEs BR: TOTVS, SAP, Bling. Guia com preços e cases reais.",
+    "readTime": "10 min"
   }
 ]
