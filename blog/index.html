@@ -110,37 +110,65 @@
       return new Date(Number(year), monthIndex, Number(day)).getTime();
     };
 
+    const buildPostHref = (post) => {
+      const rawSlug = String(post?.slug || '').trim();
+      const normalizedSlug = rawSlug
+        .replace(/^\/?blog\//, '')
+        .replace(/^\//, '');
+      if (!normalizedSlug) return '';
+      return `/blog/${normalizedSlug}`;
+    };
+
+    const filterExistingPosts = async (posts) => {
+      const checks = await Promise.all(posts.map(async (post) => {
+        const href = buildPostHref(post);
+        if (!href) return null;
+
+        try {
+          const exists = await fetch(href, { method: 'HEAD', cache: 'no-store' });
+          if (!exists.ok) return null;
+          return { ...post, href };
+        } catch (error) {
+          return null;
+        }
+      }));
+
+      return checks.filter(Boolean);
+    };
+
     const buildHtml = (post) => `
       <div class="post-item">
         <span class="data-categoria">${post.data} · ${post.categoria}</span>
         <h3>${post.titulo}</h3>
         <p>${post.excerpt}</p>
-        <a href="/blog/${post.slug}">Ler artigo →</a>
+        <a href="${post.href || buildPostHref(post)}">Ler artigo →</a>
       </div>
     `;
 
     try {
-      const response = await fetch('/blog/posts.json', { cache: 'force-cache' });
+      const response = await fetch('/blog/posts.json', { cache: 'no-store' });
       if (!response.ok) throw new Error('Falha ao carregar posts.json');
       const data = await response.json();
       const posts = Array.isArray(data)
         ? data.slice().sort((a, b) => parseDate(b.data) - parseDate(a.data))
         : [];
 
-      console.log('Lista renderizada:', posts);
+      const safePosts = await filterExistingPosts(posts);
 
-      if (!posts.length) {
+      console.log('Lista renderizada:', safePosts);
+
+      if (!safePosts.length) {
         fallback(homeContainer);
         fallback(allContainer);
         return;
       }
 
       if (homeContainer) {
-        homeContainer.innerHTML = posts.slice(0, 3).map(buildHtml).join('');
+        homeContainer.innerHTML = safePosts.slice(0, 3).map(buildHtml).join('');
       }
 
       if (allContainer) {
-        allContainer.innerHTML = posts.map(buildHtml).join('');
+        allContainer.innerHTML = safePosts.map(buildHtml).join('');
       }
     } catch (error) {
       console.error('Erro ao renderizar posts:', error);
