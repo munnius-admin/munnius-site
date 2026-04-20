@@ -1,5 +1,26 @@
 [
-  {"slug":"operacao-em-90-dias","title":"Plano em 90 dias para organizar sua operação","excerpt":"Do diagnóstico ao rito semanal: o roteiro que usamos para destravar resultados com time enxuto e muita clareza.","published":"2025-01-20","readingMinutes":7,"tags":["Operações","Processos","Gestão"]},
-  {"slug":"playbook-atendimento-ia","title":"Playbook de atendimento com IA para pequenas equipes","excerpt":"Modelos de mensagens, integrações com n8n e métricas essenciais para atender bem sem aumentar o time.","published":"2024-12-12","readingMinutes":5,"tags":["Atendimento","IA","Automação"]},
-  {"slug":"como-ia-transforma-processos","title":"Como a IA transforma processos sem virar burocracia","excerpt":"Passo a passo para mapear gargalos, priorizar automações e manter a operação leve enquanto a IA assume tarefas repetitivas.","published":"2025-02-05","readingMinutes":6,"tags":["Processos","IA","Automação"]}
+  {
+    "titulo": "Operação em 90 dias: priorize sem travar o time",
+    "slug": "operacao-em-90-dias.html",
+    "data": "02 Abr 2026",
+    "categoria": "Operações",
+    "excerpt": "Como estruturar backlog, cadência e indicadores para acelerar entregas sem criar burocracia.",
+    "readTime": "7 min"
+  },
+  {
+    "titulo": "Playbook de atendimento com IA para PMEs",
+    "slug": "playbook-ia-atendimento.html",
+    "data": "25 Mar 2026",
+    "categoria": "IA aplicada",
+    "excerpt": "Fluxos que reduzem tempo de resposta e aumentam consistência operacional.",
+    "readTime": "5 min"
+  },
+  {
+    "titulo": "Como IA transforma processos sem burocracia",
+    "slug": "ia-processos-sem-burocracia.html",
+    "data": "18 Mar 2026",
+    "categoria": "Gestão",
+    "excerpt": "Casos diretos para ganhar visibilidade e controle em áreas críticas.",
+    "readTime": "6 min"
+  }
 ]
