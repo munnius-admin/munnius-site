@@ -36,9 +36,6 @@
     .post-item p { margin: 0; color: #2f2f2f; line-height: 1.6; }
     .post-item a { color: #0B57D0; text-decoration: none; font-weight: 500; align-self: flex-start; }
     .post-item a:hover { text-decoration: underline; }
-    .owner-instructions { margin-top: 30px; padding: 18px; background: #f5f5f5; border-left: 4px solid #0B57D0; border-radius: 8px; }
-    .owner-instructions h3 { margin: 0 0 10px; font-size: 1rem; }
-    .owner-instructions ol { margin: 0; padding-left: 18px; color: #333; }
     #site-footer { background: #0D0F12; padding: 72px 80px 40px; border-top: 1px solid rgba(200,240,74,.12); }
     .footer-top { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 32px; }
     .footer-brand p { font-size: 14px; color: #5F5E5A; line-height: 1.7; }
@@ -78,14 +75,6 @@
   <section class="section">
     <div class="container">
       <div id="blog-posts-all" class="posts-list" aria-live="polite"></div>
-      <aside class="owner-instructions" aria-label="Como publicar novo post">
-        <h3>Novo post</h3>
-        <ol>
-          <li>Crie <code>/blog/[data-slug].html</code> com layout EXATO do exemplo (breadcrumb, autor, seções).</li>
-          <li>Adicione uma nova entrada em <code>/blog/posts.json</code>.</li>
-          <li>Faça upload via GitHub/FTP e recarregue a página para atualização automática.</li>
-        </ol>
-      </aside>
     </div>
   </section>
 </main>
