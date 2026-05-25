@@ -123,11 +123,11 @@
           <input type="hidden" name="_subject" value="Novo contato pelo site Munnius" />
           <input type="hidden" name="_captcha" value="false" />
           <input type="hidden" name="_template" value="table" />
-          <input type="hidden" name="_next" value="https://munnius.com.br/obrigado.html" />
           <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="sr-only" aria-hidden="true" />
           <button type="submit" class="btn btn-primary btn-full">Enviar diagnóstico</button>
           <p class="form-note">Retorno em até 72 horas. Sem spam, sem compromisso.</p>
         </form>
+        <div id="form-status" class="form-message" role="status" aria-live="polite" hidden></div>
       </div>
     </div>
   </section>
@@ -144,11 +144,69 @@
 <script src="assets/mobile-menu.js" defer></script>
 <script>
   const contatoForm = document.getElementById('contato-form');
-  contatoForm?.addEventListener('submit', () => {
+  const formStatus = document.getElementById('form-status');
+
+  const showFormStatus = (type, title, message) => {
+    if (!formStatus) return;
+    formStatus.hidden = false;
+    formStatus.className = `form-message ${type}`;
+    formStatus.innerHTML = `<strong>${title}</strong><span>${message}</span>`;
+  };
+
+  const buildMailtoFallback = (form) => {
+    const data = Object.fromEntries(new FormData(form).entries());
+    const subject = encodeURIComponent('Novo contato pelo site Munnius');
+    const body = encodeURIComponent([
+      `Nome: ${data.nome || ''}`,
+      `Empresa: ${data.empresa || ''}`,
+      `E-mail: ${data.email || ''}`,
+      `Telefone: ${data.telefone || ''}`,
+      `Cargo: ${data.cargo || ''}`,
+      '',
+      'Mensagem:',
+      data.mensagem || ''
+    ].join('\n'));
+    return `mailto:contato@munnius.com.br?subject=${subject}&body=${body}`;
+  };
+
+  contatoForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
     const submitButton = contatoForm.querySelector('button[type="submit"]');
-    if (!submitButton) return;
-    submitButton.disabled = true;
-    submitButton.textContent = 'Enviando diagnóstico...';
+    const originalLabel = submitButton?.textContent || 'Enviar diagnóstico';
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Enviando diagnóstico...';
+    }
+    if (formStatus) formStatus.hidden = true;
+
+    try {
+      const response = await fetch('https://formsubmit.co/ajax/contato@munnius.com.br', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: new FormData(contatoForm)
+      });
+
+      if (!response.ok) throw new Error('FormSubmit unavailable');
+
+      contatoForm.reset();
+      showFormStatus(
+        'success',
+        'Mensagem enviada. Obrigado por confiar o contexto.',
+        'Recebi seu diagnóstico inicial e retorno em até 72 horas úteis com uma primeira leitura do cenário.'
+      );
+    } catch (error) {
+      window.location.href = buildMailtoFallback(contatoForm);
+      showFormStatus(
+        'fallback',
+        'Não consegui enviar automaticamente agora.',
+        'Abri um e-mail pré-preenchido para contato@munnius.com.br. É só revisar e enviar por lá para garantir que sua mensagem chegue.'
+      );
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalLabel;
+      }
+    }
   });
 </script>
 </body>

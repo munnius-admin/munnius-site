@@ -65,7 +65,6 @@ def html_pages() -> list[Path]:
         ROOT / "sobre.html",
         ROOT / "servicos.html",
         ROOT / "contato.html",
-        ROOT / "obrigado.html",
         ROOT / "blog" / "index.html",
     ] + sorted((ROOT / "blog").glob("20*.html"))
 
