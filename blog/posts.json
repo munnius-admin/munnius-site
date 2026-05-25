@@ -1,5 +1,13 @@
 [
   {
+    "titulo": "Checklist de cenários de teste com IA para implantação SaaS",
+    "slug": "2026-05-25-checklist-cenarios-teste-ia.html",
+    "data": "25 Mai 2026",
+    "categoria": "IA aplicada",
+    "excerpt": "Um checklist prático para usar IA na criação de cenários de teste em onboarding, implantação SaaS e homologação.",
+    "readTime": "8 min"
+  },
+  {
     "titulo": "IA na gestão de projetos: como gerar cenários de teste melhores",
     "slug": "2026-05-24-ia-gestao-projetos-cenarios-de-teste.html",
     "data": "24 Mai 2026",
@@ -8,12 +16,12 @@
     "readTime": "11 min"
   },
   {
-    "titulo": "O que é PMO e para que serve Guia para PMEs brasileiras",
-    "slug": "2026-04-20-o-que-e-pmo-para-pmes.html",
-    "data": "20 Abr 2026",
+    "titulo": "O que é ERP e melhores opções para PMEs no Brasil",
+    "slug": "2026-04-25-o-que-e-erp-para-pmes-brasil.html",
+    "data": "25 Abr 2026",
     "categoria": "Gestão",
-    "excerpt": "PMO organiza projetos em PMEs sem burocracia: evite atrasos, desperdício e falta de visibilidade.",
-    "readTime": "8 min"
+    "excerpt": "ERP integra vendas, estoque, financeiro e operação. Veja opções e cuidados para implantar sem trauma.",
+    "readTime": "10 min"
   },
   {
     "titulo": "O que é Agile e como aplicar em PMEs brasileiras?",
@@ -24,11 +32,11 @@
     "readTime": "9 min"
   },
   {
-    "titulo": "O que é ERP e melhores opções para PMEs no Brasil",
-    "slug": "2026-04-25-o-que-e-erp-para-pmes-brasil.html",
-    "data": "25 Abr 2026",
+    "titulo": "O que é PMO e para que serve Guia para PMEs brasileiras",
+    "slug": "2026-04-20-o-que-e-pmo-para-pmes.html",
+    "data": "20 Abr 2026",
     "categoria": "Gestão",
-    "excerpt": "ERP integra vendas, estoque, financeiro e operação. Veja opções e cuidados para implantar sem trauma.",
-    "readTime": "10 min"
+    "excerpt": "PMO organiza projetos em PMEs sem burocracia: evite atrasos, desperdício e falta de visibilidade.",
+    "readTime": "8 min"
   }
 ]
