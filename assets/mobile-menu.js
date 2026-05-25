@@ -1,4 +1,6 @@
 (() => {
+  document.body.classList.add('reveal-ready');
+
   const header = document.getElementById('site-header');
   const toggle = document.querySelector('#site-header .menu-toggle');
   const navLinks = document.querySelectorAll('#site-header nav a');
@@ -44,7 +46,7 @@
     const isOpen = header.classList.toggle('nav-open');
     document.body.classList.toggle('no-scroll', isOpen);
     toggle.setAttribute('aria-expanded', String(isOpen));
-    toggle.setAttribute('aria-label', isOpen  'Fechar menu' : 'Abrir menu');
+    toggle.setAttribute('aria-label', isOpen ? 'Fechar menu' : 'Abrir menu');
   });
 
   navLinks.forEach((link) => {

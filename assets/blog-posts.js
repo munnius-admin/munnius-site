@@ -47,7 +47,7 @@
 
   const buildHtml = (post) => `
     <article class="post-item reveal">
-      <span class="data-categoria">${post.data} · ${post.categoria}${post.readTime  ` · ${post.readTime}` : ''}</span>
+      <span class="data-categoria">${post.data} · ${post.categoria}${post.readTime ? ` · ${post.readTime}` : ''}</span>
       <h3>${post.titulo}</h3>
       <p>${post.excerpt}</p>
       <a href="${post.href || buildPostHref(post)}">Ler artigo</a>
@@ -65,7 +65,7 @@
     if (!response.ok) throw new Error('Falha ao carregar posts.json');
     const data = await response.json();
     const posts = Array.isArray(data)
-       data.slice().sort((a, b) => parseDate(b.data) - parseDate(a.data))
+      ? data.slice().sort((a, b) => parseDate(b.data) - parseDate(a.data))
       : [];
     const safePosts = await filterExistingPosts(posts);
 
@@ -87,7 +87,7 @@
         });
 
         allContainer.innerHTML = visiblePosts.length
-           visiblePosts.map(buildHtml).join('')
+          ? visiblePosts.map(buildHtml).join('')
           : '<div class="blog-empty">Nenhum artigo encontrado para esse filtro.</div>';
         syncReveal();
       };

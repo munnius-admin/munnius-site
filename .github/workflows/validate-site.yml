@@ -18,3 +18,8 @@ jobs:
 
       - name: Validate SEO, JSON-LD and encoding
         run: python scripts/validate_site.py
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check assets/mobile-menu.js
+          node --check assets/blog-posts.js

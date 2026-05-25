@@ -1600,11 +1600,15 @@ input:focus, textarea:focus {
 .footer-bottom p { color: rgba(251,250,247,.58); margin: 0; font-size: 13px; }
 
 .reveal {
-  opacity: 0;
-  transform: translateY(18px);
+  opacity: 1;
+  transform: translateY(0);
   transition: opacity 600ms cubic-bezier(.2,.8,.2,1), transform 600ms cubic-bezier(.2,.8,.2,1);
 }
-.reveal.is-visible { opacity: 1; transform: translateY(0); }
+body.reveal-ready .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+}
+body.reveal-ready .reveal.is-visible { opacity: 1; transform: translateY(0); }
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
