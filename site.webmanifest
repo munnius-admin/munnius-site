@@ -1,0 +1,21 @@
+{
+  "name": "Munnius",
+  "short_name": "Munnius",
+  "description": "Consultoria em AI Transformation para SaaS, onboarding, implantação, automação e processos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#15384A",
+  "theme_color": "#15384A",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

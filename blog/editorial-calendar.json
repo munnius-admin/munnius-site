@@ -1,0 +1,86 @@
+[
+  {
+    "cluster": "IA aplicada em implantação SaaS",
+    "keyword": "IA na gestão de projetos",
+    "title": "Como usar IA na gestão de projetos sem perder controle da implantação",
+    "intent": "informacional",
+    "cta": "Diagnóstico de IA aplicada ao onboarding"
+  },
+  {
+    "cluster": "IA aplicada em implantação SaaS",
+    "keyword": "cenários de teste com IA",
+    "title": "Checklist de cenários de teste com IA para implantação SaaS",
+    "intent": "prático",
+    "cta": "Baixar checklist de testes"
+  },
+  {
+    "cluster": "Onboarding SaaS B2B",
+    "keyword": "onboarding SaaS B2B",
+    "title": "O que um onboarding SaaS B2B precisa ter para escalar sem virar improviso",
+    "intent": "informacional",
+    "cta": "Mapear jornada de onboarding"
+  },
+  {
+    "cluster": "Onboarding SaaS B2B",
+    "keyword": "playbook de onboarding SaaS",
+    "title": "Playbook de onboarding SaaS: estrutura mínima para reduzir retrabalho",
+    "intent": "prático",
+    "cta": "Criar playbook com a Munnius"
+  },
+  {
+    "cluster": "Implantação SaaS",
+    "keyword": "implantação SaaS",
+    "title": "Implantação SaaS: como organizar marcos, riscos e dependências do cliente",
+    "intent": "informacional",
+    "cta": "Agendar diagnóstico de implantação"
+  },
+  {
+    "cluster": "Implantação SaaS",
+    "keyword": "go-live SaaS",
+    "title": "Go-live SaaS sem susto: critérios de aceite antes de colocar cliente em produção",
+    "intent": "prático",
+    "cta": "Revisar prontidão de go-live"
+  },
+  {
+    "cluster": "Change management",
+    "keyword": "change management em implantação",
+    "title": "Change management em implantação SaaS: como fazer cliente adotar de verdade",
+    "intent": "informacional",
+    "cta": "Plano de adoção e comunicação"
+  },
+  {
+    "cluster": "Change management",
+    "keyword": "adoção de software B2B",
+    "title": "Adoção de software B2B: por que treinamento sozinho não resolve",
+    "intent": "dor",
+    "cta": "Diagnosticar barreiras de adoção"
+  },
+  {
+    "cluster": "Operação e processos",
+    "keyword": "processos de customer success",
+    "title": "Como alinhar CS, Produto e Delivery durante uma implantação SaaS",
+    "intent": "prático",
+    "cta": "Mapear handoffs críticos"
+  },
+  {
+    "cluster": "Operação e processos",
+    "keyword": "indicadores de onboarding SaaS",
+    "title": "Indicadores de onboarding SaaS: o que medir além do prazo de implantação",
+    "intent": "informacional",
+    "cta": "Criar painel de onboarding"
+  },
+  {
+    "cluster": "ERP e integrações",
+    "keyword": "integração ERP SaaS",
+    "title": "Integração ERP em implantação SaaS: riscos que precisam aparecer cedo",
+    "intent": "informacional",
+    "cta": "Revisar riscos de integração"
+  },
+  {
+    "cluster": "ERP e integrações",
+    "keyword": "homologação ERP",
+    "title": "Homologação ERP: como evitar que regra fiscal apareça só no fim do projeto",
+    "intent": "dor",
+    "cta": "Estruturar matriz de homologação"
+  }
+]

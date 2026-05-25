@@ -1,10 +1,18 @@
 [
   {
-    "titulo": "O que é PMO e para que serve? Guia para PMEs brasileiras",
+    "titulo": "IA na gestão de projetos: como gerar cenários de teste melhores",
+    "slug": "2026-05-24-ia-gestao-projetos-cenarios-de-teste.html",
+    "data": "24 Mai 2026",
+    "categoria": "IA aplicada",
+    "excerpt": "Como usar IA para gerar cenários de teste, mapear riscos e acelerar homologações em implantações SaaS.",
+    "readTime": "11 min"
+  },
+  {
+    "titulo": "O que é PMO e para que serve Guia para PMEs brasileiras",
     "slug": "2026-04-20-o-que-e-pmo-para-pmes.html",
     "data": "20 Abr 2026",
     "categoria": "Gestão",
-    "excerpt": "PMO organiza projetos em PMEs sem burocracia: evite atrasos e desperdício. Guia prático com exemplos BR.",
+    "excerpt": "PMO organiza projetos em PMEs sem burocracia: evite atrasos, desperdício e falta de visibilidade.",
     "readTime": "8 min"
   },
   {
@@ -12,7 +20,7 @@
     "slug": "2026-04-22-o-que-e-agile-para-pmes.html",
     "data": "22 Abr 2026",
     "categoria": "Operações",
-    "excerpt": "Agile flexível pra PMEs: entregas rápidas sem rigidez. Guia com exemplos e ferramentas BR.",
+    "excerpt": "Agile aplicado de forma simples para criar entregas rápidas, feedback constante e menos rigidez.",
     "readTime": "9 min"
   },
   {
@@ -20,7 +28,7 @@
     "slug": "2026-04-25-o-que-e-erp-para-pmes-brasil.html",
     "data": "25 Abr 2026",
     "categoria": "Gestão",
-    "excerpt": "ERP integra tudo em PMEs BR: TOTVS, SAP, Bling. Guia com preços e cases reais.",
+    "excerpt": "ERP integra vendas, estoque, financeiro e operação. Veja opções e cuidados para implantar sem trauma.",
     "readTime": "10 min"
   }
 ]

@@ -3,138 +3,285 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Munnius | Projetos que saem do papel</title>
-  <meta name="description" content="Consultoria em gestão de projetos para médias empresas com governança enxuta e execução aplicada." />
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Munnius | AI Transformation para SaaS, Onboarding e Implantação</title>
+  <meta name="description" content="Consultoria em AI Transformation para SaaS, com foco em Onboarding, Implantação, automação e processos." />
+  <meta property="og:title" content="Munnius | AI Transformation para SaaS" />
+  <meta property="og:description" content="Onboarding, implantação e automação com método para empresas SaaS B2B." />
+  <meta property="og:image" content="https://munnius.com.br/og-image.png" />
+  <link rel="canonical" href="https://munnius.com.br/" />
+  <meta property="og:url" content="https://munnius.com.br/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Munnius | AI Transformation para SaaS" />
+  <meta name="twitter:description" content="Onboarding, implantação e automação com método para empresas SaaS B2B." />
+  <meta name="twitter:image" content="https://munnius.com.br/og-image.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#15384A" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *{box-sizing:border-box}body{margin:0;background:#0D0F12;color:#fff;font-family:'DM Sans',sans-serif}main{overflow:hidden}.container{max-width:1200px;margin:0 auto}
-    #site-header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 80px;height:68px;background:rgba(13,15,18,.92);backdrop-filter:blur(12px)}
-    #site-header nav{display:flex;gap:36px}#site-header nav a{font-size:14px;color:#888780;text-decoration:none}.header-logo{display:flex;align-items:center;gap:10px;text-decoration:none}.header-logo span{font-family:Georgia,serif;font-size:20px;color:#fff}.header-cta{background:#C8F04A;color:#0D0F12;padding:9px 20px;border-radius:4px;font-size:14px;font-weight:500;text-decoration:none}.menu-toggle{display:none}
-    .hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:80px;padding:120px 80px 80px}.hero-eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#C8F04A}.hero h1{font-family:Georgia,serif;font-size:clamp(44px,6vw,72px);font-weight:400;line-height:1.05;margin:14px 0}.hero-sub{font-size:18px;color:#888780;max-width:480px;line-height:1.7}.hero-clients{font-size:12px;color:#5F5E5A;margin-top:24px}.hero-image img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;filter:grayscale(20%)}
-    .hero-ctas{display:flex;gap:16px;flex-wrap:wrap}.btn-primary{background:#C8F04A;color:#0D0F12;padding:14px 28px;border-radius:4px;font-size:15px;font-weight:500;text-decoration:none}.btn-ghost{color:#fff;border:1px solid rgba(255,255,255,.25);padding:14px 28px;border-radius:4px;text-decoration:none}
-    .logos-marquee{background:#1E2228;padding:24px 0;border-top:1px solid rgba(200,240,74,.1);border-bottom:1px solid rgba(200,240,74,.1);overflow:hidden}.marquee-label{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#5F5E5A;text-align:center;margin-bottom:20px}.marquee-track-wrap{overflow:hidden;-webkit-mask-image:linear-gradient(to right,transparent 0%,black 10%,black 90%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,black 10%,black 90%,transparent 100%)}.marquee-track{display:flex;align-items:center;width:max-content;animation:marquee 28s linear infinite}.marquee-track:hover{animation-play-state:paused}.marquee-item{display:flex;align-items:center;justify-content:center;padding:0 28px;min-width:176px;white-space:nowrap}.marquee-item img{max-width:164px;max-height:32px;width:auto;height:auto;display:block;object-fit:contain;opacity:.95}.marquee-item img[src*='intelbras_logo']{max-width:184px;max-height:38px}.marquee-sep{color:rgba(200,240,74,.3);font-size:18px}
-    .services,.metodologia,.sobre,.resultados{padding:100px 80px}.services,.metodologia{background:#0D0F12}.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}.service-card{background:#1E2228;border:1px solid rgba(200,240,74,.1);padding:40px}.service-card p{color:#888780}.metodologia{position:relative;padding-top:124px;border-top:1px solid rgba(200,240,74,.2)}.metodologia::before{content:'';position:absolute;top:0;left:80px;right:80px;height:1px;background:linear-gradient(90deg,rgba(200,240,74,0),rgba(200,240,74,.42),rgba(200,240,74,0))}.metodologia h2,.services h2,.sobre h2{font-family:Georgia,serif;font-weight:400;font-size:clamp(32px,4vw,48px)}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}.step p{color:#888780}
-    .sobre{background:#F6F5F0;color:#0D0F12}.sobre-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}.sobre img{width:100%;border-radius:8px;aspect-ratio:4/5;object-fit:cover}
-    .resultados{background:#1E2228}.resultados-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(200,240,74,.08)}.resultado-item{background:#1E2228;padding:60px 48px}.resultado-num{font-family:Georgia,serif;font-size:clamp(48px,6vw,72px);color:#C8F04A}.resultado-label{color:#888780}
-    .depoimentos{background:#F6F5F0;padding:100px 80px}.eyebrow-label{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#888780}.depoimentos h2{font-family:Georgia,serif;font-size:clamp(28px,3.5vw,44px);font-weight:400;color:#0D0F12;max-width:560px;margin-bottom:56px}.depo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}.depo-card{background:#fff;border:1px solid #D3D1C7;border-radius:12px;padding:36px;display:flex;flex-direction:column;gap:28px}.depo-texto{font-family:Georgia,serif;font-size:17px;color:#1E2228;line-height:1.65;font-style:italic}.depo-texto::before{content:'\201C'}.depo-autor{display:flex;align-items:center;gap:14px}.depo-avatar{width:40px;height:40px;border-radius:50%;background:#0D0F12;color:#C8F04A;font-size:13px;display:flex;align-items:center;justify-content:center}.depo-autor strong{display:block;color:#0D0F12;font-weight:600}.depo-autor span{display:block;margin-top:6px;color:#5F5E5A;line-height:1.4}
-    .fotos-clientes{background:#0D0F12;padding:100px 80px}.fotos-clientes h2{font-family:Georgia,serif;font-size:clamp(28px,3.5vw,44px);font-weight:400;color:#fff;margin-bottom:48px}.fotos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.foto-item{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/5}.foto-item img{width:100%;height:100%;object-fit:cover;filter:grayscale(30%) brightness(.85);transition:.4s}.foto-item:hover img{filter:grayscale(0%) brightness(1);transform:scale(1.04)}.foto-overlay{position:absolute;bottom:0;left:0;right:0;padding:20px 16px 16px;background:linear-gradient(to top,rgba(13,15,18,.85),transparent);opacity:0;transition:.3s}.foto-item:hover .foto-overlay{opacity:1}.foto-overlay span{font-size:13px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#C8F04A}
-    .blog-preview{background:#F6F5F0;padding:100px 80px}.blog-preview-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:48px;gap:24px;flex-wrap:wrap}.blog-preview-header h2{font-family:Georgia,serif;font-size:clamp(26px,3vw,38px);font-weight:400;color:#0D0F12;max-width:440px}.btn-ghost-dark{font-size:14px;color:#0D0F12;border:1px solid rgba(13,15,18,.3);padding:10px 20px;border-radius:4px;text-decoration:none}.blog-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.blog-card{background:#fff;border:1px solid #D3D1C7;border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:16px}.blog-meta{display:flex;gap:12px;font-size:12px;color:#888780}.blog-cat{background:#0D0F12;color:#C8F04A;padding:3px 9px;border-radius:2px;font-size:11px}.blog-card h3{font-family:Georgia,serif;font-size:20px;font-weight:400;color:#0D0F12}.blog-card p{font-size:14px;color:#5F5E5A;line-height:1.6;flex:1}.blog-link{font-size:13px;font-weight:500;color:#C8F04A;background:#0D0F12;padding:8px 16px;border-radius:4px;text-decoration:none;align-self:flex-start}.post-item{background:#fff;border:1px solid #D3D1C7;border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:14px}.post-item .data-categoria{font-size:12px;color:#5F5E5A;letter-spacing:.04em;text-transform:uppercase}.post-item h3{font-family:Georgia,serif;font-size:20px;font-weight:400;color:#0D0F12;margin:0}.post-item p{font-size:14px;color:#5F5E5A;line-height:1.6;margin:0}.post-item a{font-size:13px;font-weight:500;color:#0B57D0;text-decoration:none;align-self:flex-start}.post-item a:hover{text-decoration:underline}
-    .cta-final{background:#C8F04A;color:#0D0F12;padding:100px 80px;text-align:center}.cta-final h2{font-family:Georgia,serif;font-size:clamp(32px,5vw,56px);font-weight:400}.btn-dark{background:#0D0F12;color:#C8F04A;padding:16px 36px;border-radius:4px;text-decoration:none;display:inline-block}
-    #site-footer{background:#0D0F12;padding:72px 80px 40px;border-top:1px solid rgba(200,240,74,.12)}.footer-top{display:grid;grid-template-columns:1fr 1fr;gap:80px;padding-bottom:48px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:32px}.footer-links{display:grid;grid-template-columns:1fr 1fr;gap:40px}.footer-brand p,.footer-bottom p,.footer-bottom a{color:#888780;text-decoration:none}.footer-links strong{display:block;font-size:11px;color:#5F5E5A;margin-bottom:14px}.footer-links a{display:block;font-size:14px;color:#888780;text-decoration:none;margin-bottom:10px}.footer-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-    @media(max-width:768px){#site-header{padding:0 24px}#site-header nav,.header-cta{display:none}.menu-toggle{display:flex;flex-direction:column;gap:5px;background:none;border:none}.menu-toggle span{width:22px;height:1.5px;background:#fff;display:block}.hero,.services,.metodologia,.sobre,.resultados,.depoimentos,.fotos-clientes,.blog-preview,.cta-final{padding:60px 24px}.metodologia{padding-top:76px}.metodologia::before{left:24px;right:24px}.hero,.sobre-grid,.services-grid,.steps,.resultados-grid,.depo-grid,.blog-grid{grid-template-columns:1fr}.fotos-grid{grid-template-columns:repeat(2,1fr)}#site-footer{padding:48px 24px 32px}.footer-top{grid-template-columns:1fr}.footer-bottom{flex-direction:column;text-align:center}.blog-preview-header{flex-direction:column;align-items:flex-start}}
-  </style>
-  <link rel="stylesheet" href="assets/mobile-menu.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+  <link rel="stylesheet" href="assets/mobile-menu.css" />
+
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://munnius.com.br/#organization",
+    "name": "Munnius",
+    "url": "https://munnius.com.br/",
+    "logo": "https://munnius.com.br/assets/brand/munnius-logo.png",
+    "email": "contato@munnius.com.br",
+    "sameAs": [
+      "https://linkedin.com/in/grmunhoz",
+      "https://youtube.com/@by.munnius",
+      "https://instagram.com/by.munnius"
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://munnius.com.br/#website",
+    "name": "Munnius",
+    "url": "https://munnius.com.br/",
+    "publisher": {
+      "@id": "https://munnius.com.br/#organization"
+    },
+    "inLanguage": "pt-BR"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "@id": "https://munnius.com.br/#service",
+    "name": "Munnius Consultoria",
+    "url": "https://munnius.com.br/",
+    "description": "Consultoria em AI Transformation para SaaS, onboarding, implanta o, automa o e processos.",
+    "areaServed": "BR",
+    "serviceType": [
+      "AI Transformation",
+      "Onboarding SaaS",
+      "Implanta o SaaS",
+      "Automa o de processos",
+      "Gest?o de mudan?a"
+    ]
+  }
+]
+  </script>
 </head>
 <body>
-<header id="site-header"><a href="index.html" class="header-logo"><svg width="28" height="28" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="10" fill="#C8F04A"/><path d="M11 44 L11 12 L28 34 L45 12 L45 44" stroke="#0D0F12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span>munnius</span></a><nav><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a></nav><a href="contato.html" class="header-cta">Agendar conversa →</a><button class="menu-toggle" aria-label="Menu"><span></span><span></span><span></span></button></header>
+<header id="site-header">
+  <a href="index.html" class="header-logo" aria-label="Munnius"><img src="assets/brand/munnius-logo.png" alt="Munnius" /></a>
+  <nav aria-label="Navegação principal"><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a></nav>
+  <a href="contato.html" class="header-cta">Agendar diagnóstico</a>
+  <button class="menu-toggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+</header>
+
 <main>
-<section class="hero"><div><p class="hero-eyebrow">Gabriel Munhoz · Consultor</p><h1>Projetos que saem<br>do papel.</h1><p class="hero-sub">Estruturamos portfólios, alinhamos times e criamos governança enxuta para médias empresas que precisam de previsibilidade sem perder agilidade.</p><div class="hero-ctas"><a href="contato.html" class="btn-primary">Agendar diagnóstico gratuito →</a><a href="#metodologia" class="btn-ghost">Ver metodologia</a></div></div><div class="hero-image"><img src="assets/foto_munhoz.jpg" alt="Gabriel Munhoz"/></div></section>
-<section class="logos-marquee"><p class="marquee-label">Experiência aplicada em:</p><div class="marquee-track-wrap"><div class="marquee-track"><span class="marquee-item"><img src="assets/johndeere_logo.png" alt="Logo John Deere" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/viveo_logo.png" alt="Logo Viveo" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/nutrien_logo.png" alt="Logo Nutrien" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/iveco_logo.png" alt="Logo Iveco" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/vale_logo.png" alt="Logo Vale" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/azul_logo.png" alt="Logo Azul" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/intelbras_logo.png" alt="Logo Intelbras" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/johndeere_logo.png" alt="Logo John Deere" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/viveo_logo.png" alt="Logo Viveo" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/nutrien_logo.png" alt="Logo Nutrien" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/iveco_logo.png" alt="Logo Iveco" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/vale_logo.png" alt="Logo Vale" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/azul_logo.png" alt="Logo Azul" loading="lazy"></span><span class="marquee-sep">·</span><span class="marquee-item"><img src="assets/intelbras_logo.png" alt="Logo Intelbras" loading="lazy"></span><span class="marquee-sep">·</span></div></div></section>
-<section class="services" id="servicos"><h2>Consultorias desenhadas para médias empresas.</h2><div class="services-grid"><article class="service-card"><h3>Gestão de Projetos & PMO</h3><p>Roadmap trimestral, governança e execução orientada a resultado.</p></article><article class="service-card"><h3>Consultoria Empresarial</h3><p>Mapeamento de processos, KPIs e melhoria contínua.</p></article><article class="service-card"><h3>Automação & Inteligência</h3><p>Dashboards executivos e automação com IA aplicada.</p></article></div></section>
-<section class="metodologia" id="metodologia"><h2>Metodologia de execução orientada a resultado.</h2><div class="steps"><div class="step"><h3>01 Diagnóstico</h3><p>Levantamento de gargalos, prioridades e impacto financeiro.</p></div><div class="step"><h3>02 Plano de ação</h3><p>Ritos, metas e cadência de acompanhamento.</p></div><div class="step"><h3>03 Execução</h3><p>Implementação com ajustes rápidos e acompanhamento.</p></div><div class="step"><h3>04 Evolução</h3><p>Capacitação interna para sustentar ganhos.</p></div></div></section>
-<section class="sobre" id="sobre"><div class="sobre-grid"><img src="assets/foto_reuniao.jpg" alt="Gabriel em reunião" onerror="this.src='assets/foto_cliente_iveco.jpg'"/><div><p class="eyebrow-label">Sobre</p><h2>Consultoria com visão de negócio e execução aplicada.</h2><p>Gabriel Munhoz é engenheiro de produção com MBA em Gestão de Projetos, liderando implantações enterprise SaaS em operações complexas.</p></div></div></section>
-<section class="resultados" id="resultados"><div class="resultados-grid"><div class="resultado-item"><div class="resultado-num">+30%</div><p class="resultado-label">redução média de retrabalho</p></div><div class="resultado-item"><div class="resultado-num">6 sem</div><p class="resultado-label">para implantar ritos e indicadores</p></div><div class="resultado-item"><div class="resultado-num">100%</div><p class="resultado-label">visibilidade executiva dos projetos</p></div><div class="resultado-item"><div class="resultado-num">72h</div><p class="resultado-label">para diagnóstico inicial</p></div></div></section>
-<section class="depoimentos"><div class="container"><p class="eyebrow-label">O que dizem</p><h2>Quem trabalhou comigo fala por mim.</h2><div class="depo-grid"><div class="depo-card"><p class="depo-texto">"Gabriel, pela sua dedicação, inteligência, competência e vontade de aprender e ensinar. Te desejo muito sucesso na sua carreira."</p><div class="depo-autor"><div class="depo-avatar">AF</div><div><strong>Ayrton Filho, PMP</strong><span>Product Owner · SCRUM Alliance</span></div></div></div><div class="depo-card"><p class="depo-texto">"Você é um grande profissional e faz muito diferença no projeto. Obrigada pela parceria e continuamos juntos em 2025."</p><div class="depo-autor"><div class="depo-avatar">SA</div><div><strong>Silvana Antônia da Silva</strong><span>Cliente · Projeto enterprise</span></div></div></div><div class="depo-card"><p class="depo-texto">"Parabéns e obrigado Munhoz! Você faz a diferença!"</p><div class="depo-autor"><div class="depo-avatar">PD</div><div><strong>Pedro Dias</strong><span>Gerente Financeiro · SAP S4</span></div></div></div><div class="depo-card"><p class="depo-texto">"Agradeço imensamente por ter tido a oportunidade de te conhecer — alguém de coração generoso, inteligente, amável e dotado de muitas qualidades."</p><div class="depo-autor"><div class="depo-avatar">EN</div><div><strong>Eduardo Neves</strong><span>Líder Técnico · Análise Funcional</span></div></div></div></div></div></section>
-<section class="fotos-clientes"><div class="container"><p class="eyebrow-label">Presença nas empresas</p><h2>Projetos reais, equipes reais.</h2><div class="fotos-grid"><div class="foto-item"><img src="assets/foto_cliente_vale.jpg" alt="Equipe do projeto Vale"/><div class="foto-overlay"><span>Vale</span></div></div><div class="foto-item"><img src="assets/foto_cliente_iveco.jpg" alt="Equipe Iveco Group"/><div class="foto-overlay"><span>Iveco Group</span></div></div><div class="foto-item"><img src="assets/foto_cliente_vale_2.jpg" alt="Equipe Vale - cliente"/><div class="foto-overlay"><span>Vale</span></div></div><div class="foto-item"><img src="assets/foto_cliente_iusa.jpg" alt="Cliente Azul"/><div class="foto-overlay"><span>Azul</span></div></div></div></div></section>
-<section class="blog-preview"><div class="container"><div class="blog-preview-header"><div><p class="eyebrow-label">Blog</p><h2>Conteúdo prático para líderes de operação.</h2></div><a href="blog/index.html" class="btn-ghost-dark">Ver todos os artigos →</a></div><div id="blog-posts-home" class="blog-grid" aria-live="polite"></div></div></section>
-<section class="cta-final"><h2>Pronto para destravar seus projetos?</h2><p>Agende um diagnóstico gratuito e receba um plano inicial em até 72 horas.</p><a href="contato.html" class="btn-dark">Agendar conversa →</a></section>
-</main>
-<footer id="site-footer"><div class="footer-top"><div class="footer-brand"><a href="index.html" class="header-logo" style="margin-bottom:12px;display:flex;"><svg width="24" height="24" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="10" fill="#C8F04A"/><path d="M11 44 L11 12 L28 34 L45 12 L45 44" stroke="#0D0F12" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span style="font-family:Georgia,serif;font-size:18px;color:#fff;margin-left:10px;">munnius</span></a><p>Consultoria em gestão de projetos<br>e automação para médias empresas.</p></div><div class="footer-links"><div><strong>Site</strong><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a><a href="contato.html">Contato</a></div><div><strong>Contato</strong><a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a><a href="https://linkedin.com/in/grmunhoz" target="_blank">LinkedIn</a><a href="https://youtube.com/@by.munnius" target="_blank">YouTube</a><a href="https://instagram.com/by.munnius" target="_blank">Instagram</a></div></div></div><div class="footer-bottom"><p>© 2025 Munnius Consultoria — Todos os direitos reservados</p></div></footer>
-<script>const header=document.getElementById('site-header');window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60)});</script>
-<script>
-  (async function renderBlogPosts() {
-    const homeContainer = document.getElementById('blog-posts-home');
-    const allContainer = document.getElementById('blog-posts-all');
-    if (!homeContainer && !allContainer) return;
-
-    const fallback = (container) => {
-      if (!container) return;
-      container.innerHTML = '<div class="post-item"><span class="data-categoria">Blog</span><h3>Posts em breve</h3><p>Novos conteúdos serão publicados em breve.</p></div>';
-    };
-
-    const monthMap = {
-      jan: 0, fev: 1, mar: 2, abr: 3, mai: 4, jun: 5,
-      jul: 6, ago: 7, set: 8, out: 9, nov: 10, dez: 11
-    };
-
-    const parseDate = (value) => {
-      if (!value) return 0;
-      const [day, month, year] = value.trim().toLowerCase().split(/\s+/);
-      const monthIndex = monthMap[month];
-      if (!day || monthIndex === undefined || !year) return 0;
-      return new Date(Number(year), monthIndex, Number(day)).getTime();
-    };
-
-    const buildPostHref = (post) => {
-      const rawSlug = String(post?.slug || '').trim();
-      const normalizedSlug = rawSlug
-        .replace(/^\/?blog\//, '')
-        .replace(/^\//, '');
-      if (!normalizedSlug) return '';
-      return `/blog/${normalizedSlug}`;
-    };
-
-    const filterExistingPosts = async (posts) => {
-      const checks = await Promise.all(posts.map(async (post) => {
-        const href = buildPostHref(post);
-        if (!href) return null;
-
-        try {
-          const exists = await fetch(href, { method: 'HEAD', cache: 'no-store' });
-          if (!exists.ok) return null;
-          return { ...post, href };
-        } catch (error) {
-          return null;
-        }
-      }));
-
-      return checks.filter(Boolean);
-    };
-
-    const buildHtml = (post) => `
-      <div class="post-item">
-        <span class="data-categoria">${post.data} · ${post.categoria}</span>
-        <h3>${post.titulo}</h3>
-        <p>${post.excerpt}</p>
-        <a href="${post.href || buildPostHref(post)}">Ler artigo →</a>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy reveal">
+        <p class="badge">AI Transformation • SaaS • Onboarding</p>
+        <h1>IA, onboarding e implantação com <span class="highlight-pill">método</span> para SaaS B2B.</h1>
+        <p class="hero-sub">Ajudo empresas SaaS a transformar processos, acelerar onboarding e estruturar implantações com tecnologia, automação e governança leve.</p>
+        <div class="hero-ctas">
+          <a href="contato.html" class="btn btn-primary">Agendar diagnóstico</a>
+          <a href="#metodologia" class="btn btn-ghost">Ver abordagem</a>
+        </div>
       </div>
-    `;
+      <div class="hero-visual reveal">
+        <img class="hero-photo" src="assets/foto_munhoz.jpg" alt="Gabriel Munhoz, consultor Munnius" />
+        <div class="hero-panel">
+          <img src="assets/brand/munnius-mark.png" alt="" aria-hidden="true" />
+          <strong>Transformação guiada para operações SaaS que precisam implantar melhor.</strong>
+          <div class="hero-pills"><span class="mini-pill">Implantação</span><span class="mini-pill">Onboarding</span><span class="mini-pill">Automação</span><span class="mini-pill">AI Ops</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    try {
-      const response = await fetch('/blog/posts.json', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Falha ao carregar posts.json');
-      const data = await response.json();
-      const posts = Array.isArray(data)
-        ? data.slice().sort((a, b) => parseDate(b.data) - parseDate(a.data))
-        : [];
+  <section class="section">
+    <div class="container logo-rail reveal">
+      <p class="eyebrow-label">Experiência aplicada em</p>
+      <div class="logo-grid">
+        <div class="logo-tile"><img src="assets/johndeere_logo.png" alt="John Deere" loading="lazy" /></div>
+        <div class="logo-tile"><img src="assets/viveo_logo.png" alt="Viveo" loading="lazy" /></div>
+        <div class="logo-tile"><img src="assets/nutrien_logo.png" alt="Nutrien" loading="lazy" /></div>
+        <div class="logo-tile"><img src="assets/iveco_logo.png" alt="Iveco" loading="lazy" /></div>
+        <div class="logo-tile"><img src="assets/vale_logo.png" alt="Vale" loading="lazy" /></div>
+        <div class="logo-tile"><img src="assets/azul_logo.png" alt="Azul" loading="lazy" /></div>
+        <div class="logo-tile"><img src="assets/intelbras_logo.png" alt="Intelbras" loading="lazy" /></div>
+      </div>
+    </div>
+    <div class="container trust-strip reveal">
+      <article class="trust-card is-lead"><strong>Trajetória em campo</strong><p>Experiência construída em implantação SaaS enterprise, eventos, clientes e operação real.</p></article>
+      <article class="trust-card"><strong>SAP · Oracle · Protheus</strong><span>Integrações ERP e fiscal</span></article>
+      <article class="trust-card"><strong>Vale · Nutrien · Viveo</strong><span>Contextos complexos de adoção</span></article>
+      <article class="trust-card"><strong>CS · Delivery · Produto</strong><span>Alinhamento entre áreas</span></article>
+    </div>
+  </section>
 
-      const safePosts = await filterExistingPosts(posts);
+  <section class="section section-light">
+    <div class="container proof-grid">
+      <img class="proof-photo reveal" src="assets/foto_munhoz-formal.jpg" alt="Gabriel Munhoz em foto profissional" loading="lazy" />
+      <div class="proof-copy">
+        <article class="proof-card card reveal"><p class="eyebrow">Para quem chegou pelo blog</p><h2>O conteúdo vem de prática em projetos, não de teoria solta.</h2><p>A Munnius existe para transformar esse repertório em consultoria objetiva: diagnóstico, estruturação de processos, gestão de mudança e uso inteligente de IA no onboarding e na implantação SaaS.</p></article>
+        <article class="disclosure-card reveal"><h3>Como a Munnius se conecta à minha trajetória na V360</h3><p>Atuo profissionalmente na V360 e a Munnius é minha frente independente de consultoria e assessoria. As experiências citadas vêm da minha trajetória em projetos SaaS enterprise, sempre respeitando confidencialidade, contratos e sem representar vínculo comercial com clientes ou empregadores.</p></article>
+        <article class="proof-card card reveal"><h3>Por que isso importa para um lead?</h3><p>Você não está contratando uma promessa abstrata de IA. Está conversando com alguém que já viveu implantação, teste, homologação, comunicação com cliente, recuperação de projeto e pressão de go-live.</p></article>
+      </div>
+    </div>
+  </section>
 
-      console.log('Lista renderizada:', safePosts);
+  <section class="section section-light" id="servicos">
+    <div class="container">
+      <div class="section-header reveal">
+        <div>
+          <p class="eyebrow">Foco de atuação</p>
+          <h2>AI Transformation aplicada ao onboarding e à implantação SaaS.</h2>
+        </div>
+        <a href="servicos.html" class="btn btn-ghost">Ver abordagem</a>
+      </div>
+      <div class="service-focus">
+        <article class="service-focus-card brand-surface reveal">
+          <p class="badge">Um foco, três frentes integradas</p>
+          <h3>Consultoria e assessoria para transformar onboarding e implantação em um sistema escalável.</h3>
+          <p>A Munnius combina IA aplicada, desenho de processos, gestão de mudança e relacionamento com clientes para SaaS B2B que precisam implantar melhor sem perder proximidade.</p>
+        </article>
+        <div class="service-system">
+          <article class="service-system-item reveal"><span>01</span><div><h3>AI Transformation com contexto</h3><p>Casos de uso de IA priorizados a partir da operação, não da ferramenta da moda.</p></div></article>
+          <article class="service-system-item reveal"><span>02</span><div><h3>Onboarding e implantação SaaS</h3><p>Jornadas, playbooks, ritos e indicadores para reduzir variação entre clientes.</p></div></article>
+          <article class="service-system-item reveal"><span>03</span><div><h3>Pessoas, relacionamento e change management</h3><p>Adoção guiada, comunicação clara e alinhamento entre CS, produto, delivery e cliente.</p></div></article>
+        </div>
+      </div>
+    </div>
+  </section>
 
-      if (!safePosts.length) {
-        fallback(homeContainer);
-        fallback(allContainer);
-        return;
-      }
+  <section class="section" id="metodologia">
+    <div class="container">
+      <div class="section-header reveal">
+        <div>
+          <p class="eyebrow">Abordagem</p>
+          <h2>Uma jornada clara para sair do diagnóstico e chegar na ativação.</h2>
+        </div>
+      </div>
+      <div class="journey">
+        <article class="card journey-step reveal"><h3>Mapear</h3><p>Entender gargalos, dados, ritos, ferramentas e experiência do cliente.</p></article>
+        <article class="card journey-step reveal"><h3>Priorizar</h3><p>Escolher casos de uso com impacto prático, esforço controlado e dono claro.</p></article>
+        <article class="card journey-step reveal"><h3>Ativar</h3><p>Criar playbooks, cadências e templates para implantação e onboarding.</p></article>
+        <article class="card journey-step reveal"><h3>Medir</h3><p>Acompanhar adoção, tempo de implantação, retrabalho e bloqueios.</p></article>
+        <article class="card journey-step reveal"><h3>Evoluir</h3><p>Automatizar com IA, treinar o time e transformar aprendizado em sistema.</p></article>
+      </div>
+    </div>
+  </section>
 
-      if (homeContainer) {
-        homeContainer.innerHTML = safePosts.slice(0, 3).map(buildHtml).join('');
-      }
+  <section class="section section-light" id="sobre">
+    <div class="container about-split">
+      <img class="about-photo reveal" src="assets/foto_cliente_iveco.jpg" alt="Gabriel em projeto com cliente" loading="lazy" />
+      <div class="reveal">
+        <p class="eyebrow">Sobre</p>
+        <h2>Consultoria com visão de produto, operação e execução aplicada.</h2>
+        <p>Gabriel Munhoz é engenheiro de produção com MBA em Gestão de Projetos, liderando implantações enterprise SaaS, integrações ERP e frentes de onboarding em operações complexas.</p>
+        <div class="tags"><span class="tag">SaaS B2B</span><span class="tag">Onboarding</span><span class="tag">Implantação</span><span class="tag">ERP integrations</span><span class="tag">AI Transformation</span><span class="tag">Automação</span></div>
+      </div>
+    </div>
+  </section>
 
-      if (allContainer) {
-        allContainer.innerHTML = safePosts.map(buildHtml).join('');
-      }
-    } catch (error) {
-      console.error('Erro ao renderizar posts:', error);
-      fallback(homeContainer);
-      fallback(allContainer);
-    }
-  })();
-</script>
-<script src="assets/mobile-menu.js" defer></script></body>
+  <section class="section">
+    <div class="container">
+      <div class="section-header reveal"><div><p class="eyebrow">Resultados</p><h2>Menos improviso. Mais método, dados e automação.</h2></div></div>
+      <div class="results-grid">
+        <div class="card result-card reveal"><span class="resultado-num">+30%</span><p>redução média de retrabalho</p></div>
+        <div class="card result-card reveal"><span class="resultado-num">6 sem</span><p>para implantar ritos e indicadores</p></div>
+        <div class="card result-card reveal"><span class="resultado-num">100%</span><p>visibilidade executiva dos projetos</p></div>
+        <div class="card result-card reveal"><span class="resultado-num">72h</span><p>para diagnóstico inicial</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-light">
+    <div class="container">
+      <div class="section-header reveal"><div><p class="eyebrow">Prova social com contexto</p><h2>O que líderes e colegas destacaram em projetos que participei.</h2></div></div>
+      <div class="quote-wall">
+        <article class="card quote-card reveal"><p>"Gabriel faz muita diferença no projeto. Obrigada pela parceria."</p><footer><strong>Silvana Antônia da Silva</strong><span>Gerente de Suprimentos da Vale durante projeto atendido</span></footer></article>
+        <article class="card quote-card reveal"><p>"Você faz a diferença."</p><footer><strong>Pedro Dias</strong><span>Ex-gerente de Recebimento Fiscal da Vale</span></footer></article>
+        <article class="card quote-card reveal"><p>"Foi a diferença entre o projeto entrar nos eixos e ser entregue, trazendo segurança, gestão, controle de testes e configuração."</p><footer><strong>Karine Costa</strong><span>Coordenadora Tributária da Nutrien</span></footer></article>
+        <article class="card quote-card reveal"><p>"Traz clareza para processos, boas práticas fiscais e gestão de mudança e homologação."</p><footer><strong>Fernanda Fugii</strong><span>Gerente de CSC da Viveo</span></footer></article>
+        <article class="card quote-card reveal"><p>"Dedicação, inteligência, competência e vontade de aprender e ensinar."</p><footer><strong>Ayrton Filho, PMP</strong><span>Gerente de Projetos no primeiro estágio na AMM Tecnologia</span></footer></article>
+        <article class="card quote-card reveal"><p>"Alguém generoso, inteligente, amável e dotado de muitas qualidades."</p><footer><strong>Eduardo Neves</strong><span>Líder de funcionais V360 em projeto suportado e controle</span></footer></article>
+      </div>
+      <p class="quote-note reveal">Depoimentos e comentários associados a projetos da trajetória profissional de Gabriel Munhoz. A Munnius atua como consultoria independente.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container brand-surface presence-panel reveal">
+      <div class="presence-intro">
+        <div><p class="eyebrow">Presença nas empresas</p><h2>Projetos reais, equipes reais, relacionamento no centro.</h2></div>
+        <div class="presence-stats">
+          <div class="presence-stat"><strong>ERP</strong><span>SAP, Oracle e Protheus</span></div>
+          <div class="presence-stat"><strong>B2B</strong><span>Implantação enterprise</span></div>
+          <div class="presence-stat"><strong>CS</strong><span>Onboarding e ativação</span></div>
+        </div>
+      </div>
+      <div class="fotos-grid">
+        <div class="foto-item"><img src="assets/foto_cliente_vale.jpg" alt="Equipe do projeto Vale" loading="lazy" /><div class="foto-overlay"><span>Vale</span></div></div>
+        <div class="foto-item"><img src="assets/foto_cliente_iveco.jpg" alt="Equipe Iveco Group" loading="lazy" /><div class="foto-overlay"><span>Iveco Group</span></div></div>
+        <div class="foto-item"><img src="assets/foto_cliente_vale_2.jpg" alt="Visita ao cliente Vale" loading="lazy" /><div class="foto-overlay"><span>Vale</span></div></div>
+        <div class="foto-item"><img src="assets/foto_cliente_iusa.jpg" alt="Visita ao cliente Azul" loading="lazy" /><div class="foto-overlay"><span>Azul</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-light">
+    <div class="container">
+      <div class="section-header reveal"><div><p class="eyebrow">Blog</p><h2>Insights práticos sobre SaaS, onboarding, implantação, IA e automação.</h2></div><a href="blog/index.html" class="btn btn-ghost">Ver todos os artigos</a></div>
+      <div id="blog-posts-home" class="blog-grid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="section home-secondary-cta" hidden>
+    <div class="container brand-surface cta-final reveal">
+      <div class="lead-path">
+        <div>
+          <p class="eyebrow">Da leitura para a ação</p>
+          <h2>Se algum artigo descreveu sua operação, vale conversar.</h2>
+          <p>O diagnóstico não começa vendendo solução. Ele começa organizando o problema: onde o onboarding trava, quem precisa mudar, quais dados faltam e onde IA pode ajudar sem virar distração.</p>
+        </div>
+        <div class="lead-steps">
+          <article class="lead-step"><span>1</span><div><h3>Você traz o contexto</h3><p>Produto, clientes, time, gargalos e momento da operação.</p></div></article>
+          <article class="lead-step"><span>2</span><div><h3>Eu organizo a leitura</h3><p>Processo, relacionamento, riscos, adoção e oportunidades de IA.</p></div></article>
+          <article class="lead-step"><span>3</span><div><h3>A gente define o primeiro movimento</h3><p>Um plano enxuto para sair da conversa com direção clara.</p></div></article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container cta-final brand-surface reveal">
+      <div class="cta-final-inner">
+        <div>
+          <p class="eyebrow">Diagnóstico</p>
+          <h2>Pronto para transformar onboarding e implantação com IA?</h2>
+          <p>Vamos identificar gargalos, relações críticas, oportunidades de automação e o primeiro movimento prático para sua operação SaaS.</p>
+        </div>
+        <a href="contato.html" class="btn btn-secondary">Agendar diagnóstico</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand"><a href="index.html"><img src="assets/brand/munnius-logo-light.png" alt="Munnius" /></a><p>AI Transformation para SaaS, Onboarding e Implantação.</p></div>
+    <div class="footer-links"><div><strong>Site</strong><a href="sobre.html">Sobre</a><a href="servicos.html">Serviços</a><a href="blog/index.html">Blog</a><a href="contato.html">Contato</a></div><div><strong>Contato</strong><a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a><a href="https://linkedin.com/in/grmunhoz" target="_blank" rel="noreferrer">LinkedIn</a><a href="https://youtube.com/@by.munnius" target="_blank" rel="noreferrer">YouTube</a><a href="https://instagram.com/by.munnius" target="_blank" rel="noreferrer">Instagram</a></div></div>
+  </div>
+  <div class="footer-bottom"><p>© 2026 Munnius Consultoria. Todos os direitos reservados.</p></div>
+</footer>
+<script src="assets/blog-posts.js" defer></script>
+<script src="assets/mobile-menu.js" defer></script>
+</body>
 </html>
