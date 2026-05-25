@@ -1079,7 +1079,29 @@ input:focus, textarea:focus {
   background: #fff;
 }
 .form-note { margin: 12px 0 0; text-align: center; font-size: 13px; color: var(--color-muted); }
-.form-success { display: none; padding: 48px 24px; text-align: center; }
+.form-success {
+  display: none;
+  min-height: 360px;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  padding: 52px 28px;
+  text-align: center;
+  border: 1px solid rgba(224, 177, 44, .36);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, #fff 0%, rgba(247, 217, 120, .14) 100%);
+  color: var(--color-primary);
+}
+.form-success h3 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.05;
+}
+.form-success p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--color-muted);
+}
 .form-message {
   margin-top: 18px;
   padding: 18px 20px;
@@ -1104,9 +1126,9 @@ input:focus, textarea:focus {
   border-color: rgba(224, 177, 44, .45);
   background: rgba(224, 177, 44, .12);
 }
-.form-message.fallback {
-  border-color: rgba(21, 56, 74, .22);
-  background: #fff;
+.form-message.error {
+  border-color: rgba(176, 55, 55, .26);
+  background: rgba(176, 55, 55, .08);
 }
 .contact-info { display: grid; gap: 16px; }
 .info-item { padding: 22px; }
