@@ -122,11 +122,12 @@
           <div class="field"><label for="mensagem">Como posso ajudar?</label><textarea id="mensagem" name="mensagem" rows="6" placeholder="Descreva brevemente o desafio de onboarding, implantação, automação ou processos..." required></textarea></div>
           <input type="hidden" name="_subject" value="Novo contato pelo site Munnius" />
           <input type="hidden" name="_captcha" value="false" />
+          <input type="hidden" name="_template" value="table" />
+          <input type="hidden" name="_next" value="https://munnius.com.br/obrigado.html" />
+          <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="sr-only" aria-hidden="true" />
           <button type="submit" class="btn btn-primary btn-full">Enviar diagnóstico</button>
           <p class="form-note">Retorno em até 72 horas. Sem spam, sem compromisso.</p>
         </form>
-        <div id="form-success" class="form-success"><h3>Mensagem recebida.</h3><p>Retorno em até 72h com uma leitura inicial do seu cenário.</p></div>
-        <div id="form-error" class="form-note" style="display:none;">Não foi possível enviar agora. Tente novamente em alguns minutos.</div>
       </div>
     </div>
   </section>
@@ -140,33 +141,15 @@
   </div>
   <div class="footer-bottom"><p>© 2026 Munnius Consultoria. Todos os direitos reservados.</p></div>
 </footer>
+<script src="assets/mobile-menu.js" defer></script>
 <script>
   const contatoForm = document.getElementById('contato-form');
-  const formSuccess = document.getElementById('form-success');
-  const formError = document.getElementById('form-error');
-  contatoForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    formError.style.display = 'none';
-    const submitButton = this.querySelector('button[type="submit"]');
-    const originalLabel = submitButton.textContent;
+  contatoForm?.addEventListener('submit', () => {
+    const submitButton = contatoForm.querySelector('button[type="submit"]');
+    if (!submitButton) return;
     submitButton.disabled = true;
-    submitButton.textContent = 'Enviando...';
-    try {
-      const response = await fetch('https://formsubmit.co/ajax/contato@munnius.com.br', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(new FormData(this).entries()))
-      });
-      if (!response.ok) throw new Error('Falha no envio');
-      this.style.display = 'none';
-      formSuccess.style.display = 'block';
-    } catch (error) {
-      formError.style.display = 'block';
-      submitButton.disabled = false;
-      submitButton.textContent = originalLabel;
-    }
+    submitButton.textContent = 'Enviando diagnóstico...';
   });
 </script>
-<script src="assets/mobile-menu.js" defer></script>
 </body>
 </html>

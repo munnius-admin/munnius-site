@@ -7,7 +7,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MOJIBAKE = re.compile(r"Ã|Â|â€¢|â†|âœ|â€|âŒ|�|gest\?o|diagn\?stico|Servi\?os|implanta\?\?")
+MOJIBAKE = re.compile(
+    "\u00c3|\u00c2|\u00e2\u20ac\u00a2|\u00e2\u2020|\u00e2\u0153|"
+    "\u00e2\u20ac|\u00e2\u0152|\ufffd|gest\\?o|diagn\\?stico|Servi\\?os|"
+    "implanta\\?\\?|implanta o|automa o|Gest\\?o|mudan\\?a"
+)
 
 
 class PageAudit(HTMLParser):
@@ -56,7 +60,14 @@ class PageAudit(HTMLParser):
 
 
 def html_pages() -> list[Path]:
-    return [ROOT / "index.html", ROOT / "sobre.html", ROOT / "servicos.html", ROOT / "contato.html", ROOT / "blog" / "index.html"] + sorted((ROOT / "blog").glob("20*.html"))
+    return [
+        ROOT / "index.html",
+        ROOT / "sobre.html",
+        ROOT / "servicos.html",
+        ROOT / "contato.html",
+        ROOT / "obrigado.html",
+        ROOT / "blog" / "index.html",
+    ] + sorted((ROOT / "blog").glob("20*.html"))
 
 
 def validate_mojibake() -> list[str]:
