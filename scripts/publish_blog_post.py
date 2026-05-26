@@ -271,6 +271,8 @@ def update_sitemap(posts: list[dict[str, str]]) -> None:
 def publish_next(target_date: date, dry_run: bool = False) -> str:
     candidates = []
     for path in sorted(DRAFTS_DIR.glob("*.md")):
+        if path.name.endswith(".published.md"):
+            continue
         text = path.read_text(encoding="utf-8")
         if not text.startswith("---\n"):
             continue
@@ -291,6 +293,8 @@ def publish_next(target_date: date, dry_run: bool = False) -> str:
     rendered = post_template(meta, html_body, slug, related)
     if dry_run:
         return f"Dry run: would publish {slug}"
+    if output.exists():
+        raise FileExistsError(f"Refusing to overwrite existing post: {output.relative_to(ROOT)}")
     output.write_text(rendered, encoding="utf-8")
     posts = update_posts_json(meta, slug)
     update_sitemap(posts)
