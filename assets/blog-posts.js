@@ -30,6 +30,14 @@
     return `/blog/${normalizedSlug}`;
   };
 
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[character]));
+
   const filterExistingPosts = async (posts) => {
     const checks = await Promise.all(posts.map(async (post) => {
       const href = buildPostHref(post);
@@ -48,9 +56,9 @@
   const buildHtml = (post) => `
     <article class="post-item reveal">
       <span class="data-categoria">${post.data} · ${post.categoria}${post.readTime ? ` · ${post.readTime}` : ''}</span>
-      <h3>${post.titulo}</h3>
-      <p>${post.excerpt}</p>
-      <a href="${post.href || buildPostHref(post)}">Ler artigo</a>
+      <h3>${escapeHtml(post.titulo)}</h3>
+      <p>${escapeHtml(post.excerpt)}</p>
+      <a href="${escapeHtml(post.href || buildPostHref(post))}">Ler artigo</a>
     </article>
   `;
 

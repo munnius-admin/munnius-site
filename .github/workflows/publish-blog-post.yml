@@ -24,15 +24,21 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install image tooling
+        run: python -m pip install pillow
+
       - name: Publish next scheduled draft
         run: python scripts/publish_blog_post.py
+
+      - name: Generate Instagram assets
+        run: python scripts/generate_instagram_assets.py
 
       - name: Commit published post
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add -A blog sitemap.xml
+            git add -A blog sitemap.xml social/instagram
             git commit -m "Publish scheduled Munnius blog post"
             git push
           else
