@@ -66,7 +66,11 @@ def html_pages() -> list[Path]:
         ROOT / "servicos.html",
         ROOT / "contato.html",
         ROOT / "blog" / "index.html",
-    ] + sorted((ROOT / "blog").glob("20*.html"))
+    ] + [
+        path
+        for path in sorted((ROOT / "blog").glob("*.html"))
+        if path.name != "index.html"
+    ]
 
 
 def validate_mojibake() -> list[str]:

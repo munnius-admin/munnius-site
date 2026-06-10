@@ -256,14 +256,23 @@ def update_sitemap(posts: list[dict[str, str]]) -> None:
         ("/sobre.html", "2026-05-24", "monthly", "0.8"),
         ("/servicos.html", "2026-05-24", "monthly", "0.9"),
         ("/contato.html", "2026-05-24", "monthly", "0.6"),
+        ("/politicas.html", "2026-06-10", "yearly", "0.3"),
     ]
     urls = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for path, lastmod, changefreq, priority in static:
         urls.append(f"  <url>\n    <loc>{BASE_URL}{path}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <changefreq>{changefreq}</changefreq>\n    <priority>{priority}</priority>\n  </url>")
+    listed_slugs = set()
     for post in posts:
         slug = post["slug"]
+        listed_slugs.add(slug)
         lastmod = slug[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", slug) else date.today().isoformat()
         urls.append(f"  <url>\n    <loc>{BASE_URL}/blog/{slug}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.85</priority>\n  </url>")
+    for page in sorted(BLOG_DIR.glob("*.html")):
+        slug = page.name
+        if slug == "index.html" or slug in listed_slugs:
+            continue
+        lastmod = slug[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", slug) else date.today().isoformat()
+        urls.append(f"  <url>\n    <loc>{BASE_URL}/blog/{slug}</loc>\n    <lastmod>{lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>")
     urls.append("</urlset>\n")
     SITEMAP.write_text("\n".join(urls), encoding="utf-8")
 
