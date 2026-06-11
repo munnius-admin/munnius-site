@@ -1,6 +1,6 @@
-O que é PMO e para que serve Guia para PMEs brasileiras
+O que é PMO? Significado, funções e como aplicar em PMEs
 
-PMO organiza projetos em PMEs sem burocracia: evite atrasos, desperdício e falta de visibilidade.
+Entenda o que significa PMO, para que serve, quais funções exerce e como aplicar gestão de projetos em PMEs sem burocracia.
 
 Artigo completo no blog:
 https://munnius.com.br/blog/2026-04-20-o-que-e-pmo-para-pmes.html
