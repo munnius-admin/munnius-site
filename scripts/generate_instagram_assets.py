@@ -184,13 +184,15 @@ def caption_for(post: dict[str, str]) -> str:
     )
 
 
-def generate(limit: int | None = None) -> list[Path]:
+def generate(limit: int | None = None, force: bool = False) -> list[Path]:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     created: list[Path] = []
     for post in read_posts(limit=limit):
         base_name = Path(post["slug"]).with_suffix("").name
         image_path = OUTPUT_DIR / f"{base_name}.png"
         caption_path = OUTPUT_DIR / f"{base_name}.md"
+        if not force and image_path.exists() and caption_path.exists():
+            continue
         render_post_card(post, image_path)
         caption_path.write_text(caption_for(post), encoding="utf-8")
         created.extend([image_path, caption_path])
@@ -200,8 +202,9 @@ def generate(limit: int | None = None) -> list[Path]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Gera artes e legendas de Instagram a partir dos posts do blog.")
     parser.add_argument("--limit", type=int, default=None, help="Quantidade de posts mais recentes para gerar.")
+    parser.add_argument("--force", action="store_true", help="Regenera artes e legendas mesmo quando os arquivos ja existem.")
     args = parser.parse_args()
-    files = generate(limit=args.limit)
+    files = generate(limit=args.limit, force=args.force)
     print(f"Generated {len(files)} files in {OUTPUT_DIR.relative_to(ROOT)}")
 
 

@@ -2,7 +2,8 @@ name: Publish scheduled blog post
 
 on:
   schedule:
-    - cron: "0 10 * * *"
+    - cron: "17 10 * * *"
+    - cron: "47 15 * * *"
   workflow_dispatch:
 
 permissions:
