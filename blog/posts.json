@@ -1,5 +1,13 @@
 [
   {
+    "titulo": "Documentação viva em implantação SaaS: como parar de criar PDFs que ninguém usa",
+    "slug": "2026-06-15-documentacao-viva-implantacao.html",
+    "data": "15 Jun 2026",
+    "categoria": "Operação SaaS",
+    "excerpt": "Como criar documentação viva para implantação SaaS com playbooks, decisões, aprendizados e uso prático no dia a dia.",
+    "readTime": "8 min"
+  },
+  {
     "titulo": "Backlog de automações com IA: como priorizar o que realmente vale testar",
     "slug": "2026-06-14-ia-backlog-automacoes.html",
     "data": "14 Jun 2026",
