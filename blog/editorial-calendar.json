@@ -4,7 +4,7 @@
     "keyword": "IA na gestão de projetos",
     "title": "Como usar IA na gestão de projetos sem perder controle da implantação",
     "intent": "informacional",
-    "cta": "Diagnóstico de IA aplicada ao onboarding"
+    "cta": "Enviar contexto sobre IA aplicada"
   },
   {
     "cluster": "IA aplicada em implantação SaaS",
@@ -25,14 +25,14 @@
     "keyword": "playbook de onboarding SaaS",
     "title": "Playbook de onboarding SaaS: estrutura mínima para reduzir retrabalho",
     "intent": "prático",
-    "cta": "Criar playbook com a Munnius"
+    "cta": "Ler exemplos de playbook"
   },
   {
     "cluster": "Implantação SaaS",
     "keyword": "implantação SaaS",
     "title": "Implantação SaaS: como organizar marcos, riscos e dependências do cliente",
     "intent": "informacional",
-    "cta": "Agendar diagnóstico de implantação"
+    "cta": "Enviar contexto de implantação"
   },
   {
     "cluster": "Implantação SaaS",

@@ -1,16 +1,16 @@
 ---
-title: "Briefing para consultoria de IA em SaaS: o que preparar antes do diagnóstico"
-shortTitle: "Briefing para consultoria de IA"
-description: "O que preparar antes de um diagnóstico de consultoria de IA em SaaS: processos, dores, dados, prioridades e restricoes."
+title: "Briefing para projeto de IA em SaaS: o que preparar antes da primeira conversa"
+shortTitle: "Briefing para projeto de IA"
+description: "O que preparar antes de uma conversa sobre IA em SaaS: processos, dores, dados, prioridades e restricoes."
 date: 2026-08-19
-category: "Consultoria"
+category: "Projetos"
 readTime: "11 min"
 breadcrumb: "Briefing"
 ---
 
-Briefing para consultoria de IA em SaaS: o que preparar antes do diagnóstico
+Briefing para projeto de IA em SaaS: o que preparar antes da primeira conversa
 
-O tema **consultoria de IA para SaaS** ganha importancia quando a operação precisa sair de iniciativas soltas e criar uma forma consistente de evoluir. Em muitas empresas SaaS, a discussao sobre IA, onboarding ou implantação comeca pela ferramenta. O caminho mais produtivo e outro: entender o problema operacional, nomear os donos, organizar o processo e só depois escolher onde tecnologia acelera.
+O tema **projeto de IA para SaaS** ganha importancia quando a operação precisa sair de iniciativas soltas e criar uma forma consistente de evoluir. Em muitas empresas SaaS, a discussao sobre IA, onboarding ou implantação comeca pela ferramenta. O caminho mais produtivo e outro: entender o problema operacional, nomear os donos, organizar o processo e só depois escolher onde tecnologia acelera.
 
 Este artigo parte de uma visao prática: ajudar leads a chegarem mais preparados para uma conversa consultiva. A ideia não e criar mais uma camada de burocracia, mas dar clareza para uma operação que precisa crescer sem depender de improviso.
 
