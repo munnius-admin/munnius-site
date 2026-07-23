@@ -1,5 +1,13 @@
 [
   {
+    "titulo": "Agentes de IA em produção: o que muda quando o piloto vira operação",
+    "slug": "2026-07-23-agentes-ia-producao-piloto-operacao.html",
+    "data": "23 Jul 2026",
+    "categoria": "IA aplicada",
+    "excerpt": "Um framework para levar agentes de IA do piloto à produção com escopo, avaliações, escalonamento, monitoramento e melhoria contínua.",
+    "readTime": "10 min"
+  },
+  {
     "titulo": "Governanca leve para AI Transformation: controle suficiente para IA não virar experimento solto",
     "slug": "2026-07-22-governanca-leve-ai-transformation.html",
     "data": "22 Jul 2026",
