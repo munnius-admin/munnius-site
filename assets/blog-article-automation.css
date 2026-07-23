@@ -1,0 +1,35 @@
+.post-cover {
+  margin: 0 0 32px;
+  overflow: hidden;
+  background: #eef1f2;
+  border: 1px solid rgba(21, 56, 74, 0.12);
+  border-radius: 18px;
+}
+
+.post-cover img {
+  width: 100%;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+}
+
+.post-cover figcaption {
+  padding: 10px 14px;
+  color: #6b7a80;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.post-cover figcaption a {
+  color: #15384a;
+  text-underline-offset: 2px;
+}
+
+.post-sources {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(21, 56, 74, 0.14);
+}
+
+.post-sources li + li {
+  margin-top: 8px;
+}
