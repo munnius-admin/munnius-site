@@ -1,5 +1,13 @@
 [
   {
+    "titulo": "Go-live em fases: o que o novo aeroporto de Sydney ensina sobre prontidão operacional",
+    "slug": "2026-07-25-go-live-em-fases-prontidao-operacional.html",
+    "data": "25 Jul 2026",
+    "categoria": "Operações",
+    "excerpt": "Um framework de go-live em fases inspirado na abertura gradual do novo aeroporto de Western Sydney, com testes, critérios de avanço e operação assistida.",
+    "readTime": "10 min"
+  },
+  {
     "titulo": "Agentes de IA em produção: o que muda quando o piloto vira operação",
     "slug": "2026-07-23-agentes-ia-producao-piloto-operacao.html",
     "data": "23 Jul 2026",
