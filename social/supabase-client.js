@@ -8,6 +8,20 @@ async function getClient() {
   return createClient(config.supabaseUrl, config.supabaseAnonKey);
 }
 
+async function getContext(client) {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) throw new Error("Sessão expirada.");
+  const { data: membership, error } = await client
+    .from("organization_members")
+    .select("organization_id")
+    .eq("profile_id", user.id)
+    .eq("active", true)
+    .limit(1)
+    .single();
+  if (error || !membership) throw new Error("Usuário sem organização ativa.");
+  return { user, organizationId: membership.organization_id };
+}
+
 export const authGateway = {
   async signIn(email, password) {
     if (!isSupabaseConfigured) {
@@ -35,25 +49,34 @@ export const authGateway = {
 };
 
 export const dataGateway = {
-  async saveSession(session) {
-    if (!isSupabaseConfigured) {
-      const rows = JSON.parse(localStorage.getItem("munnius-social-sessions") || "[]");
-      rows.push({ ...session, endedAt: Date.now() });
-      localStorage.setItem("munnius-social-sessions", JSON.stringify(rows.slice(-100)));
-      return;
-    }
+  async loadSnapshot() {
+    if (!isSupabaseConfigured) return null;
     const client = await getClient();
-    const { data: membership } = await client.from("organization_members").select("organization_id").eq("profile_id", (await client.auth.getUser()).data.user.id).eq("active", true).limit(1).single();
-    const user = (await client.auth.getUser()).data.user;
-    if (!membership || !user) throw new Error("Usuário sem organização ativa.");
-    await client.from("work_sessions").insert({
-      id: session.id,
-      organization_id: membership.organization_id,
-      user_id: user.id,
-      clinic_id: session.clinicId,
-      started_at: new Date(session.startedAt).toISOString(),
-      ended_at: new Date().toISOString(),
-      ...Object.fromEntries(Object.entries(session.counts).map(([key, value]) => [`${key}_count`, value]))
+    const { user, organizationId } = await getContext(client);
+    const { data, error } = await client
+      .from("app_snapshots")
+      .select("payload")
+      .eq("organization_id", organizationId)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.payload || null;
+  },
+  async saveSnapshot(payload) {
+    if (!isSupabaseConfigured) return;
+    const client = await getClient();
+    const { user, organizationId } = await getContext(client);
+    const { error } = await client.from("app_snapshots").upsert({
+      organization_id: organizationId,
+      profile_id: user.id,
+      payload,
+      updated_at: new Date().toISOString()
     });
+    if (error) throw error;
+  },
+  async saveSession(session) {
+    const rows = JSON.parse(localStorage.getItem("munnius-social-sessions") || "[]");
+    rows.push({ ...session, endedAt: session.endedAt || new Date().toISOString() });
+    localStorage.setItem("munnius-social-sessions", JSON.stringify(rows.slice(-100)));
   }
 };

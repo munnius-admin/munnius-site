@@ -1,4 +1,4 @@
-const CACHE = "munnius-social-v3";
+const CACHE = "munnius-social-v4";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./supabase-client.js", "./config.js", "./manifest.webmanifest", "./assets/munnius-mark.png", "./assets/munnius-app-icon.png"];
 self.addEventListener("install", event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))));
 self.addEventListener("activate", event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))));

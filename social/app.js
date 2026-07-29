@@ -34,17 +34,40 @@ const seed = {
 };
 
 function loadState() {
+  const base = isSupabaseConfigured
+    ? { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] }
+    : structuredClone(seed);
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (stored?.version === 2) return { ...structuredClone(seed), ...stored, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+    if (stored?.version === 2) return { ...base, ...stored, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
   } catch (error) { console.warn("Não foi possível recuperar os dados locais.", error); }
-  return { ...structuredClone(seed), session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+  return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
 }
 
-const state = loadState();
+let state = loadState();
+let syncTimer;
 function persist() {
   const { timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  if (isSupabaseConfigured) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => dataGateway.saveSnapshot(serializable).catch(error => {
+      console.warn("Sincronização adiada.", error);
+      showToast("Salvo neste aparelho; sincronização pendente");
+    }), 500);
+  }
+}
+
+async function hydrateRemoteState() {
+  if (!isSupabaseConfigured) return;
+  const remote = await dataGateway.loadSnapshot();
+  if (remote?.version !== 2) {
+    persist();
+    return;
+  }
+  const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
+  state = { ...base, ...remote, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
 }
 
 function uid(prefix) { return crypto.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; }
@@ -428,6 +451,12 @@ $("#login-form").addEventListener("submit", async event => {
   event.preventDefault();
   const result = await authGateway.signIn($("#email").value, $("#password").value);
   if (!result.ok) return showToast(result.message);
+  try {
+    await hydrateRemoteState();
+  } catch (error) {
+    console.warn("Não foi possível carregar a nuvem.", error);
+    showToast("Entrou, mas a sincronização será retomada");
+  }
   $("#auth-screen").classList.add("hidden"); $("#app-shell").classList.remove("hidden");
   renderDashboard(); renderLeads(); renderFollowups(); renderReport();
   showToast(isSupabaseConfigured ? "Bem-vinda de volta" : "Ambiente local aberto");
