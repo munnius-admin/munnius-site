@@ -16,8 +16,14 @@
   "background": {
     "service_worker": "service-worker.js"
   },
+  "icons": {
+    "128": "icon.png"
+  },
   "action": {
-    "default_title": "Abrir Munnius Social"
+    "default_title": "Abrir Munnius Social",
+    "default_icon": {
+      "128": "icon.png"
+    }
   },
   "side_panel": {
     "default_path": "sidepanel.html"
