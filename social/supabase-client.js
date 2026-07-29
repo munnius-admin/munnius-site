@@ -13,13 +13,13 @@ async function getContext(client) {
   if (!user) throw new Error("Sessão expirada.");
   const { data: membership, error } = await client
     .from("organization_members")
-    .select("organization_id")
+    .select("organization_id, role")
     .eq("profile_id", user.id)
     .eq("active", true)
     .limit(1)
     .single();
   if (error || !membership) throw new Error("Usuário sem organização ativa.");
-  return { user, organizationId: membership.organization_id };
+  return { user, organizationId: membership.organization_id, role: membership.role };
 }
 
 export const authGateway = {
@@ -49,18 +49,31 @@ export const authGateway = {
 };
 
 export const dataGateway = {
-  async loadSnapshot() {
+  async loadWorkspace() {
     if (!isSupabaseConfigured) return null;
     const client = await getClient();
-    const { user, organizationId } = await getContext(client);
-    const { data, error } = await client
+    const { user, organizationId, role } = await getContext(client);
+    const [{ data, error }, { data: profile, error: profileError }] = await Promise.all([
+      client
       .from("app_snapshots")
       .select("payload")
       .eq("organization_id", organizationId)
       .eq("profile_id", user.id)
-      .maybeSingle();
+      .maybeSingle(),
+      client.from("profiles").select("full_name, email").eq("id", user.id).single()
+    ]);
     if (error) throw error;
-    return data?.payload || null;
+    if (profileError) throw profileError;
+    const name = profile.full_name || user.email?.split("@")[0] || "Usuário";
+    return {
+      snapshot: data?.payload || null,
+      profile: {
+        name,
+        email: profile.email || user.email,
+        initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
+        role
+      }
+    };
   },
   async saveSnapshot(payload) {
     if (!isSupabaseConfigured) return;

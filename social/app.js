@@ -60,14 +60,28 @@ function persist() {
 
 async function hydrateRemoteState() {
   if (!isSupabaseConfigured) return;
-  const remote = await dataGateway.loadSnapshot();
+  const workspace = await dataGateway.loadWorkspace();
+  const remote = workspace?.snapshot;
   if (remote?.version !== 2) {
+    state.profile = workspace.profile;
     persist();
     return;
   }
   const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
-  state = { ...base, ...remote, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
+  state = { ...base, ...remote, profile: workspace.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+  const { timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+}
+
+function renderProfile() {
+  const name = state.profile?.name || "Usuário";
+  const firstName = name.split(/\s+/)[0];
+  const initials = state.profile?.initials || firstName.slice(0, 2).toUpperCase();
+  $("#greeting").textContent = `Olá, ${firstName}`;
+  $("#profile-avatar-button").textContent = initials;
+  $("#profile-avatar-large").textContent = initials;
+  $("#profile-name").textContent = name;
+  $("#profile-role").textContent = state.profile?.role === "admin" ? "Admin · Social seller" : "Social seller";
 }
 
 function uid(prefix) { return crypto.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; }
@@ -458,6 +472,7 @@ $("#login-form").addEventListener("submit", async event => {
     showToast("Entrou, mas a sincronização será retomada");
   }
   $("#auth-screen").classList.add("hidden"); $("#app-shell").classList.remove("hidden");
+  renderProfile();
   renderDashboard(); renderLeads(); renderFollowups(); renderReport();
   showToast(isSupabaseConfigured ? "Bem-vinda de volta" : "Ambiente local aberto");
 });
