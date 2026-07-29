@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=14";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=15";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -6,14 +6,65 @@ const STORAGE_KEY = "munnius-social-v3";
 const LEGACY_STORAGE_KEY = "munnius-social-v2";
 const countLabels = { profiles: "Novos follows", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
 const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", followups: "Follow-ups", more: "Mais", clinics: "Clínicas", reports: "Relatórios" };
-const statusNames = { new: "Lead mapeado", talking: "Conversando", follow_up: "Em follow-up", lost: "Perdido", sent_to_hunter: "Qualificado e encaminhado", finished: "Finalizado" };
-const qualificationItems = [
-  ["procedureDiscussed", "Falou sobre o procedimento"],
-  ["valueUnderstood", "Entendeu o valor do atendimento"],
-  ["fitConfirmed", "Respondeu se faz sentido para ele(a)"],
-  ["knowsDoctor", "Já conhece a Dra."],
-  ["interestedThisMonth", "Tem interesse em fazer ainda este mês"]
+const statusNames = {
+  new: "Lead mapeado",
+  talking: "Conversando",
+  follow_up: "Em follow-up",
+  lost: "Perdido",
+  sent_to_hunter: "Qualificado e encaminhado",
+  scheduled: "Agendamento confirmado",
+  attended: "Compareceu",
+  no_show: "Não compareceu",
+  finished: "Finalizado"
+};
+const clinicPriorities = {
+  A: { label: "Alta prioridade", minutes: 30, range: "R$ 5 mil ou mais", order: 1, tone: "#9b5b4a" },
+  B: { label: "Média prioridade", minutes: 20, range: "R$ 3 mil a R$ 4.999", order: 2, tone: "#a37a2f" },
+  C: { label: "Baixa prioridade", minutes: 15, range: "Até R$ 2.999", order: 3, tone: "#487163" }
+};
+const qualificationGroups = [
+  {
+    key: "B",
+    title: "Momento e investimento",
+    helper: "Entenda o repertório da pessoa antes de entrar em valores.",
+    prompt: "Você já chegou a pesquisar ou investir em algum procedimento parecido antes?",
+    items: [
+      ["priorInvestment", "Já pesquisou ou investiu em estética antes"],
+      ["valueUnderstood", "Entendeu o valor do atendimento"]
+    ]
+  },
+  {
+    key: "A",
+    title: "Decisão",
+    helper: "Descubra com naturalidade quem participa dessa escolha.",
+    prompt: "Essa é uma decisão que você está olhando por conta própria ou costuma conversar com alguém antes?",
+    items: [
+      ["decisionAuthority", "A decisão depende dela"],
+      ["knowsDoctor", "Conhece ou confia no trabalho da Dra."]
+    ]
+  },
+  {
+    key: "N",
+    title: "Necessidade",
+    helper: "Confirme o incômodo e se a solução faz sentido.",
+    prompt: "O que mais te incomoda hoje e o que você gostaria de melhorar?",
+    items: [
+      ["procedureDiscussed", "Falou sobre o procedimento ou incômodo"],
+      ["fitConfirmed", "Respondeu se a solução faz sentido para ela"]
+    ]
+  },
+  {
+    key: "T",
+    title: "Tempo",
+    helper: "Entenda urgência sem pressionar pelo agendamento.",
+    prompt: "Você pensa em fazer isso ainda este mês ou tem alguma data importante em mente?",
+    items: [
+      ["interestedThisMonth", "Tem interesse em fazer ainda este mês"],
+      ["importantDate", "Existe uma data ou prazo importante"]
+    ]
+  }
 ];
+const qualificationItems = qualificationGroups.flatMap(group => group.items);
 const googleEnabled = Boolean(window.MUNNIUS_SOCIAL_CONFIG?.googleEnabled);
 const recoveryLinkDetected = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery"
   || new URLSearchParams(location.search).get("type") === "recovery";
@@ -22,9 +73,9 @@ const seed = {
   version: 3,
   profile: { name: "Usuário", initials: "US", role: "social_seller" },
   clinics: [
-    { id: "bella", name: "Clínica Bella", doctor: "Dra. Beatriz", instagram: "@clinicabella", hunter: "Ana", hunterPhone: "5541999990001", protocol: "Glow", location: "Curitiba, PR", evaluationPrice: 300, target: 8, color: "#75566f", active: true },
-    { id: "aura", name: "Instituto Aura", doctor: "Dra. Camila", instagram: "@institutoaura", hunter: "Marina", hunterPhone: "5541999990002", protocol: "Aura Natural", location: "São Paulo, SP", evaluationPrice: 250, target: 6, color: "#df765f", active: true },
-    { id: "leve", name: "Clínica Leve", doctor: "Dra. Renata", instagram: "@clinicaleve", hunter: "Clara", hunterPhone: "5541999990003", protocol: "Leve Face", location: "Belo Horizonte, MG", evaluationPrice: 280, target: 5, color: "#1f6b57", active: true }
+    { id: "bella", name: "Clínica Bella", doctor: "Dra. Beatriz", instagram: "@clinicabella", hunter: "Ana", hunterPhone: "5541999990001", protocol: "Glow", location: "Curitiba, PR", evaluationPrice: 300, trafficInvestment: 6000, priority: "A", target: 8, color: "#75566f", active: true },
+    { id: "aura", name: "Instituto Aura", doctor: "Dra. Camila", instagram: "@institutoaura", hunter: "Marina", hunterPhone: "5541999990002", protocol: "Aura Natural", location: "São Paulo, SP", evaluationPrice: 250, trafficInvestment: 4000, priority: "B", target: 6, color: "#df765f", active: true },
+    { id: "leve", name: "Clínica Leve", doctor: "Dra. Renata", instagram: "@clinicaleve", hunter: "Clara", hunterPhone: "5541999990003", protocol: "Leve Face", location: "Belo Horizonte, MG", evaluationPrice: 280, trafficInvestment: 2500, priority: "C", target: 5, color: "#1f6b57", active: true }
   ],
   leads: [
     { id: "lead-1", name: "Mariana Costa", instagram: "@maricosta", whatsapp: "", clinicId: "bella", status: "talking", interest: "Harmonização facial", location: "Curitiba", temperature: "warm", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: null, timeline: [{ at: new Date().toISOString(), label: "Primeiro contato realizado" }] },
@@ -52,11 +103,17 @@ function normalizeState(candidate) {
   normalized.followups ||= [];
   normalized.sessions ||= [];
   normalized.templates ||= structuredClone(seed.templates);
+  normalized.clinics.forEach(clinic => {
+    clinic.priority = priorityFromInvestment(clinic.trafficInvestment, clinic.priority);
+  });
   normalized.leads.forEach(lead => {
     if (lead.status === "no_response") lead.status = "lost";
     if (lead.status === "qualified") lead.status = lead.whatsapp ? "sent_to_hunter" : "talking";
     lead.qualification ||= {};
     lead.timeline ||= [];
+    lead.scheduledAt ||= null;
+    lead.attendedAt ||= null;
+    lead.noShowAt ||= null;
   });
   return normalized;
 }
@@ -423,7 +480,15 @@ function periodStats(period = state.period || "day") {
     total.seconds += Number(session.durationSeconds || 0);
     return total;
   }, { profiles: 0, likes: 0, comments: 0, directs: 0, responses: 0, phones: 0, seconds: 0 });
-  return { leads: leads.length, hunters: leads.filter(lead => lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, period)).length, sessions, ...counts };
+  return {
+    leads: leads.length,
+    hunters: state.leads.filter(lead => lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, period)).length,
+    scheduled: state.leads.filter(lead => lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length,
+    attended: state.leads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length,
+    noShows: state.leads.filter(lead => lead.noShowAt && inPeriod(lead.noShowAt, period)).length,
+    sessions,
+    ...counts
+  };
 }
 
 function renderDashboard() {
@@ -435,6 +500,8 @@ function renderDashboard() {
   const followingUp = state.leads.filter(lead => lead.status === "follow_up").length;
   const lost = state.leads.filter(lead => lead.status === "lost").length;
   const qualified = state.leads.filter(lead => lead.status === "sent_to_hunter").length;
+  const scheduled = state.leads.filter(lead => lead.status === "scheduled").length;
+  const attended = state.leads.filter(lead => lead.status === "attended").length;
   $("#actions-total").textContent = actions;
   $("#leads-total").textContent = stats.leads;
   $("#clinics-total").textContent = activeClinics.length;
@@ -445,6 +512,8 @@ function renderDashboard() {
   $("#pipeline-followups").textContent = followingUp;
   $("#pipeline-lost").textContent = lost;
   $("#pipeline-qualified").textContent = qualified;
+  $("#pipeline-scheduled").textContent = scheduled;
+  $("#pipeline-attended").textContent = attended;
   $("#hero-summary").textContent = actions
     ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phones} telefones`
     : activeClinics.length ? "Escolha uma clínica abaixo e comece a sessão." : "Cadastre sua primeira clínica para começar.";
@@ -459,9 +528,10 @@ function clinicMarkup(clinic, detailed = false) {
   const leads = clinicLeadCount(clinic.id);
   const pct = Math.min(100, clinic.target ? leads / clinic.target * 100 : 0);
   const active = state.session?.clinicId === clinic.id;
+  const priority = clinicPriority(clinic);
   return `<article class="clinic-card ${detailed ? "clickable" : ""} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
     <div class="clinic-avatar" style="background:${clinic.color}">${clinic.name.split(" ").slice(-1)[0][0]}</div>
-    <div class="clinic-main"><strong>${clinic.name}</strong><span>${clinic.instagram} · Closer ${clinic.hunter}</span><div class="progress"><i style="width:${pct}%"></i></div></div>
+    <div class="clinic-main"><strong>${clinic.name} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${clinic.instagram} · Closer ${clinic.hunter} · ${priority.minutes} min</span><div class="progress"><i style="width:${pct}%"></i></div></div>
     <div class="clinic-card-side"><div class="clinic-score"><strong>${leads}/${clinic.target}</strong><span>leads hoje</span></div>
       ${detailed ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>`}
     </div>
@@ -494,6 +564,19 @@ function compactDuration(seconds = 0) {
   return hours ? `${hours}h${minutes ? ` ${minutes}min` : ""}` : `${minutes} min`;
 }
 
+function priorityFromInvestment(value = 0, fallback = "C") {
+  const investment = Number(value || 0);
+  if (investment >= 5000) return "A";
+  if (investment >= 3000) return "B";
+  if (investment > 0) return "C";
+  return clinicPriorities[fallback] ? fallback : "C";
+}
+
+function clinicPriority(clinic = {}) {
+  const key = priorityFromInvestment(clinic.trafficInvestment, clinic.priority);
+  return { key, ...clinicPriorities[key] };
+}
+
 function clinicActivityToday(clinicId) {
   const completed = state.sessions.filter(session => session.clinicId === clinicId && isSameDay(session.startedAt));
   const active = state.session?.clinicId === clinicId ? state.session : null;
@@ -515,7 +598,8 @@ function renderSessionClinicTracker() {
   if (!list) return;
   const clinics = state.clinics.filter(clinic => clinic.active);
   const rows = clinics.map(clinic => ({ clinic, activity: clinicActivityToday(clinic.id) }))
-    .sort((a, b) => Number(b.activity.active) - Number(a.activity.active)
+    .sort((a, b) => clinicPriority(a.clinic).order - clinicPriority(b.clinic).order
+      || Number(b.activity.active) - Number(a.activity.active)
       || Number(a.activity.worked) - Number(b.activity.worked)
       || a.clinic.name.localeCompare(b.clinic.name, "pt-BR"));
   const worked = rows.filter(row => row.activity.worked).length;
@@ -527,20 +611,36 @@ function renderSessionClinicTracker() {
       ? `${missing} ${missing === 1 ? "conta ainda falta" : "contas ainda faltam"} na ronda de hoje.`
       : "Ronda completa. Todas as clínicas foram trabalhadas hoje."
     : "Cadastre uma clínica para montar sua ronda diária.";
-  list.innerHTML = rows.map(({ clinic, activity }) => {
-    const status = activity.active ? "Agora" : activity.worked ? "Trabalhada" : "Pendente";
-    const buttonLabel = activity.active ? "Continuar" : state.session ? "Em fila" : activity.worked ? "Nova sessão" : "Iniciar";
-    const buttonIcon = activity.active ? "timer" : activity.worked ? "replay" : "play_arrow";
-    return `<article class="session-clinic-row ${activity.active ? "active" : ""} ${activity.worked ? "worked" : "pending"}">
-      <span class="session-clinic-avatar" style="--clinic-color:${clinic.color}">${initials(clinic.name).slice(0, 1)}</span>
-      <div class="session-clinic-copy">
-        <div><strong>${escapeHtml(clinic.name)}</strong><span class="session-round-status ${activity.active ? "active" : activity.worked ? "worked" : "pending"}">${status}</span></div>
-        <small>${escapeHtml(clinic.instagram)} · ${compactDuration(activity.seconds)} · ${activity.actions} ${activity.actions === 1 ? "ação" : "ações"}</small>
+  list.innerHTML = Object.keys(clinicPriorities).map(priorityKey => {
+    const priority = clinicPriorities[priorityKey];
+    const groupRows = rows.filter(row => clinicPriority(row.clinic).key === priorityKey);
+    if (!groupRows.length) return "";
+    const completed = groupRows.filter(row => row.activity.worked).length;
+    const groupMarkup = groupRows.map(({ clinic, activity }) => {
+      const status = activity.active ? "Agora" : activity.worked ? "Trabalhada" : "Pendente";
+      const buttonLabel = activity.active ? "Continuar" : state.session ? "Em fila" : activity.worked ? "Nova sessão" : "Iniciar";
+      const buttonIcon = activity.active ? "timer" : activity.worked ? "replay" : "play_arrow";
+      const spentPct = Math.min(100, activity.seconds / (priority.minutes * 60) * 100);
+      return `<article class="session-clinic-row ${activity.active ? "active" : ""} ${activity.worked ? "worked" : "pending"}">
+        <span class="session-clinic-avatar" style="--clinic-color:${clinic.color}">${initials(clinic.name).slice(0, 1)}</span>
+        <div class="session-clinic-copy">
+          <div><strong>${escapeHtml(clinic.name)}</strong><span class="session-round-status ${activity.active ? "active" : activity.worked ? "worked" : "pending"}">${status}</span></div>
+          <small>${escapeHtml(clinic.instagram)} · ${compactDuration(activity.seconds)} de ${priority.minutes} min · ${activity.actions} ${activity.actions === 1 ? "ação" : "ações"}</small>
+          <span class="clinic-time-track" aria-hidden="true"><i style="width:${spentPct}%"></i></span>
+        </div>
+        <button class="session-round-button ${activity.active ? "active" : ""}" data-session-clinic="${clinic.id}" ${state.session && !activity.active ? "disabled" : ""}>
+          <span class="material-symbols-outlined">${buttonIcon}</span>${buttonLabel}
+        </button>
+      </article>`;
+    }).join("");
+    return `<section class="priority-group priority-group-${priorityKey.toLowerCase()}">
+      <div class="priority-group-heading">
+        <span class="priority-letter">${priorityKey}</span>
+        <div><strong>${priority.label}</strong><small>${priority.range} · até ${priority.minutes} min por clínica</small></div>
+        <b>${completed}/${groupRows.length}</b>
       </div>
-      <button class="session-round-button ${activity.active ? "active" : ""}" data-session-clinic="${clinic.id}" ${state.session && !activity.active ? "disabled" : ""}>
-        <span class="material-symbols-outlined">${buttonIcon}</span>${buttonLabel}
-      </button>
-    </article>`;
+      <div class="priority-group-list">${groupMarkup}</div>
+    </section>`;
   }).join("") || emptyState("Nenhuma clínica ativa.");
   $$("[data-session-clinic]").forEach(button => button.addEventListener("click", () => {
     const clinicId = button.dataset.sessionClinic;
@@ -597,10 +697,10 @@ function renderReport() {
   const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Últimos 30 dias" };
   $("#report-label").textContent = labels[state.reportPeriod];
   $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
-  $("#report-leads").textContent = stats.leads;
   $("#report-hunters").textContent = stats.hunters;
-  $("#report-directs").textContent = stats.directs;
-  $("#report-hours").textContent = `${(stats.seconds / 3600).toFixed(1).replace(".", ",")}h`;
+  $("#report-scheduled").textContent = stats.scheduled;
+  $("#report-attended").textContent = stats.attended;
+  $("#report-hours").textContent = compactDuration(stats.seconds);
   $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação" : "ações"}`;
   $("#report-profiles").textContent = stats.profiles;
   $("#report-likes").textContent = stats.likes;
@@ -622,12 +722,14 @@ function renderReport() {
     const clinicSessions = stats.sessions.filter(session => session.clinicId === clinic.id);
     const clinicActions = clinicSessions.reduce((total, session) => total + Object.keys(countLabels).reduce((sum, key) => sum + Number(session.counts?.[key] || 0), 0), 0);
     const clinicLeads = state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length;
-    return { clinic, clinicActions, clinicLeads };
-  }).filter(row => row.clinicActions || row.clinicLeads).sort((a, b) => (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.slice(0, 8).map(({ clinic, clinicActions, clinicLeads }) => `
+    const qualified = state.leads.filter(lead => lead.clinicId === clinic.id && lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, state.reportPeriod)).length;
+    const attended = state.leads.filter(lead => lead.clinicId === clinic.id && lead.attendedAt && inPeriod(lead.attendedAt, state.reportPeriod)).length;
+    return { clinic, clinicActions, clinicLeads, qualified, attended };
+  }).filter(row => row.clinicActions || row.clinicLeads || row.qualified).sort((a, b) => (b.qualified - a.qualified) || (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
+  $("#report-clinic-breakdown").innerHTML = clinicRows.slice(0, 8).map(({ clinic, clinicActions, clinicLeads, qualified, attended }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
-      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ações</small></p>
-      <b>${clinicLeads} ${clinicLeads === 1 ? "lead" : "leads"}</b>
+      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ações · ${clinicLeads} leads</small></p>
+      <b>${qualified} qualif. · ${attended} comp.</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
@@ -659,7 +761,15 @@ function clinicPicker() {
 function startSession(clinicId) {
   const clinic = clinicById(clinicId);
   if (!clinic) return showToast("Clínica não encontrada.");
-  state.session = { id: uid("session"), clinicId, startedAt: new Date().toISOString(), counts: Object.fromEntries(Object.keys(countLabels).map(key => [key, 0])) };
+  const priority = clinicPriority(clinic);
+  state.session = {
+    id: uid("session"),
+    clinicId,
+    startedAt: new Date().toISOString(),
+    limitSeconds: priority.minutes * 60,
+    limitNotified: false,
+    counts: Object.fromEntries(Object.keys(countLabels).map(key => [key, 0]))
+  };
   $("#session-clinic").textContent = clinic.name;
   $("#session-empty").classList.add("hidden");
   $("#session-active").classList.remove("hidden");
@@ -668,12 +778,31 @@ function startSession(clinicId) {
   clearInterval(state.timerId);
   state.timerId = setInterval(updateTimer, 1000);
   updateTimer(); renderClinics(); navigate("session");
-  showToast(`Sessão iniciada · ${clinic.name}`);
+  showToast(`Sessão iniciada · prioridade ${priority.key} · ${priority.minutes} min`);
 }
 function updateTimer() {
   if (!state.session) return;
+  const clinic = clinicById(state.session.clinicId);
+  const priority = clinicPriority(clinic);
   const elapsed = Math.floor((Date.now() - new Date(state.session.startedAt)) / 1000);
-  $("#timer").textContent = [Math.floor(elapsed / 3600), Math.floor(elapsed % 3600 / 60), elapsed % 60].map(value => String(value).padStart(2, "0")).join(":");
+  const limit = Number(state.session.limitSeconds || priority.minutes * 60);
+  const remaining = limit - elapsed;
+  const absolute = Math.abs(remaining);
+  const timer = $("#timer");
+  timer.textContent = `${remaining < 0 ? "+" : ""}${[Math.floor(absolute / 60), absolute % 60].map(value => String(value).padStart(2, "0")).join(":")}`;
+  timer.classList.toggle("warning", remaining > 0 && remaining <= 300);
+  timer.classList.toggle("overtime", remaining <= 0);
+  $("#session-limit-label").textContent = remaining > 0
+    ? `restantes · prioridade ${priority.key}`
+    : `tempo extra · hora de seguir`;
+  $("#session-timer-progress").style.width = `${Math.min(100, elapsed / limit * 100)}%`;
+  $("#session-timer-progress").classList.toggle("warning", remaining > 0 && remaining <= 300);
+  $("#session-timer-progress").classList.toggle("overtime", remaining <= 0);
+  if (remaining <= 0 && !state.session.limitNotified) {
+    state.session.limitNotified = true;
+    navigator.vibrate?.([120, 70, 120]);
+    showToast(`Tempo da ${clinic?.name || "clínica"} concluído. Finalize e siga para a próxima.`);
+  }
   if (elapsed % 10 === 0) renderSessionClinicTracker();
 }
 function updateAction(action, delta = 1) {
@@ -725,6 +854,7 @@ function openAdjustCounts() {
 function openClinicForm(clinicId = null) {
   const clinic = clinicId ? clinicById(clinicId) : {};
   const edit = Boolean(clinicId);
+  const currentPriority = clinicPriority(clinic);
   openSheet(`<h2 class="sheet-title">${edit ? "Editar clínica" : "Nova clínica"}</h2><p class="sheet-subtitle">A closer fica vinculada para agilizar cada entrega.</p>
     <form class="sheet-form" id="clinic-form">
       ${field("clinic-name", "Nome da clínica", clinic.name, true)}
@@ -734,16 +864,32 @@ function openClinicForm(clinicId = null) {
       ${field("clinic-protocol", "Protocolo da clínica", clinic.protocol)}
       ${field("clinic-location", "Localização", clinic.location)}
       <div class="form-grid">${field("clinic-price", "Valor da avaliação", clinic.evaluationPrice, false, "number", "300")}${field("clinic-target", "Meta diária de leads", clinic.target || 5, true, "number", "5")}</div>
+      <div class="priority-form-block">
+        ${field("clinic-investment", "Faixa mensal de faturamento", clinic.trafficInvestment, true, "number", "5000")}
+        <div class="priority-preview" id="priority-preview">
+          <span class="priority-letter">${currentPriority.key}</span>
+          <div><strong>${currentPriority.label}</strong><small>Ronda de até ${currentPriority.minutes} min por sessão</small></div>
+        </div>
+        <p>O app calcula a prioridade automaticamente: A a partir de R$ 5 mil, B a partir de R$ 3 mil e C abaixo disso.</p>
+      </div>
       <button class="primary-button" type="submit">${edit ? "Salvar alterações" : "Salvar clínica"}</button>
       ${edit ? `<button class="danger-link" type="button" id="archive-clinic">Arquivar clínica</button>` : ""}
     </form>`, () => {
+    const updatePriorityPreview = () => {
+      const key = priorityFromInvestment($("#clinic-investment").value);
+      const priority = clinicPriorities[key];
+      $("#priority-preview").innerHTML = `<span class="priority-letter">${key}</span><div><strong>${priority.label}</strong><small>Ronda de até ${priority.minutes} min por sessão</small></div>`;
+    };
+    $("#clinic-investment").addEventListener("input", updatePriorityPreview);
     $("#clinic-form").addEventListener("submit", event => {
       event.preventDefault();
+      const trafficInvestment = Number($("#clinic-investment").value || 0);
       const record = {
         id: clinicId || uid("clinic"), name: $("#clinic-name").value.trim(), doctor: $("#clinic-doctor").value.trim(),
         instagram: instagramHandle($("#clinic-instagram").value), hunter: $("#clinic-hunter").value.trim(),
         hunterPhone: phoneDigits($("#clinic-hunter-phone").value), protocol: $("#clinic-protocol").value.trim(),
         location: $("#clinic-location").value.trim(), evaluationPrice: Number($("#clinic-price").value || 0),
+        trafficInvestment, priority: priorityFromInvestment(trafficInvestment),
         target: Number($("#clinic-target").value || 0), color: clinic.color || ["#75566f", "#df765f", "#1f6b57", "#dda94c"][state.clinics.length % 4], active: true
       };
       if (edit) Object.assign(clinic, record); else state.clinics.push(record);
@@ -758,12 +904,35 @@ function field(id, label, value = "", required = false, type = "text", placehold
 }
 
 function qualificationChecklist(lead = {}) {
-  return `<div class="qualification-checklist">${qualificationItems.map(([key, label]) => `
-    <label class="qualification-check"><input id="qualification-${key}" type="checkbox" ${lead.qualification?.[key] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>`;
+  const progress = qualificationProgress(lead.qualification);
+  return `<div class="bant-progress">
+      <div><strong id="bant-progress-label">${progress.done} de ${progress.total} pontos alinhados</strong><small>BANT completo antes de pedir o telefone</small></div>
+      <span><i id="bant-progress-bar" style="width:${progress.percent}%"></i></span>
+    </div>
+    <div class="qualification-checklist">${qualificationGroups.map(group => `
+      <section class="bant-group" data-bant-group="${group.key}">
+        <div class="bant-group-heading"><span>${group.key}</span><div><strong>${group.title}</strong><small>${group.helper}</small></div></div>
+        <button class="bant-prompt" type="button" data-copy-bant="${group.key}">
+          <span class="material-symbols-outlined">content_copy</span>
+          <span><small>Pergunta sugerida</small>${escapeHtml(group.prompt)}</span>
+        </button>
+        <div class="bant-checks">${group.items.map(([key, label]) => `
+          <label class="qualification-check"><input id="qualification-${key}" type="checkbox" ${lead.qualification?.[key] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
+      </section>`).join("")}</div>`;
 }
 
 function readQualification() {
   return Object.fromEntries(qualificationItems.map(([key]) => [key, Boolean($(`#qualification-${key}`)?.checked)]));
+}
+
+function qualificationProgress(qualification = {}) {
+  const total = qualificationItems.length;
+  const done = qualificationItems.filter(([key]) => Boolean(qualification?.[key])).length;
+  return { done, total, percent: total ? Math.round(done / total * 100) : 0, complete: done === total };
+}
+
+function isBantComplete(lead = {}) {
+  return qualificationProgress(lead.qualification).complete;
 }
 
 function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
@@ -775,11 +944,12 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
   const fixedStatus = isPhone ? "sent_to_hunter" : isResponse ? "talking" : null;
   const title = edit ? "Editar lead" : isPhone ? "Telefone captado" : isResponse ? "Lead respondeu" : "Lead mapeado";
   const submitLabel = isPhone ? "🎉 Salvar e enviar para closer" : edit ? "Salvar alterações" : isResponse ? "Salvar em Conversando" : "Salvar lead";
-  openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Complete o contexto e entregue a oportunidade para a closer." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
+  const initialBant = qualificationProgress(lead.qualification);
+  openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Conclua a pré-qualificação e entregue a oportunidade sem a closer repetir perguntas." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
     <form class="sheet-form" id="lead-form">
       ${field("lead-instagram", "Instagram", lead.instagram, true, "text", "@usuario ou link")}
       ${field("lead-name", "Nome", lead.name, false, "text", "Nome do lead")}
-      ${isPhone || edit ? field("lead-phone", "WhatsApp", lead.whatsapp, isPhone, "tel", "(00) 00000-0000") : ""}
+      ${edit && !isPhone ? field("lead-phone", "WhatsApp", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
       <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic">${state.clinics.filter(c => c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
       <div class="qualification-block">
         <div class="qualification-heading"><span class="material-symbols-outlined">verified</span><div><strong>Contexto da conversa</strong><small>Evita que a closer repita o que já foi falado.</small></div></div>
@@ -791,13 +961,36 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
         </select></div>
         ${qualificationChecklist(lead)}
       </div>
+      ${isPhone ? `<div class="phone-gate ${initialBant.complete ? "complete" : ""}" id="phone-gate"><span class="material-symbols-outlined">${initialBant.complete ? "verified" : "lock"}</span><p><strong>${initialBant.complete ? "Qualificação concluída" : "Telefone protegido pelo BANT"}</strong><small>${initialBant.complete ? "Agora salve o número e comemore a entrega." : "Marque os 8 pontos acima para liberar o telefone."}</small></p></div>` : ""}
+      ${isPhone ? field("lead-phone", "WhatsApp liberado para entrega", lead.whatsapp, true, "tel", "(00) 00000-0000") : ""}
       ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
       ${isPhone ? "" : `<div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>`}
-      <button class="primary-button ${isPhone ? "victory-button" : ""}" type="submit">${submitLabel}</button>
+      <button class="primary-button ${isPhone ? "victory-button" : ""}" id="lead-submit" type="submit" ${isPhone && !initialBant.complete ? "disabled" : ""}>${submitLabel}</button>
     </form>`, () => {
     $("#lead-instagram").addEventListener("blur", event => { event.target.value = instagramHandle(event.target.value); });
+    const updateBantGate = () => {
+      const progress = qualificationProgress(readQualification());
+      $("#bant-progress-label").textContent = `${progress.done} de ${progress.total} pontos alinhados`;
+      $("#bant-progress-bar").style.width = `${progress.percent}%`;
+      if (!isPhone) return;
+      $("#lead-phone").disabled = !progress.complete;
+      $("#lead-submit").disabled = !progress.complete;
+      $("#phone-gate").classList.toggle("complete", progress.complete);
+      $("#phone-gate").innerHTML = `<span class="material-symbols-outlined">${progress.complete ? "verified" : "lock"}</span><p><strong>${progress.complete ? "Qualificação concluída" : "Telefone protegido pelo BANT"}</strong><small>${progress.complete ? "Agora salve o número e comemore a entrega." : `Faltam ${progress.total - progress.done} pontos para liberar o telefone.`}</small></p>`;
+    };
+    $$("[id^='qualification-']").forEach(input => input.addEventListener("change", updateBantGate));
+    $$("[data-copy-bant]").forEach(button => button.addEventListener("click", async () => {
+      const group = qualificationGroups.find(item => item.key === button.dataset.copyBant);
+      await navigator.clipboard.writeText(group.prompt);
+      showToast(`Pergunta ${group.key} copiada`);
+    }));
+    updateBantGate();
     $("#lead-form").addEventListener("submit", event => {
       event.preventDefault();
+      if (isPhone && !qualificationProgress(readQualification()).complete) {
+        showToast("Conclua o BANT antes de pedir o telefone.");
+        return;
+      }
       const clinicId = $("#lead-clinic").value;
       const instagram = instagramHandle($("#lead-instagram").value);
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
@@ -807,6 +1000,10 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       const now = new Date().toISOString();
       const status = fixedStatus || $("#lead-status").value;
       const shouldSend = isPhone || (status === "sent_to_hunter" && !record.sentToHunterAt);
+      if (shouldSend && !qualificationProgress(readQualification()).complete) {
+        showToast("Conclua o BANT antes de enviar para a closer.");
+        return;
+      }
       record.timeline ||= [];
       Object.assign(record, {
         name: $("#lead-name").value.trim(), instagram,
@@ -845,32 +1042,85 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
 
 function openLeadDetail(leadId) {
   const lead = leadById(leadId); const clinic = clinicById(lead.clinicId);
-  const alignedItems = qualificationItems.filter(([key]) => lead.qualification?.[key]);
+  const progress = qualificationProgress(lead.qualification);
+  const bantSummary = qualificationGroups.map(group => {
+    const checked = group.items.filter(([key]) => lead.qualification?.[key]);
+    return `<section class="bant-summary-group"><span>${group.key}</span><div><strong>${group.title}</strong>${checked.length ? checked.map(([, label]) => `<small>✓ ${escapeHtml(label)}</small>`).join("") : "<small>Ainda não explorado</small>"}</div></section>`;
+  }).join("");
+  const canSend = lead.whatsapp && !lead.sentToHunterAt && progress.complete;
+  const hunterTracking = lead.sentToHunterAt ? `<div class="hunter-tracking">
+      <div><span class="material-symbols-outlined">${lead.status === "attended" ? "verified" : lead.status === "no_show" ? "event_busy" : lead.status === "scheduled" ? "event_available" : "hourglass_top"}</span>
+        <p><strong>Retorno da Hunter</strong><small>${lead.status === "attended" ? "Paciente compareceu" : lead.status === "no_show" ? "Paciente não compareceu" : lead.status === "scheduled" ? `Agendado para ${formatDate(lead.scheduledAt, true)}` : "Aguardando confirmação do agendamento"}</small></p>
+      </div>
+      ${["sent_to_hunter", "scheduled"].includes(lead.status) ? `<button class="small-link" id="hunter-update">Atualizar</button>` : ""}
+    </div>` : "";
   openSheet(`<div class="lead-detail-head"><div class="lead-avatar">${initials(lead.name || lead.instagram)}</div><div><h2 class="sheet-title">${escapeHtml(lead.name || lead.instagram)}</h2><p class="sheet-subtitle">${escapeHtml(lead.instagram)} · ${clinic?.name || ""}</p></div></div>
     <div class="qualification-summary">
       <div><span>Interesse</span><strong>${escapeHtml(lead.interest || "Ainda não informado")}</strong></div>
       <div><span>Temperatura</span><strong class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliado"}</strong></div>
       <div><span>WhatsApp</span><strong>${lead.whatsapp ? escapeHtml(lead.whatsapp) : "Ainda não captado"}</strong></div>
     </div>
-    <h3 class="timeline-title">O que já foi alinhado</h3>
-    <div class="qualification-result">${alignedItems.length ? alignedItems.map(([, label]) => `<div><span>✓</span><p>${escapeHtml(label)}</p></div>`).join("") : `<div><span>—</span><p>Nenhum ponto confirmado ainda.</p></div>`}</div>
+    <div class="lead-bant-head"><h3 class="timeline-title">Pré-qualificação BANT</h3><span>${progress.done}/${progress.total}</span></div>
+    <div class="bant-summary">${bantSummary}</div>
+    ${hunterTracking}
     <div class="detail-actions"><button class="secondary-button" id="edit-lead">Editar</button><button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
     <h3 class="timeline-title">Histórico resumido</h3><div class="timeline">${[...(lead.timeline || [])].reverse().map(item => `<div><i></i><span><strong>${escapeHtml(item.label)}</strong><small>${formatDate(item.at, true)}</small></span></div>`).join("")}</div>
-    ${lead.whatsapp && !lead.sentToHunterAt ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}`, () => {
+    ${canSend ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : lead.whatsapp && !lead.sentToHunterAt ? `<button class="secondary-button" id="complete-bant">Concluir BANT para enviar</button>` : ""}`, () => {
     $("#edit-lead").addEventListener("click", () => openLeadForm({ leadId }));
     $("#contact-lead").addEventListener("click", () => window.open(`https://instagram.com/${lead.instagram.replace("@", "")}`, "_blank", "noopener"));
+    $("#complete-bant")?.addEventListener("click", () => openLeadForm({ leadId }));
+    $("#hunter-update")?.addEventListener("click", () => openHunterUpdate(leadId));
     $("#send-hunter")?.addEventListener("click", () => { lead.status = "sent_to_hunter"; lead.sentToHunterAt = new Date().toISOString(); lead.timeline.push({ at: lead.sentToHunterAt, label: `Enviado para ${clinic.hunter}` }); persist(); renderLeads(); renderDashboard(); openHunterWhatsApp(lead); });
   });
+}
+
+function openHunterUpdate(leadId) {
+  const lead = leadById(leadId);
+  const clinic = clinicById(lead.clinicId);
+  if (lead.status === "sent_to_hunter") {
+    openSheet(`<h2 class="sheet-title">Retorno da Hunter</h2><p class="sheet-subtitle">${escapeHtml(clinic?.hunter || "A closer")} confirmou o agendamento? Registre apenas o essencial.</p>
+      <form class="sheet-form" id="hunter-schedule-form">
+        <div class="field"><label for="hunter-scheduled-at">Data e hora do agendamento</label><input id="hunter-scheduled-at" type="datetime-local" required></div>
+        <button class="primary-button" type="submit"><span class="material-symbols-outlined">event_available</span> Confirmar agendamento</button>
+      </form>`, () => {
+      $("#hunter-schedule-form").addEventListener("submit", event => {
+        event.preventDefault();
+        const scheduledAt = new Date($("#hunter-scheduled-at").value).toISOString();
+        lead.status = "scheduled";
+        lead.scheduledAt = scheduledAt;
+        lead.timeline.push({ at: new Date().toISOString(), label: `Hunter confirmou agendamento para ${formatDate(scheduledAt, true)}` });
+        persist(); renderDashboard(); renderLeads(); renderReport(); openLeadDetail(leadId); showToast("Agendamento confirmado");
+      });
+    });
+    return;
+  }
+  openSheet(`<h2 class="sheet-title">A paciente compareceu?</h2><p class="sheet-subtitle">Atualize com o retorno da Hunter para fechar o funil real.</p>
+    <div class="attendance-choice">
+      <button class="primary-button" id="mark-attended"><span class="material-symbols-outlined">verified</span> Sim, compareceu</button>
+      <button class="secondary-button" id="mark-no-show"><span class="material-symbols-outlined">event_busy</span> Não compareceu</button>
+    </div>`, () => {
+    $("#mark-attended").addEventListener("click", () => saveAttendanceOutcome(lead, "attended"));
+    $("#mark-no-show").addEventListener("click", () => saveAttendanceOutcome(lead, "no_show"));
+  });
+}
+
+function saveAttendanceOutcome(lead, outcome) {
+  const now = new Date().toISOString();
+  lead.status = outcome;
+  if (outcome === "attended") lead.attendedAt = now;
+  else lead.noShowAt = now;
+  lead.timeline.push({ at: now, label: outcome === "attended" ? "Hunter confirmou o comparecimento" : "Hunter informou que não compareceu" });
+  persist(); renderDashboard(); renderLeads(); renderReport(); openLeadDetail(lead.id);
+  showToast(outcome === "attended" ? "Comparecimento registrado" : "Ausência registrada");
 }
 
 function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
   if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
+  if (!isBantComplete(lead)) return showToast("Conclua o BANT antes de enviar para a closer.");
   const temperature = { hot: "🔥 Quente", warm: "🌤️ Morno", cold: "❄️ Frio" }[lead.temperature] || "Não avaliada";
-  const aligned = qualificationItems
-    .map(([key, label]) => `${lead.qualification?.[key] ? "✅" : "▫️"} ${label}`)
-    .join("\n");
-  const message = `🎉 *NOVO LEAD QUALIFICADO!*\n\nBoa, ${clinic.hunter}! Temos uma nova oportunidade da *${clinic.name}* pronta para você continuar. 🚀\n\n👤 *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Não informado"}\n• Temperatura: ${temperature}\n\n💬 *O que já foi conversado*\n${aligned}\n\n✨ O contato já recebeu a primeira qualificação. Pode seguir daqui sem repetir a abordagem inicial.\n\n📅 Captado em ${formatDate(lead.prospectedAt, true)}`;
+  const aligned = qualificationGroups.map(group => `*${group.key} · ${group.title}*\n${group.items.map(([key, label]) => `${lead.qualification?.[key] ? "✅" : "▫️"} ${label}`).join("\n")}`).join("\n\n");
+  const message = `🎉 *NOVA OPORTUNIDADE QUALIFICADA!*\n\nBoa, ${clinic.hunter}! A pré-qualificação da *${clinic.name}* foi concluída e esse contato está pronto para você assumir. 🚀\n\n👤 *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Não informado"}\n• Temperatura: ${temperature}\n\n🧭 *BANT · o que já foi conversado*\n${aligned}\n\n✨ Pode seguir para o agendamento sem repetir a abordagem inicial.\n\n📅 Captado em ${formatDate(lead.prospectedAt, true)}`;
   showToast("🎉 Lead qualificado e mensagem preparada!");
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
@@ -957,8 +1207,8 @@ async function exportReport(share = false) {
   const stats = periodStats(state.reportPeriod);
   const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
   const responseRate = stats.directs ? Math.round(stats.responses / stats.directs * 100) : 0;
-  const captureRate = stats.responses ? Math.round(stats.phones / stats.responses * 100) : 0;
-  const directsPerPhone = stats.phones ? (stats.directs / stats.phones).toFixed(1).replace(".", ",") : "—";
+  const appointmentRate = stats.hunters ? Math.round(stats.scheduled / stats.hunters * 100) : 0;
+  const attendanceRate = stats.scheduled ? Math.round(stats.attended / stats.scheduled * 100) : 0;
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -1018,9 +1268,9 @@ async function exportReport(share = false) {
   ctx.fillText("DESEMPENHO DO PERÍODO", 104, 294);
   const heroMetrics = [
     [actions, "Ações"],
-    [stats.leads, "Leads"],
-    [stats.hunters, "Encaminhados"],
-    [compactDuration(stats.seconds), "Tempo"]
+    [stats.hunters, "Qualificados"],
+    [stats.scheduled, "Agendados"],
+    [stats.attended, "Compareceram"]
   ];
   heroMetrics.forEach(([value, label], index) => {
     const x = 104 + index * 220;
@@ -1060,8 +1310,8 @@ async function exportReport(share = false) {
   canvasRoundedRect(ctx, 82, 860, 916, 104, 24, "#eff5f1");
   const efficiency = [
     [`${responseRate}%`, "Taxa de resposta"],
-    [`${captureRate}%`, "Captação por resposta"],
-    [directsPerPhone, "Directs por telefone"]
+    [`${appointmentRate}%`, "Agendamento por qualificado"],
+    [`${attendanceRate}%`, "Comparecimento"]
   ];
   efficiency.forEach(([value, label], index) => {
     const x = 112 + index * 294;

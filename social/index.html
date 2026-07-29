@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
   <main id="app">
@@ -117,6 +117,8 @@
               <button data-view="followups"><span class="pipeline-icon"><span class="material-symbols-outlined">schedule</span></span><strong id="pipeline-followups">0</strong><small>Em follow-up</small></button>
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">person_cancel</span></span><strong id="pipeline-lost">0</strong><small>Perdidos</small></button>
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">celebration</span></span><strong id="pipeline-qualified">0</strong><small>Encaminhados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">event_available</span></span><strong id="pipeline-scheduled">0</strong><small>Agendados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">verified</span></span><strong id="pipeline-attended">0</strong><small>Compareceram</small></button>
           </div>
           <div class="section-heading"><div><p class="overline">Operação</p><h2>Começar por uma clínica</h2></div><button class="small-link" data-view="clinics">Gerenciar</button></div>
           <div class="clinic-list" id="clinic-list"></div>
@@ -132,8 +134,12 @@
           <div class="session-active hidden" id="session-active">
             <div class="session-header">
               <div><p class="overline">Sessão ativa</p><h2 id="session-clinic">Clínica Bella</h2></div>
-              <div class="timer" id="timer">00:00:00</div>
+              <div class="timer-panel">
+                <div class="timer" id="timer">30:00</div>
+                <small id="session-limit-label">restantes</small>
+              </div>
             </div>
+            <div class="session-timer-track" aria-hidden="true"><i id="session-timer-progress"></i></div>
             <div class="action-grid" id="action-grid">
               <button data-action="profiles"><span class="material-symbols-outlined">person_add</span><strong>0</strong><small>Novos follows</small></button>
               <button data-action="likes"><span class="material-symbols-outlined">favorite</span><strong>0</strong><small>Curtidas</small></button>
@@ -175,6 +181,9 @@
             <button data-status="follow_up">Follow-up</button>
             <button data-status="lost">Perdidos</button>
             <button data-status="sent_to_hunter">Encaminhados</button>
+            <button data-status="scheduled">Agendados</button>
+            <button data-status="attended">Compareceram</button>
+            <button data-status="no_show">Não compareceram</button>
           </div>
           <div class="lead-list" id="lead-list"></div>
           <button class="fab" id="new-lead" aria-label="Novo lead"><span class="material-symbols-outlined">person_add</span></button>
@@ -217,9 +226,9 @@
             <p class="overline">Resumo da operação</p>
             <div class="report-heading"><div><h2 id="report-label">Hoje</h2><p id="report-date"></p></div><span class="report-badge">Social selling</span></div>
             <div class="report-metrics">
-              <div><strong id="report-leads">0</strong><span>Leads</span></div>
-              <div><strong id="report-hunters">0</strong><span>Para closer</span></div>
-              <div><strong id="report-directs">0</strong><span>Directs</span></div>
+              <div><strong id="report-hunters">0</strong><span>Qualificados</span></div>
+              <div><strong id="report-scheduled">0</strong><span>Agendados</span></div>
+              <div><strong id="report-attended">0</strong><span>Compareceram</span></div>
               <div><strong id="report-hours">0h</strong><span>Trabalhadas</span></div>
             </div>
             <div class="report-section-title"><span>Atividade da operação</span><small id="report-actions-total">0 ações</small></div>
@@ -261,7 +270,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=14"></script>
-  <script type="module" src="app.js?v=14"></script>
+  <script src="config.js?v=15"></script>
+  <script type="module" src="app.js?v=15"></script>
 </body>
 </html>

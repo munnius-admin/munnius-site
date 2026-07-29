@@ -8,18 +8,25 @@ O aplicativo funciona como dois produtos leves no mesmo fluxo:
 2. **mini CRM de pré-qualificação**, com o mínimo necessário para uma closer continuar o atendimento.
 
 O dashboard inicia ou retoma uma sessão diretamente em cada clínica. O funil apresenta
-`Directs enviados → Conversando → Em follow-up → Perdidos → Encaminhados`. Direct é
+`Directs enviados → Conversando → Em follow-up → Perdidos → Encaminhados → Agendados → Compareceram`. Direct é
 uma métrica agregada; o cadastro individual nasce quando a pessoa responde, evitando
-duplicidade manual. Ao captar o telefone, o lead é qualificado e entregue à closer.
+duplicidade manual. Ao captar o telefone, o lead é qualificado e entregue à Hunter/closer.
+O agendamento é feito pela Hunter; a social seller apenas registra no app o retorno de
+agendamento, comparecimento ou ausência.
 
-A passagem registra procedimento, temperatura e cinco confirmações objetivas da
-conversa. O WhatsApp da closer recebe uma mensagem comemorativa com o contexto já
-alinhado para que a abordagem inicial não seja repetida.
+A passagem registra procedimento, temperatura e oito pontos de pré-qualificação,
+agrupados em BANT: momento/investimento, autoridade de decisão, necessidade e tempo.
+Cada grupo oferece uma pergunta conversacional pronta para copiar. O telefone e o envio
+para a Hunter ficam bloqueados até os oito pontos serem concluídos. O WhatsApp recebe
+uma mensagem comemorativa com o BANT organizado para que a abordagem não seja repetida.
 
-A aba Sessão também funciona como uma ronda diária das clínicas: contas pendentes
-aparecem primeiro e cada linha consolida tempo e ações de todas as sessões do dia. A
+A aba Sessão também funciona como uma ronda diária das clínicas, agrupada por prioridade
+calculada a partir da faixa mensal informada no cadastro: A (30 min), B (20 min) e C
+(15 min). O cronômetro é regressivo e avisa quando é hora de seguir, sem encerrar a
+sessão à força. Cada linha consolida tempo e ações de todas as sessões do dia. A
 imagem compartilhável do relatório é gerada sob demanda em formato 4:5, com identidade
-discreta, indicadores do funil e destaques por clínica; nenhuma imagem é armazenada.
+discreta, ações, qualificados, agendamentos, comparecimentos e destaques por clínica;
+nenhuma imagem é armazenada.
 
 Identidade nunca faz parte do estado operacional compartilhado. Nome, e-mail e papel são
 obtidos da conta autenticada a cada abertura, evitando que cache ou dados de
