@@ -7,12 +7,16 @@ O aplicativo funciona como dois produtos leves no mesmo fluxo:
 1. **contador de rotina**, com sessões agregadas por clínica;
 2. **mini CRM de pré-qualificação**, com o mínimo necessário para uma closer continuar o atendimento.
 
-O dashboard inicia ou retoma uma sessão diretamente em cada clínica. O lead passa
-por `Novo → Conversando → Follow-up → Pré-qualificado → Enviado à closer`, com
-interesse, região e temperatura como campos rápidos. Relatórios permanecem em uma
-área principal da navegação e separam resultado comercial de esforço operacional.
+O dashboard inicia ou retoma uma sessão diretamente em cada clínica. O funil apresenta
+`Directs enviados → Conversando → Em follow-up → Perdidos → Encaminhados`. Direct é
+uma métrica agregada; o cadastro individual nasce quando a pessoa responde, evitando
+duplicidade manual. Ao captar o telefone, o lead é qualificado e entregue à closer.
 
-Identidade nunca faz parte do snapshot operacional. Nome, e-mail e papel são
+A passagem registra procedimento, temperatura e cinco confirmações objetivas da
+conversa. O WhatsApp da closer recebe uma mensagem comemorativa com o contexto já
+alinhado para que a abordagem inicial não seja repetida.
+
+Identidade nunca faz parte do estado operacional compartilhado. Nome, e-mail e papel são
 obtidos da conta autenticada a cada abertura, evitando que cache ou dados de
 demonstração apareçam para outro usuário.
 
@@ -47,6 +51,8 @@ outra organização.
 - `lead_timeline`: histórico curto e datado do lead.
 - `follow_ups`, `message_templates`, `hunter_deliveries`: operação diária.
 - `audit_events`: fatos relevantes e correções, sem HTML, prints ou conversas completas.
+- `organization_snapshots`: estado compacto compartilhado por toda a organização
+  durante o MVP, com atualização em tempo real e mesclagem por ID.
 
 ## Retenção
 
@@ -58,15 +64,15 @@ em imagem devem ser gerados sob demanda, não armazenados.
 
 1. Crie um projeto na região mais próxima disponível.
 2. Em Authentication, mantenha e-mail/senha e desative cadastro público.
-3. Execute `supabase/migrations/001_munnius_social_foundation.sql` no SQL Editor.
+3. Execute, em ordem, os arquivos de `supabase/migrations` no SQL Editor.
 4. Crie a primeira organização e convide usuários usando uma função administrativa
    server-side ou o painel do Supabase. Nunca exponha a `service_role`.
 5. Copie URL e chave pública `anon` para `social/config.js`.
 6. Adicione `https://social.munnius.com.br` às URLs permitidas de autenticação.
-7. Teste com dois usuários em organizações diferentes antes de inserir dados reais.
+7. Teste dois membros na mesma organização e dois usuários em organizações diferentes.
 
-O arquivo SQL não é executado automaticamente. Isso evita alterar o projeto Supabase
-aberto sem uma confirmação explícita.
+As migrations devem permanecer versionadas junto do código e ser aplicadas primeiro
+em prévia sempre que houver um ambiente separado.
 
 ## Subdomínio no Cloudflare
 
@@ -88,7 +94,7 @@ repositório `munnius-social`. Nenhuma alteração de DNS foi feita nesta entreg
 
 ## Próximos incrementos
 
-1. sincronização completa de clínicas, leads, follow-ups e mensagens via Supabase;
+1. migrar gradualmente o snapshot compacto para as tabelas normalizadas;
 2. convite administrativo por uma Edge Function com allowlist;
-3. testes automatizados de RLS com duas organizações;
+3. testes automatizados de concorrência e RLS com duas organizações;
 4. extensão Chrome consumindo as mesmas tabelas e políticas.

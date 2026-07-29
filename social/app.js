@@ -1,17 +1,25 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=11";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=12";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const STORAGE_KEY = "munnius-social-v2";
-const countLabels = { profiles: "Perfis", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Respostas", phones: "Telefones" };
+const STORAGE_KEY = "munnius-social-v3";
+const LEGACY_STORAGE_KEY = "munnius-social-v2";
+const countLabels = { profiles: "Novos follows", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
 const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", followups: "Follow-ups", more: "Mais", clinics: "Clínicas", reports: "Relatórios" };
-const statusNames = { new: "Novo", talking: "Conversando", no_response: "Sem resposta", follow_up: "Follow-up", qualified: "Pré-qualificado", sent_to_hunter: "Enviado à closer", finished: "Finalizado" };
+const statusNames = { new: "Lead mapeado", talking: "Conversando", follow_up: "Em follow-up", lost: "Perdido", sent_to_hunter: "Qualificado e encaminhado", finished: "Finalizado" };
+const qualificationItems = [
+  ["procedureDiscussed", "Falou sobre o procedimento"],
+  ["valueUnderstood", "Entendeu o valor do atendimento"],
+  ["fitConfirmed", "Respondeu se faz sentido para ele(a)"],
+  ["knowsDoctor", "Já conhece a Dra."],
+  ["interestedThisMonth", "Tem interesse em fazer ainda este mês"]
+];
 const googleEnabled = Boolean(window.MUNNIUS_SOCIAL_CONFIG?.googleEnabled);
 const recoveryLinkDetected = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery"
   || new URLSearchParams(location.search).get("type") === "recovery";
 
 const seed = {
-  version: 2,
+  version: 3,
   profile: { name: "Usuário", initials: "US", role: "social_seller" },
   clinics: [
     { id: "bella", name: "Clínica Bella", doctor: "Dra. Beatriz", instagram: "@clinicabella", hunter: "Ana", hunterPhone: "5541999990001", protocol: "Glow", location: "Curitiba, PR", evaluationPrice: 300, target: 8, color: "#75566f", active: true },
@@ -36,6 +44,23 @@ const seed = {
   ]
 };
 
+function normalizeState(candidate) {
+  const normalized = candidate;
+  normalized.version = 3;
+  normalized.clinics ||= [];
+  normalized.leads ||= [];
+  normalized.followups ||= [];
+  normalized.sessions ||= [];
+  normalized.templates ||= structuredClone(seed.templates);
+  normalized.leads.forEach(lead => {
+    if (lead.status === "no_response") lead.status = "lost";
+    if (lead.status === "qualified") lead.status = lead.whatsapp ? "sent_to_hunter" : "talking";
+    lead.qualification ||= {};
+    lead.timeline ||= [];
+  });
+  return normalized;
+}
+
 function loadState() {
   const base = isSupabaseConfigured
     ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], followups: [], sessions: [] }
@@ -44,10 +69,10 @@ function loadState() {
     return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
   }
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (stored?.version === 2) {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY));
+    if (stored?.version >= 2) {
       const { profile: _ignoredProfile, ...operationalState } = stored;
-      return { ...base, ...operationalState, profile: base.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+      return normalizeState({ ...base, ...operationalState, profile: base.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" });
     }
   } catch (error) { console.warn("Não foi possível recuperar os dados locais.", error); }
   return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
@@ -57,19 +82,52 @@ let state = loadState();
 let syncTimer;
 let workspaceOpened = false;
 let recoveryMode = recoveryLinkDetected;
+let stopWorkspaceRealtime;
 function operationalStorageKey(profileId = state.profile?.id) {
   return isSupabaseConfigured && profileId ? `${STORAGE_KEY}:${profileId}` : STORAGE_KEY;
+}
+function legacyOperationalStorageKey(profileId = state.profile?.id) {
+  return isSupabaseConfigured && profileId ? `${LEGACY_STORAGE_KEY}:${profileId}` : LEGACY_STORAGE_KEY;
 }
 function loadLocalOperational(profile) {
   const base = { ...structuredClone(seed), profile, clinics: [], leads: [], followups: [], sessions: [] };
   try {
-    const stored = JSON.parse(localStorage.getItem(operationalStorageKey(profile?.id)));
-    if (stored?.version === 2) {
+    const stored = JSON.parse(
+      localStorage.getItem(operationalStorageKey(profile?.id))
+      || localStorage.getItem(legacyOperationalStorageKey(profile?.id))
+    );
+    if (stored?.version >= 2) {
       const { profile: _ignoredProfile, ...operationalState } = stored;
-      return { ...base, ...operationalState, profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+      return normalizeState({ ...base, ...operationalState, profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" });
     }
   } catch (error) { console.warn("Não foi possível recuperar o cache desta conta.", error); }
   return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+}
+function mergeById(localItems = [], remoteItems = []) {
+  const merged = new Map();
+  localItems.forEach(item => item?.id && merged.set(item.id, item));
+  remoteItems.forEach(item => item?.id && merged.set(item.id, item));
+  return [...merged.values()];
+}
+function mergeOperationalState(localState, remoteState, profile) {
+  const local = normalizeState(localState);
+  const remote = normalizeState(remoteState);
+  return normalizeState({
+    ...local,
+    ...remote,
+    profile,
+    clinics: mergeById(local.clinics, remote.clinics),
+    leads: mergeById(local.leads, remote.leads),
+    followups: mergeById(local.followups, remote.followups),
+    sessions: mergeById(local.sessions, remote.sessions),
+    templates: mergeById(local.templates, remote.templates),
+    session: null,
+    timerId: null,
+    lastAction: null,
+    leadFilter: "all",
+    followupFilter: "today",
+    reportPeriod: "day"
+  });
 }
 function persist() {
   const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
@@ -87,16 +145,48 @@ async function hydrateRemoteState() {
   if (!isSupabaseConfigured) return;
   const workspace = await dataGateway.loadWorkspace();
   const remote = workspace?.snapshot;
-  if (remote?.version !== 2) {
-    state.profile = workspace.profile;
+  const local = loadLocalOperational(workspace.profile);
+  if (!remote || Number(remote.version || 0) < 2) {
+    state = local;
     persist();
     return;
   }
   const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
   const { profile: _ignoredProfile, ...operationalState } = remote;
-  state = { ...base, ...operationalState, profile: workspace.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+  state = mergeOperationalState(local, { ...base, ...operationalState }, workspace.profile);
   const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
   localStorage.setItem(operationalStorageKey(profile.id), JSON.stringify(serializable));
+  persist();
+}
+
+function applyRemoteSnapshot(remote) {
+  if (!remote || Number(remote.version || 0) < 2 || state.session) return;
+  const profile = state.profile;
+  const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
+  const { profile: _ignoredProfile, ...operationalState } = remote;
+  state = mergeOperationalState(state, { ...base, ...operationalState }, profile);
+  localStorage.setItem(operationalStorageKey(profile.id), JSON.stringify(state));
+  renderDashboard();
+  renderLeads();
+  renderFollowups();
+  renderReport();
+  showToast("Dados atualizados por outro aparelho");
+}
+
+function expireUnansweredLeads() {
+  const cutoff = Date.now() - 7 * 86400000;
+  let changed = false;
+  state.leads.forEach(lead => {
+    const referenceDate = new Date(lead.lastContactAt || lead.prospectedAt || 0).getTime();
+    if (lead.status === "new" && referenceDate && referenceDate < cutoff) {
+      const now = new Date().toISOString();
+      lead.status = "lost";
+      lead.timeline ||= [];
+      lead.timeline.push({ at: now, label: "Encerrado sem resposta após 7 dias" });
+      changed = true;
+    }
+  });
+  if (changed) persist();
 }
 
 function renderProfile() {
@@ -137,11 +227,18 @@ async function openWorkspace(message = "Bem-vindo") {
   }
   $("#auth-screen").classList.add("hidden");
   $("#app-shell").classList.remove("hidden");
+  expireUnansweredLeads();
   renderProfile();
   renderDashboard();
   renderLeads();
   renderFollowups();
   renderReport();
+  stopWorkspaceRealtime?.();
+  try {
+    stopWorkspaceRealtime = await dataGateway.subscribeToWorkspace?.(applyRemoteSnapshot);
+  } catch (error) {
+    console.warn("Atualização em tempo real será retomada depois.", error);
+  }
   showToast(message);
 }
 
@@ -199,14 +296,18 @@ function renderDashboard() {
   const pending = state.followups.filter(item => item.status === "pending").length;
   const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
   const talking = state.leads.filter(lead => lead.status === "talking").length;
-  const qualified = state.leads.filter(lead => lead.status === "qualified").length;
+  const followingUp = state.leads.filter(lead => lead.status === "follow_up").length;
+  const lost = state.leads.filter(lead => lead.status === "lost").length;
+  const qualified = state.leads.filter(lead => lead.status === "sent_to_hunter").length;
   $("#actions-total").textContent = actions;
   $("#leads-total").textContent = stats.leads;
   $("#clinics-total").textContent = activeClinics.length;
   $("#hunters-total").textContent = stats.hunters;
   $("#followups-total").textContent = pending;
+  $("#pipeline-mapped").textContent = stats.directs;
   $("#pipeline-talking").textContent = talking;
-  $("#pipeline-followups").textContent = pending;
+  $("#pipeline-followups").textContent = followingUp;
+  $("#pipeline-lost").textContent = lost;
   $("#pipeline-qualified").textContent = qualified;
   $("#hero-summary").textContent = actions
     ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phones} telefones`
@@ -378,7 +479,18 @@ function updateAction(action, delta = 1) {
   countNode.classList.remove("count-pop");
   requestAnimationFrame(() => countNode.classList.add("count-pop"));
   if (delta > 0) state.lastAction = action;
-  if (action === "phones" && delta > 0) openLeadForm({ hasPhone: true });
+}
+function handleSessionAction(action) {
+  if (!state.session) return;
+  if (action === "responses") {
+    openLeadForm({ mode: "response", onSaved: () => updateAction("responses") });
+    return;
+  }
+  if (action === "phones") {
+    openLeadForm({ mode: "phone", onSaved: () => updateAction("phones") });
+    return;
+  }
+  updateAction(action);
 }
 async function finishSession() {
   if (!state.session) return;
@@ -438,71 +550,103 @@ function field(id, label, value = "", required = false, type = "text", placehold
   return `<div class="field"><label for="${id}">${label}</label><input id="${id}" type="${type}" value="${escapeHtml(String(value ?? ""))}" placeholder="${placeholder}" ${required ? "required" : ""}></div>`;
 }
 
-function openLeadForm({ leadId = null, hasPhone = false } = {}) {
-  const lead = leadId ? leadById(leadId) : {};
-  const edit = Boolean(leadId);
-  openSheet(`<h2 class="sheet-title">${edit ? "Editar lead" : hasPhone ? "Telefone captado" : "Novo lead"}</h2><p class="sheet-subtitle">Cole o @ ou o link do Instagram. O restante é opcional.</p>
+function qualificationChecklist(lead = {}) {
+  return `<div class="qualification-checklist">${qualificationItems.map(([key, label]) => `
+    <label class="qualification-check"><input id="qualification-${key}" type="checkbox" ${lead.qualification?.[key] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>`;
+}
+
+function readQualification() {
+  return Object.fromEntries(qualificationItems.map(([key]) => [key, Boolean($(`#qualification-${key}`)?.checked)]));
+}
+
+function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
+  const originalLead = leadId ? leadById(leadId) : null;
+  const lead = originalLead || {};
+  const edit = Boolean(originalLead);
+  const isPhone = mode === "phone";
+  const isResponse = mode === "response";
+  const fixedStatus = isPhone ? "sent_to_hunter" : isResponse ? "talking" : null;
+  const title = edit ? "Editar lead" : isPhone ? "Telefone captado" : isResponse ? "Lead respondeu" : "Lead mapeado";
+  const submitLabel = isPhone ? "🎉 Salvar e enviar para closer" : edit ? "Salvar alterações" : isResponse ? "Salvar em Conversando" : "Salvar lead";
+  openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Complete o contexto e entregue a oportunidade para a closer." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
     <form class="sheet-form" id="lead-form">
       ${field("lead-instagram", "Instagram", lead.instagram, true, "text", "@usuario ou link")}
       ${field("lead-name", "Nome", lead.name, false, "text", "Nome do lead")}
-      ${field("lead-phone", "WhatsApp", lead.whatsapp, hasPhone, "tel", "(00) 00000-0000")}
-      <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic">${state.clinics.filter(c=>c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
+      ${isPhone || edit ? field("lead-phone", "WhatsApp", lead.whatsapp, isPhone, "tel", "(00) 00000-0000") : ""}
+      <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic">${state.clinics.filter(c => c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
       <div class="qualification-block">
-        <div class="qualification-heading"><span class="material-symbols-outlined">verified</span><div><strong>Pré-qualificação rápida</strong><small>O suficiente para a closer continuar bem.</small></div></div>
-        ${field("lead-interest", "Interesse / procedimento", lead.interest, false, "text", "Ex.: Botox, avaliação facial")}
-        <div class="form-grid">${field("lead-location", "Cidade ou região", lead.location, false, "text", "Curitiba")}
-          <div class="field"><label for="lead-temperature">Temperatura</label><select id="lead-temperature">
-            <option value="cold" ${lead.temperature === "cold" ? "selected" : ""}>Frio</option>
-            <option value="warm" ${(!lead.temperature || lead.temperature === "warm") ? "selected" : ""}>Morno</option>
-            <option value="hot" ${lead.temperature === "hot" ? "selected" : ""}>Quente</option>
-          </select></div>
-        </div>
+        <div class="qualification-heading"><span class="material-symbols-outlined">verified</span><div><strong>Contexto da conversa</strong><small>Evita que a closer repita o que já foi falado.</small></div></div>
+        ${field("lead-interest", "Procedimento de interesse", lead.interest, false, "text", "Ex.: Botox, avaliação facial")}
+        <div class="field"><label for="lead-temperature">Temperatura</label><select id="lead-temperature">
+          <option value="cold" ${lead.temperature === "cold" ? "selected" : ""}>Frio</option>
+          <option value="warm" ${(!lead.temperature || lead.temperature === "warm") ? "selected" : ""}>Morno</option>
+          <option value="hot" ${lead.temperature === "hot" ? "selected" : ""}>Quente</option>
+        </select></div>
+        ${qualificationChecklist(lead)}
       </div>
-      <div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || (hasPhone ? "qualified" : "new")) === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>
-      <div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>
-      <button class="primary-button" type="submit">${edit ? "Salvar alterações" : "Salvar lead"}</button>
+      ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
+      ${isPhone ? "" : `<div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>`}
+      <button class="primary-button ${isPhone ? "victory-button" : ""}" type="submit">${submitLabel}</button>
     </form>`, () => {
     $("#lead-instagram").addEventListener("blur", event => { event.target.value = instagramHandle(event.target.value); });
-    $("#lead-form").addEventListener("submit", async event => {
+    $("#lead-form").addEventListener("submit", event => {
       event.preventDefault();
       const clinicId = $("#lead-clinic").value;
-      const status = $("#lead-status").value;
-      const now = new Date().toISOString();
-      const record = edit ? lead : {
-        id: uid("lead"), prospectedAt: now, timeline: [{ at: now, label: "Lead criado" }], sentToHunterAt: null
+      const instagram = instagramHandle($("#lead-instagram").value);
+      const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
+      const record = originalLead || existing || {
+        id: uid("lead"), prospectedAt: new Date().toISOString(), timeline: [], sentToHunterAt: null
       };
+      const now = new Date().toISOString();
+      const status = fixedStatus || $("#lead-status").value;
+      const shouldSend = isPhone || (status === "sent_to_hunter" && !record.sentToHunterAt);
       record.timeline ||= [];
       Object.assign(record, {
-        name: $("#lead-name").value.trim(), instagram: instagramHandle($("#lead-instagram").value),
-        whatsapp: phoneDigits($("#lead-phone").value), clinicId, status, lastContactAt: now,
-        interest: $("#lead-interest").value.trim(), location: $("#lead-location").value.trim(),
-        temperature: $("#lead-temperature").value
+        name: $("#lead-name").value.trim(), instagram,
+        whatsapp: $("#lead-phone") ? phoneDigits($("#lead-phone").value) : record.whatsapp || "",
+        clinicId, status, lastContactAt: now,
+        interest: $("#lead-interest").value.trim(),
+        temperature: $("#lead-temperature").value,
+        qualification: readQualification()
       });
-      if (!edit) state.leads.unshift(record);
-      record.timeline.push({ at: now, label: edit ? `Status alterado para ${statusNames[status]}` : "Primeiro contato registrado" });
-      const followupAt = $("#lead-followup").value;
+      if (!originalLead && !existing) state.leads.unshift(record);
+      if (isResponse) record.timeline.push({ at: now, label: existing ? "Nova resposta registrada" : "Lead respondeu ao direct" });
+      else if (isPhone) record.timeline.push({ at: now, label: "WhatsApp captado e qualificação concluída" });
+      else record.timeline.push({ at: now, label: edit ? `Etapa alterada para ${statusNames[status]}` : "Lead mapeado" });
+      const followupAt = $("#lead-followup")?.value;
       if (followupAt) {
         state.followups.push({ id: uid("fu"), leadId: record.id, scheduledFor: new Date(followupAt).toISOString(), step: "Follow-up", status: "pending" });
-        record.status = "follow_up"; record.timeline.push({ at: now, label: `Follow-up agendado para ${formatDate(followupAt, true)}` });
+        record.status = "follow_up";
+        record.timeline.push({ at: now, label: `Follow-up agendado para ${formatDate(followupAt, true)}` });
       }
-      if (status === "qualified" && !edit) record.timeline.push({ at: now, label: "Lead pré-qualificado" });
-      const shouldSend = status === "sent_to_hunter";
-      if (shouldSend) record.sentToHunterAt = now;
-      persist(); renderDashboard(); renderLeads(); renderFollowups(); closeSheet();
-      if (shouldSend) openHunterWhatsApp(record); else showToast(edit ? "Lead atualizado" : "Lead salvo");
+      if (shouldSend) {
+        record.status = "sent_to_hunter";
+        record.sentToHunterAt ||= now;
+        record.timeline.push({ at: now, label: `Encaminhado para ${clinicById(clinicId)?.hunter || "closer"}` });
+      }
+      persist();
+      renderDashboard();
+      renderLeads();
+      renderFollowups();
+      closeSheet();
+      onSaved?.(record);
+      if (shouldSend) openHunterWhatsApp(record);
+      else showToast(edit || existing ? "Lead atualizado" : "Lead salvo");
     });
   });
 }
 
 function openLeadDetail(leadId) {
   const lead = leadById(leadId); const clinic = clinicById(lead.clinicId);
+  const alignedItems = qualificationItems.filter(([key]) => lead.qualification?.[key]);
   openSheet(`<div class="lead-detail-head"><div class="lead-avatar">${initials(lead.name || lead.instagram)}</div><div><h2 class="sheet-title">${escapeHtml(lead.name || lead.instagram)}</h2><p class="sheet-subtitle">${escapeHtml(lead.instagram)} · ${clinic?.name || ""}</p></div></div>
     <div class="qualification-summary">
       <div><span>Interesse</span><strong>${escapeHtml(lead.interest || "Ainda não informado")}</strong></div>
-      <div><span>Região</span><strong>${escapeHtml(lead.location || "Ainda não informada")}</strong></div>
       <div><span>Temperatura</span><strong class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliado"}</strong></div>
       <div><span>WhatsApp</span><strong>${lead.whatsapp ? escapeHtml(lead.whatsapp) : "Ainda não captado"}</strong></div>
     </div>
+    <h3 class="timeline-title">O que já foi alinhado</h3>
+    <div class="qualification-result">${alignedItems.length ? alignedItems.map(([, label]) => `<div><span>✓</span><p>${escapeHtml(label)}</p></div>`).join("") : `<div><span>—</span><p>Nenhum ponto confirmado ainda.</p></div>`}</div>
     <div class="detail-actions"><button class="secondary-button" id="edit-lead">Editar</button><button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
     <h3 class="timeline-title">Histórico resumido</h3><div class="timeline">${[...(lead.timeline || [])].reverse().map(item => `<div><i></i><span><strong>${escapeHtml(item.label)}</strong><small>${formatDate(item.at, true)}</small></span></div>`).join("")}</div>
     ${lead.whatsapp && !lead.sentToHunterAt ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}`, () => {
@@ -514,8 +658,13 @@ function openLeadDetail(leadId) {
 
 function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
-  const message = `Oi, ${clinic.hunter}! Novo lead pré-qualificado da ${clinic.name}.\n\nNome: ${lead.name || "Não informado"}\nInstagram: ${lead.instagram}\nWhatsApp: ${lead.whatsapp || "Não informado"}\nInteresse: ${lead.interest || "Não informado"}\nRegião: ${lead.location || "Não informada"}\nTemperatura: ${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliada"}\nData: ${formatDate(lead.prospectedAt, true)}`;
-  showToast("Lead salvo e mensagem preparada");
+  if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
+  const temperature = { hot: "🔥 Quente", warm: "🌤️ Morno", cold: "❄️ Frio" }[lead.temperature] || "Não avaliada";
+  const aligned = qualificationItems
+    .map(([key, label]) => `${lead.qualification?.[key] ? "✅" : "▫️"} ${label}`)
+    .join("\n");
+  const message = `🎉 *NOVO LEAD QUALIFICADO!*\n\nBoa, ${clinic.hunter}! Temos uma nova oportunidade da *${clinic.name}* pronta para você continuar. 🚀\n\n👤 *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Não informado"}\n• Temperatura: ${temperature}\n\n💬 *O que já foi conversado*\n${aligned}\n\n✨ O contato já recebeu a primeira qualificação. Pode seguir daqui sem repetir a abordagem inicial.\n\n📅 Captado em ${formatDate(lead.prospectedAt, true)}`;
+  showToast("🎉 Lead qualificado e mensagem preparada!");
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
 
@@ -551,7 +700,7 @@ function openMessages() {
 
 function openSettings() {
   openSheet(`<h2 class="sheet-title">Preferências</h2><p class="sheet-subtitle">Seu espaço de operação manual</p>
-    <div class="template-card"><strong>Dados</strong><p>${isSupabaseConfigured ? "Sincronização segura com Supabase ativa." : "Modo local de validação. Os dados ficam somente neste navegador."}</p></div>
+    <div class="template-card"><strong>Dados</strong><p>${isSupabaseConfigured ? "Espaço compartilhado da equipe com sincronização em tempo real." : "Modo local de validação. Os dados ficam somente neste navegador."}</p></div>
     <div class="template-card"><strong>Instalar no iPhone</strong><p>No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p></div>
     <button class="danger-link" id="reset-demo">Apagar dados locais de demonstração</button>`, () => {
     $("#reset-demo").addEventListener("click", () => {
@@ -572,9 +721,9 @@ async function exportReport(share = false) {
   ctx.fillStyle = "#71807a"; ctx.font = "30px Arial"; ctx.fillText($("#report-date").textContent, 70, 295);
   const metrics = [
     [stats.leads, "Leads captados"], [stats.hunters, "Para closer"],
-    [stats.profiles, "Perfis prospectados"], [stats.likes, "Curtidas"],
+    [stats.profiles, "Novos follows"], [stats.likes, "Curtidas"],
     [stats.comments, "Comentários"], [stats.directs, "Directs enviados"],
-    [stats.responses, "Respostas"], [stats.phones, "Telefones captados"]
+    [stats.responses, "Leads que responderam"], [stats.phones, "Telefones captados"]
   ];
   metrics.forEach(([value, label], index) => {
     const x = 70 + (index % 2) * 480, y = 365 + Math.floor(index / 2) * 225;
@@ -651,13 +800,13 @@ $$("[data-view]").forEach(button => button.addEventListener("click", () => navig
 $$("[data-period]").forEach(button => button.addEventListener("click", () => { $$("[data-period]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.period = button.dataset.period; renderDashboard(); }));
 $$("[data-report-period]").forEach(button => button.addEventListener("click", () => { $$("[data-report-period]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.reportPeriod = button.dataset.reportPeriod; renderReport(); }));
 $("#choose-clinic").addEventListener("click", clinicPicker);
-$$("[data-action]").forEach(button => button.addEventListener("click", () => updateAction(button.dataset.action)));
+$$("[data-action]").forEach(button => button.addEventListener("click", () => handleSessionAction(button.dataset.action)));
 $("#undo-action").addEventListener("click", () => state.lastAction ? (updateAction(state.lastAction, -1), state.lastAction = null, showToast("Última ação desfeita")) : showToast("Nenhuma ação para desfazer"));
 $("#adjust-counts").addEventListener("click", openAdjustCounts);
 $("#finish-session").addEventListener("click", finishSession);
 $("#open-instagram").addEventListener("click", () => { const clinic = clinicById(state.session?.clinicId); if (clinic) window.open(`https://instagram.com/${clinic.instagram.replace("@", "")}`, "_blank", "noopener"); });
-$("#quick-lead").addEventListener("click", () => openLeadForm());
-$("#new-lead").addEventListener("click", () => openLeadForm());
+$("#quick-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
+$("#new-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
 $("#lead-search").addEventListener("input", renderLeads);
 $$("[data-status]").forEach(button => button.addEventListener("click", () => { $$("[data-status]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.leadFilter = button.dataset.status; renderLeads(); }));
 $$("[data-followup-filter]").forEach(button => button.addEventListener("click", () => { $$("[data-followup-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.followupFilter = button.dataset.followupFilter; renderFollowups(); }));

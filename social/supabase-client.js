@@ -158,11 +158,10 @@ export const dataGateway = {
     const { user, organizationId, role } = await getContext(client);
     const [{ data, error }, { data: profile, error: profileError }] = await Promise.all([
       client
-      .from("app_snapshots")
-      .select("payload")
-      .eq("organization_id", organizationId)
-      .eq("profile_id", user.id)
-      .maybeSingle(),
+        .from("organization_snapshots")
+        .select("payload")
+        .eq("organization_id", organizationId)
+        .maybeSingle(),
       client.from("profiles").select("full_name, email").eq("id", user.id).single()
     ]);
     if (error) throw error;
@@ -193,14 +192,24 @@ export const dataGateway = {
   async saveSnapshot(payload) {
     if (!isSupabaseConfigured) return;
     const client = await getClient();
-    const { user, organizationId } = await getContext(client);
-    const { error } = await client.from("app_snapshots").upsert({
-      organization_id: organizationId,
-      profile_id: user.id,
-      payload,
-      updated_at: new Date().toISOString()
-    });
+    await getContext(client);
+    const { error } = await client.rpc("save_organization_snapshot", { incoming_payload: payload });
     if (error) throw error;
+  },
+  async subscribeToWorkspace(callback) {
+    if (!isSupabaseConfigured) return null;
+    const client = await getClient();
+    const { organizationId } = await getContext(client);
+    const channel = client
+      .channel(`organization-workspace-${organizationId}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "organization_snapshots",
+        filter: `organization_id=eq.${organizationId}`
+      }, message => callback(message.new?.payload))
+      .subscribe();
+    return () => client.removeChannel(channel);
   },
   async saveSession(session) {
     const rows = JSON.parse(localStorage.getItem("munnius-social-sessions") || "[]");

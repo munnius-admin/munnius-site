@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
   <main id="app">
@@ -111,10 +111,12 @@
             <article class="metric-card metric-card-action" data-view="followups"><span class="ui-icon"><span class="material-symbols-outlined">notifications_active</span></span><strong id="followups-total">0</strong><p>Follow-ups pendentes</p></article>
           </div>
           <div class="section-heading"><div><p class="overline">Próximo passo</p><h2>Fila de oportunidades</h2></div><button class="small-link" data-view="leads">Abrir CRM</button></div>
-          <div class="pipeline-strip">
-            <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">forum</span></span><strong id="pipeline-talking">0</strong><small>Conversando</small></button>
-            <button data-view="followups"><span class="pipeline-icon"><span class="material-symbols-outlined">schedule</span></span><strong id="pipeline-followups">0</strong><small>Para retomar</small></button>
-            <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">verified</span></span><strong id="pipeline-qualified">0</strong><small>Qualificados</small></button>
+            <div class="pipeline-strip">
+              <button data-view="reports"><span class="pipeline-icon"><span class="material-symbols-outlined">send</span></span><strong id="pipeline-mapped">0</strong><small>Directs enviados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">forum</span></span><strong id="pipeline-talking">0</strong><small>Conversando</small></button>
+              <button data-view="followups"><span class="pipeline-icon"><span class="material-symbols-outlined">schedule</span></span><strong id="pipeline-followups">0</strong><small>Em follow-up</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">person_cancel</span></span><strong id="pipeline-lost">0</strong><small>Perdidos</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">celebration</span></span><strong id="pipeline-qualified">0</strong><small>Encaminhados</small></button>
           </div>
           <div class="section-heading"><div><p class="overline">Operação</p><h2>Começar por uma clínica</h2></div><button class="small-link" data-view="clinics">Gerenciar</button></div>
           <div class="clinic-list" id="clinic-list"></div>
@@ -133,16 +135,16 @@
               <div class="timer" id="timer">00:00:00</div>
             </div>
             <div class="action-grid" id="action-grid">
-              <button data-action="profiles"><span class="material-symbols-outlined">person_search</span><strong>0</strong><small>Perfis</small></button>
+              <button data-action="profiles"><span class="material-symbols-outlined">person_add</span><strong>0</strong><small>Novos follows</small></button>
               <button data-action="likes"><span class="material-symbols-outlined">favorite</span><strong>0</strong><small>Curtidas</small></button>
               <button data-action="comments"><span class="material-symbols-outlined">chat_bubble</span><strong>0</strong><small>Comentários</small></button>
               <button data-action="directs"><span class="material-symbols-outlined">send</span><strong>0</strong><small>Directs</small></button>
-              <button data-action="responses"><span class="material-symbols-outlined">mark_chat_read</span><strong>0</strong><small>Respostas</small></button>
-              <button class="accent-action" data-action="phones"><span class="material-symbols-outlined">phone_in_talk</span><strong>0</strong><small>Telefones</small></button>
+              <button data-action="responses"><span class="material-symbols-outlined">mark_chat_read</span><strong>0</strong><small>Responderam</small></button>
+              <button class="accent-action" data-action="phones"><span class="material-symbols-outlined">phone_in_talk</span><strong>0</strong><small>Telefone captado</small></button>
             </div>
             <div class="session-actions">
               <button class="secondary-button" id="open-instagram">Abrir Instagram</button>
-              <button class="secondary-button" id="quick-lead">+ Registrar lead</button>
+              <button class="secondary-button" id="quick-lead">+ Registrar resposta</button>
             </div>
             <button class="danger-link" id="finish-session">Encerrar sessão</button>
             <div class="quiet-actions">
@@ -159,10 +161,11 @@
           </div>
           <div class="filter-chips" id="lead-filters">
             <button class="active" data-status="all">Todos</button>
-            <button data-status="new">Novos</button>
+            <button data-status="new">Mapeados</button>
             <button data-status="talking">Conversando</button>
             <button data-status="follow_up">Follow-up</button>
-            <button data-status="qualified">Qualificados</button>
+            <button data-status="lost">Perdidos</button>
+            <button data-status="sent_to_hunter">Encaminhados</button>
           </div>
           <div class="lead-list" id="lead-list"></div>
           <button class="fab" id="new-lead" aria-label="Novo lead"><span class="material-symbols-outlined">person_add</span></button>
@@ -212,12 +215,12 @@
             </div>
             <div class="report-section-title"><span>Atividade da operação</span><small id="report-actions-total">0 ações</small></div>
             <div class="report-actions-grid">
-              <div><span class="material-symbols-outlined">person_search</span><strong id="report-profiles">0</strong><small>Perfis</small></div>
+              <div><span class="material-symbols-outlined">person_add</span><strong id="report-profiles">0</strong><small>Novos follows</small></div>
               <div><span class="material-symbols-outlined">favorite</span><strong id="report-likes">0</strong><small>Curtidas</small></div>
               <div><span class="material-symbols-outlined">chat_bubble</span><strong id="report-comments">0</strong><small>Comentários</small></div>
               <div><span class="material-symbols-outlined">send</span><strong id="report-directs-detail">0</strong><small>Directs</small></div>
-              <div><span class="material-symbols-outlined">mark_chat_read</span><strong id="report-responses">0</strong><small>Respostas</small></div>
-              <div><span class="material-symbols-outlined">phone_in_talk</span><strong id="report-phones">0</strong><small>Telefones</small></div>
+              <div><span class="material-symbols-outlined">mark_chat_read</span><strong id="report-responses">0</strong><small>Responderam</small></div>
+              <div><span class="material-symbols-outlined">phone_in_talk</span><strong id="report-phones">0</strong><small>Telefones captados</small></div>
             </div>
             <div class="report-chart" id="report-chart"></div>
             <div class="report-section-title"><span>Por clínica</span><small>Resultado e esforço</small></div>
@@ -249,7 +252,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=11"></script>
-  <script type="module" src="app.js?v=11"></script>
+  <script src="config.js?v=12"></script>
+  <script type="module" src="app.js?v=12"></script>
 </body>
 </html>
