@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=17";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=18";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -110,6 +110,7 @@ function normalizeState(candidate) {
   normalized.goals.scheduled = Number(normalized.goals.scheduled || 30);
   normalized.templates ||= structuredClone(seed.templates);
   normalized.clinics.forEach(clinic => {
+    if (clinic.active == null) clinic.active = true;
     clinic.priority = priorityFromInvestment(clinic.trafficInvestment, clinic.priority);
   });
   normalized.leads.forEach(lead => {
@@ -618,10 +619,9 @@ function renderDashboard() {
   const scheduled = state.leads.filter(lead => lead.status === "scheduled").length;
   const attended = state.leads.filter(lead => lead.status === "attended").length;
   $("#actions-total").textContent = actions;
-  const monthly = periodStats("month");
-  $("#leads-total").textContent = `${monthly.phones}/${state.goals.phones}`;
+  $("#leads-total").textContent = stats.phones;
   $("#clinics-total").textContent = activeClinics.length;
-  $("#hunters-total").textContent = `${monthly.scheduled}/${state.goals.scheduled}`;
+  $("#hunters-total").textContent = stats.scheduled;
   $("#followups-total").textContent = conversations;
   $("#pipeline-mapped").textContent = stats.directs;
   $("#pipeline-talking").textContent = talking;
@@ -673,6 +673,8 @@ function renderGoals() {
   const monthly = periodStats("month");
   phoneNode.textContent = `${monthly.phones} / ${state.goals.phones}`;
   scheduledNode.textContent = `${monthly.scheduled} / ${state.goals.scheduled}`;
+  $("#goal-phones-bar").style.width = `${Math.min(100, monthly.phones / state.goals.phones * 100)}%`;
+  $("#goal-scheduled-bar").style.width = `${Math.min(100, monthly.scheduled / state.goals.scheduled * 100)}%`;
 }
 
 function openGoalsForm() {
@@ -926,13 +928,11 @@ function renderHunterFollowups(filteredLeads = state.leads) {
   const groupedItems = [...groups.values()];
   container.innerHTML = groupedItems.map((group, groupIndex) => `<section class="hunter-group">
     <header><span class="material-symbols-outlined">support_agent</span><div><strong>${escapeHtml(group.hunter)}</strong><small>${group.leads.length} ${group.leads.length === 1 ? "retorno pendente" : "retornos pendentes"}</small></div>
-      <button class="hunter-group-message" data-hunter-group="${groupIndex}"><span class="material-symbols-outlined">chat</span>Cobrar todos</button>
+      <button class="hunter-group-message" data-hunter-group="${groupIndex}"><span class="material-symbols-outlined">chat</span>Cobrar</button>
     </header>
     <div>${group.leads.map(lead => {
       const clinic = clinicById(lead.clinicId);
-      return `<article><div><strong>${escapeHtml(lead.name || lead.instagram)}</strong><small>${escapeHtml(clinic?.name || "")} · ${lead.status === "scheduled" ? `agendado ${formatDate(lead.scheduledAt, true)}` : "aguardando agendamento"}</small></div>
-        <button class="update" data-hunter-update="${lead.id}"><span class="material-symbols-outlined">edit_calendar</span>Atualizar</button>
-      </article>`;
+      return `<article data-hunter-update="${lead.id}"><div><strong>${escapeHtml(lead.name || lead.instagram)}</strong><small>${escapeHtml(clinic?.name || "")} · ${lead.status === "scheduled" ? `agendado ${formatDate(lead.scheduledAt, true)}` : "aguardando agendamento"}</small></div><span class="material-symbols-outlined">chevron_right</span></article>`;
     }).join("")}</div>
   </section>`).join("") || `<p class="report-empty">Nenhum retorno pendente com as Hunters.</p>`;
   $$("[data-hunter-group]").forEach(button => button.addEventListener("click", event => {
@@ -1023,7 +1023,7 @@ function renderReport() {
   }).filter(row => row.clinicActions || row.clinicLeads || row.qualified || row.scheduled || row.attended).sort((a, b) => (b.qualified - a.qualified) || (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
   $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, clinicActions, clinicLeads, qualified, scheduled, attended }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
-      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ações · ${clinicLeads} leads</small></p>
+      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${clinicLeads} ${clinicLeads === 1 ? "lead" : "leads"}</small></p>
       <b>${qualified} qualif. · ${scheduled} agend. · ${attended} comp.</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
@@ -1652,6 +1652,7 @@ async function exportReport(share = false) {
   const responseRate = stats.directs ? Math.round(stats.responses / stats.directs * 100) : 0;
   const appointmentRate = stats.hunters ? Math.round(stats.scheduled / stats.hunters * 100) : 0;
   const attendanceRate = stats.scheduled ? Math.round(stats.attended / stats.scheduled * 100) : 0;
+  const directsPerPhone = stats.phones ? (stats.directs / stats.phones).toFixed(1).replace(".", ",") : null;
   const reportClinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
     const sessions = stats.sessions.filter(session => session.clinicId === clinic.id);
     return {
@@ -1737,6 +1738,9 @@ async function exportReport(share = false) {
     ctx.font = "500 19px Arial";
     ctx.fillText(label, x, 419);
   });
+  ctx.fillStyle = "rgba(255,255,255,.82)";
+  ctx.font = "600 17px Arial";
+  ctx.fillText(`${compactDuration(stats.seconds)} trabalhadas  ·  ${stats.phones} ${stats.phones === 1 ? "telefone captado" : "telefones captados"}`, 104, 455);
 
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
@@ -1763,7 +1767,15 @@ async function exportReport(share = false) {
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
   ctx.fillText("Eficiência do funil", 82, 837);
-  canvasRoundedRect(ctx, 82, 860, 916, 104, 24, "#eff5f1");
+  canvasRoundedRect(ctx, 82, 860, 916, 154, 24, "#eff5f1");
+  ctx.fillStyle = "#1f6b57";
+  ctx.font = directsPerPhone ? "700 31px Arial" : "700 25px Arial";
+  ctx.fillText(directsPerPhone ? `1 telefone a cada ${directsPerPhone} directs` : "Ainda sem telefone captado", 112, 910);
+  ctx.fillStyle = "#71807a";
+  ctx.font = "500 17px Arial";
+  ctx.fillText("Relação entre abordagem e oportunidade entregue", 112, 940);
+  ctx.strokeStyle = "#d7e3dc";
+  ctx.beginPath(); ctx.moveTo(112, 963); ctx.lineTo(968, 963); ctx.stroke();
   const efficiency = [
     [`${responseRate}%`, "Taxa de resposta"],
     [`${appointmentRate}%`, "Agendamento por qualificado"],
@@ -1771,25 +1783,27 @@ async function exportReport(share = false) {
   ];
   efficiency.forEach(([value, label], index) => {
     const x = 112 + index * 294;
-    if (index) {
-      ctx.strokeStyle = "#d7e3dc";
-      ctx.beginPath(); ctx.moveTo(x - 24, 886); ctx.lineTo(x - 24, 938); ctx.stroke();
-    }
     ctx.fillStyle = "#1f6b57";
-    ctx.font = "700 31px Arial";
-    ctx.fillText(value, x, 909);
+    ctx.font = "700 20px Arial";
+    ctx.fillText(value, x, 991);
     ctx.fillStyle = "#71807a";
-    ctx.font = "500 17px Arial";
-    ctx.fillText(label, x, 938);
+    ctx.font = "500 14px Arial";
+    ctx.fillText(label, x + 58, 991);
   });
 
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Destaques por clínica", 82, 1015);
+  ctx.fillText("Resultado por clínica", 82, 1065);
+  ctx.fillStyle = "#829089";
+  ctx.font = "400 17px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 1065);
+  ctx.textAlign = "left";
   const clinicRows = reportClinicRows;
   if (clinicRows.length) {
     clinicRows.forEach(({ clinic, actions: clinicActions, seconds, leads, qualified, scheduled, attended }, index) => {
-      const y = 1040 + index * 82;
+      const y = 1090 + index * 82;
+      if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fafbf8");
       ctx.fillStyle = clinic.color || "#1f6b57";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#ffffff";
@@ -1803,7 +1817,7 @@ async function exportReport(share = false) {
       ctx.fillText(clinicName, 134, y + 21);
       ctx.fillStyle = "#7a8782";
       ctx.font = "400 16px Arial";
-      ctx.fillText(`${clinicActions} ações · ${compactDuration(seconds)} · ${leads} leads`, 134, y + 45);
+      ctx.fillText(`${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${compactDuration(seconds)} · ${leads} ${leads === 1 ? "lead" : "leads"}`, 134, y + 45);
       ctx.fillStyle = "#1f6b57";
       ctx.font = "700 16px Arial";
       ctx.textAlign = "right";
@@ -1817,7 +1831,7 @@ async function exportReport(share = false) {
   } else {
     ctx.fillStyle = "#7a8782";
     ctx.font = "400 18px Arial";
-    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1062);
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1112);
   }
 
   const footerY = canvas.height - 100;
