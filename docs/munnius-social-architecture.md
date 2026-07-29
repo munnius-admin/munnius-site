@@ -8,6 +8,8 @@
 - Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação.
 - Extensão Chrome: fora desta fase, mas o campo `source` já aceita `chrome_extension`.
 - Auditoria: ações volumosas agregadas na sessão; fatos comerciais relevantes são append-only.
+- Segurança de prévia: o modo demonstração só funciona em `localhost`; sem Supabase,
+  um endereço público não aceita login.
 
 ## Stack
 
@@ -70,8 +72,7 @@ repositório `munnius-social`. Nenhuma alteração de DNS foi feita nesta entreg
 
 ## Próximos incrementos
 
-1. CRUD real de clínicas, leads, follow-ups e mensagens via Supabase.
-2. convite administrativo por uma Edge Function com allowlist.
-3. relatório renderizado em PNG no próprio navegador.
-4. testes de RLS e fluxo de recuperação de senha.
-5. extensão Chrome consumindo as mesmas tabelas e políticas.
+1. sincronização completa de clínicas, leads, follow-ups e mensagens via Supabase;
+2. convite administrativo por uma Edge Function com allowlist;
+3. testes automatizados de RLS com duas organizações;
+4. extensão Chrome consumindo as mesmas tabelas e políticas.

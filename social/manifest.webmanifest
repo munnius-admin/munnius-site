@@ -9,7 +9,7 @@
   "theme_color": "#f7f5f0",
   "icons": [
     {
-      "src": "../assets/brand/munnius-app-icon.png",
+      "src": "assets/munnius-app-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

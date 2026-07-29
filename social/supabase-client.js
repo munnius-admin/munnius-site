@@ -10,7 +10,12 @@ async function getClient() {
 
 export const authGateway = {
   async signIn(email, password) {
-    if (!isSupabaseConfigured) return { ok: true, user: { email, role: "social_seller" } };
+    if (!isSupabaseConfigured) {
+      const localHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+      return localHosts.has(location.hostname)
+        ? { ok: true, user: { email, role: "social_seller" } }
+        : { ok: false, message: "Ambiente ainda não conectado. Tente novamente em instantes." };
+    }
     const client = await getClient();
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     return error ? { ok: false, message: "E-mail ou senha inválidos." } : { ok: true, user: data.user };
