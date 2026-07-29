@@ -98,9 +98,15 @@
               <button data-action="responses"><span>↩</span><strong>0</strong><small>Respostas</small></button>
               <button class="accent-action" data-action="phones"><span>✦</span><strong>0</strong><small>Telefones</small></button>
             </div>
-            <button class="secondary-button" id="quick-lead">+ Registrar lead</button>
+            <div class="session-actions">
+              <button class="secondary-button" id="open-instagram">Abrir Instagram</button>
+              <button class="secondary-button" id="quick-lead">+ Registrar lead</button>
+            </div>
             <button class="danger-link" id="finish-session">Encerrar sessão</button>
-            <button class="undo-link" id="undo-action">Desfazer última ação</button>
+            <div class="quiet-actions">
+              <button class="undo-link" id="undo-action">Desfazer última ação</button>
+              <button class="undo-link" id="adjust-counts">Ajustar contagens</button>
+            </div>
           </div>
         </section>
 
@@ -120,7 +126,12 @@
         </section>
 
         <section class="view" data-view-panel="followups">
-          <div class="notice-card"><span>◷</span><div><strong>Prioridades de hoje</strong><p>Comece pelos contatos mais antigos.</p></div></div>
+          <div class="filter-chips" id="followup-filters">
+            <button class="active" data-followup-filter="today">Hoje</button>
+            <button data-followup-filter="overdue">Atrasados</button>
+            <button data-followup-filter="next">Próximos</button>
+          </div>
+          <div class="notice-card"><span>◷</span><div><strong id="followup-priority-title">Prioridades de hoje</strong><p>Comece pelos contatos mais antigos.</p></div></div>
           <div class="followup-list" id="followup-list"></div>
         </section>
 
@@ -129,7 +140,7 @@
           <div class="menu-list">
             <button data-view="clinics"><span>◇</span><div><strong>Clínicas</strong><small>Dados, metas e Hunters</small></div><b>›</b></button>
             <button data-sheet="messages"><span>✉</span><div><strong>Mensagens</strong><small>Respostas rápidas e naturais</small></div><b>›</b></button>
-            <button data-sheet="reports"><span>▥</span><div><strong>Relatórios</strong><small>Exporte para WhatsApp ou Discord</small></div><b>›</b></button>
+            <button data-view="reports"><span>▥</span><div><strong>Relatórios</strong><small>Exporte para WhatsApp ou Discord</small></div><b>›</b></button>
             <button data-sheet="settings"><span>⚙</span><div><strong>Preferências</strong><small>Conta e notificações</small></div><b>›</b></button>
           </div>
           <button class="signout-button" id="signout">Sair da conta</button>
@@ -138,6 +149,31 @@
         <section class="view" data-view-panel="clinics">
           <div class="section-heading"><div><p class="overline">Carteira</p><h2>Clínicas ativas</h2></div><button class="small-link" id="add-clinic">+ Adicionar</button></div>
           <div class="clinic-list detailed" id="clinics-page-list"></div>
+        </section>
+
+        <section class="view" data-view-panel="reports">
+          <div class="period-control" id="report-period" role="group" aria-label="Período do relatório">
+            <button class="active" data-report-period="day">Hoje</button>
+            <button data-report-period="week">Semana</button>
+            <button data-report-period="month">Mês</button>
+          </div>
+          <article class="report-card" id="report-card">
+            <div class="report-brand"><img src="../assets/brand/munnius-mark.png" alt=""><span>Munnius Social</span></div>
+            <p class="overline">Resumo da operação</p>
+            <div class="report-heading"><div><h2 id="report-label">Hoje</h2><p id="report-date"></p></div><span class="report-badge">Social selling</span></div>
+            <div class="report-metrics">
+              <div><strong id="report-leads">0</strong><span>Leads</span></div>
+              <div><strong id="report-hunters">0</strong><span>Para Hunter</span></div>
+              <div><strong id="report-directs">0</strong><span>Directs</span></div>
+              <div><strong id="report-hours">0h</strong><span>Trabalhadas</span></div>
+            </div>
+            <div class="report-chart" id="report-chart"></div>
+            <div class="report-footer"><span>Operação registrada com Munnius Social</span><strong id="report-efficiency">—</strong></div>
+          </article>
+          <div class="report-actions">
+            <button class="primary-button" id="export-report">Baixar imagem</button>
+            <button class="secondary-button" id="share-report">Compartilhar</button>
+          </div>
         </section>
       </div>
 

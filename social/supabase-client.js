@@ -18,6 +18,14 @@ export const authGateway = {
   async signOut() {
     const client = await getClient();
     if (client) await client.auth.signOut();
+  },
+  async resetPassword(email) {
+    if (!isSupabaseConfigured) return { ok: false };
+    const client = await getClient();
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${location.origin}${location.pathname}`
+    });
+    return { ok: !error };
   }
 };
 
@@ -30,7 +38,13 @@ export const dataGateway = {
       return;
     }
     const client = await getClient();
+    const { data: membership } = await client.from("organization_members").select("organization_id").eq("profile_id", (await client.auth.getUser()).data.user.id).eq("active", true).limit(1).single();
+    const user = (await client.auth.getUser()).data.user;
+    if (!membership || !user) throw new Error("Usuário sem organização ativa.");
     await client.from("work_sessions").insert({
+      id: session.id,
+      organization_id: membership.organization_id,
+      user_id: user.id,
       clinic_id: session.clinicId,
       started_at: new Date(session.startedAt).toISOString(),
       ended_at: new Date().toISOString(),
