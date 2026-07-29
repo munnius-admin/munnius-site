@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=8";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=9";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -6,6 +6,9 @@ const STORAGE_KEY = "munnius-social-v2";
 const countLabels = { profiles: "Perfis", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Respostas", phones: "Telefones" };
 const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", followups: "Follow-ups", more: "Mais", clinics: "Clínicas", reports: "Relatórios" };
 const statusNames = { new: "Novo", talking: "Conversando", no_response: "Sem resposta", follow_up: "Follow-up", sent_to_hunter: "Enviado à Hunter", finished: "Finalizado" };
+const googleEnabled = Boolean(window.MUNNIUS_SOCIAL_CONFIG?.googleEnabled);
+const recoveryLinkDetected = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery"
+  || new URLSearchParams(location.search).get("type") === "recovery";
 
 const seed = {
   version: 2,
@@ -46,6 +49,8 @@ function loadState() {
 
 let state = loadState();
 let syncTimer;
+let workspaceOpened = false;
+let recoveryMode = recoveryLinkDetected;
 function persist() {
   const { timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
@@ -82,6 +87,32 @@ function renderProfile() {
   $("#profile-avatar-large").textContent = initials;
   $("#profile-name").textContent = name;
   $("#profile-role").textContent = state.profile?.role === "admin" ? "Admin · Social seller" : "Social seller";
+}
+
+function showRecoveryForm() {
+  recoveryMode = true;
+  $("#login-form").classList.add("hidden");
+  $("#recovery-form").classList.remove("hidden");
+  requestAnimationFrame(() => $("#new-password").focus());
+}
+
+async function openWorkspace(message = "Bem-vindo") {
+  if (workspaceOpened) return;
+  workspaceOpened = true;
+  try {
+    await hydrateRemoteState();
+  } catch (error) {
+    console.warn("Não foi possível carregar a nuvem.", error);
+    showToast("Entrou, mas a sincronização será retomada");
+  }
+  $("#auth-screen").classList.add("hidden");
+  $("#app-shell").classList.remove("hidden");
+  renderProfile();
+  renderDashboard();
+  renderLeads();
+  renderFollowups();
+  renderReport();
+  showToast(message);
 }
 
 function uid(prefix) { return crypto.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; }
@@ -465,16 +496,22 @@ $("#login-form").addEventListener("submit", async event => {
   event.preventDefault();
   const result = await authGateway.signIn($("#email").value, $("#password").value);
   if (!result.ok) return showToast(result.message);
-  try {
-    await hydrateRemoteState();
-  } catch (error) {
-    console.warn("Não foi possível carregar a nuvem.", error);
-    showToast("Entrou, mas a sincronização será retomada");
+  await openWorkspace(isSupabaseConfigured ? "Bem-vindo de volta" : "Ambiente local aberto");
+});
+if (googleEnabled) {
+  $("#google-login").classList.remove("hidden");
+  $("#google-divider").classList.remove("hidden");
+}
+$("#google-login").addEventListener("click", async () => {
+  const button = $("#google-login");
+  button.disabled = true;
+  button.querySelector("span").textContent = "Abrindo Google...";
+  const result = await authGateway.signInWithGoogle();
+  if (!result.ok) {
+    button.disabled = false;
+    button.querySelector("span").textContent = "Continuar com Google";
+    showToast(result.message);
   }
-  $("#auth-screen").classList.add("hidden"); $("#app-shell").classList.remove("hidden");
-  renderProfile();
-  renderDashboard(); renderLeads(); renderFollowups(); renderReport();
-  showToast(isSupabaseConfigured ? "Bem-vinda de volta" : "Ambiente local aberto");
 });
 $("#toggle-password").addEventListener("click", () => { const input = $("#password"); input.type = input.type === "password" ? "text" : "password"; $("#toggle-password").textContent = input.type === "password" ? "Ver" : "Ocultar"; });
 $("#forgot-password").addEventListener("click", async () => {
@@ -487,6 +524,25 @@ $("#forgot-password").addEventListener("click", async () => {
   button.disabled = false;
   button.textContent = "Esqueci minha senha";
   showToast(result?.message || "Não foi possível solicitar a recuperação.");
+});
+$("#recovery-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const password = $("#new-password").value;
+  const confirmation = $("#confirm-password").value;
+  if (password.length < 8) return showToast("Use pelo menos 8 caracteres.");
+  if (password !== confirmation) return showToast("As senhas não são iguais.");
+  const button = $("#save-password");
+  button.disabled = true;
+  button.textContent = "Salvando...";
+  const result = await authGateway.updatePassword(password);
+  if (!result.ok) {
+    button.disabled = false;
+    button.textContent = "Salvar senha e entrar";
+    return showToast(result.message);
+  }
+  recoveryMode = false;
+  history.replaceState({}, document.title, location.pathname);
+  await openWorkspace("Senha criada. Bem-vindo!");
 });
 $("#signout").addEventListener("click", async () => { await authGateway.signOut(); location.reload(); });
 $$("[data-view]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.view)));
@@ -510,5 +566,29 @@ $("#add-clinic").addEventListener("click", () => openClinicForm());
 $("#export-report").addEventListener("click", () => exportReport(false));
 $("#share-report").addEventListener("click", () => exportReport(true));
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });
+
+async function initializeAuth() {
+  if (!isSupabaseConfigured) return;
+  await authGateway.onAuthStateChange(async (event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+      showRecoveryForm();
+      return;
+    }
+    if (event === "SIGNED_IN" && session && !recoveryMode) {
+      await openWorkspace("Bem-vindo de volta");
+    }
+  });
+  const session = await authGateway.getSession();
+  if (recoveryMode) {
+    showRecoveryForm();
+    return;
+  }
+  if (session) await openWorkspace("Bem-vindo de volta");
+}
+
+initializeAuth().catch(error => {
+  console.warn("Não foi possível restaurar a sessão.", error);
+  showToast("Não foi possível restaurar seu acesso.");
+});
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");

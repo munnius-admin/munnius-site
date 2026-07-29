@@ -1,11 +1,21 @@
 // Preencha somente as chaves públicas em config.js. A service role nunca pertence ao navegador.
 const config = window.MUNNIUS_SOCIAL_CONFIG || {};
 export const isSupabaseConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
+let clientPromise;
 
 async function getClient() {
   if (!isSupabaseConfigured) return null;
-  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-  return createClient(config.supabaseUrl, config.supabaseAnonKey);
+  if (!clientPromise) {
+    clientPromise = import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
+      .then(({ createClient }) => createClient(config.supabaseUrl, config.supabaseAnonKey, {
+        auth: {
+          detectSessionInUrl: true,
+          persistSession: true,
+          autoRefreshToken: true
+        }
+      }));
+  }
+  return clientPromise;
 }
 
 async function getContext(client) {
@@ -34,6 +44,40 @@ export const authGateway = {
     const { data, error } = await client.auth.signInWithPassword({ email, password });
     return error ? { ok: false, message: "E-mail ou senha inválidos." } : { ok: true, user: data.user };
   },
+  async signInWithGoogle() {
+    if (!isSupabaseConfigured) {
+      return { ok: false, message: "O acesso com Google ainda não está configurado." };
+    }
+    try {
+      const client = await getClient();
+      const { data, error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: config.appUrl || `${location.origin}${location.pathname}`,
+          queryParams: { prompt: "select_account" }
+        }
+      });
+      return error
+        ? { ok: false, message: "O acesso com Google ainda não está disponível." }
+        : { ok: true, data };
+    } catch (error) {
+      console.warn("Falha ao iniciar acesso com Google.", error);
+      return { ok: false, message: "Não foi possível abrir o Google agora." };
+    }
+  },
+  async getSession() {
+    if (!isSupabaseConfigured) return null;
+    const client = await getClient();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    return data.session;
+  },
+  async onAuthStateChange(callback) {
+    if (!isSupabaseConfigured) return null;
+    const client = await getClient();
+    const { data } = client.auth.onAuthStateChange((event, session) => callback(event, session));
+    return data.subscription;
+  },
   async signOut() {
     const client = await getClient();
     if (client) await client.auth.signOut();
@@ -45,7 +89,7 @@ export const authGateway = {
     try {
       const client = await getClient();
       const { error } = await client.auth.resetPasswordForEmail(email, {
-        redirectTo: `${location.origin}${location.pathname}`
+        redirectTo: config.appUrl || `${location.origin}${location.pathname}`
       });
       if (!error) {
         return { ok: true, message: "E-mail de recuperação enviado. Confira também o spam." };
@@ -66,6 +110,21 @@ export const authGateway = {
         ok: false,
         message: "Não foi possível falar com o serviço de acesso. Verifique sua conexão e tente novamente."
       };
+    }
+  },
+  async updatePassword(password) {
+    if (!isSupabaseConfigured) {
+      return { ok: false, message: "A recuperação de senha ainda não está configurada." };
+    }
+    try {
+      const client = await getClient();
+      const { error } = await client.auth.updateUser({ password });
+      return error
+        ? { ok: false, message: "Não foi possível salvar a senha. Abra novamente o link recebido." }
+        : { ok: true, message: "Senha criada com sucesso." };
+    } catch (error) {
+      console.warn("Falha ao atualizar senha.", error);
+      return { ok: false, message: "Não foi possível salvar a senha agora." };
     }
   }
 };

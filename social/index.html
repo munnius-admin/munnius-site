@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <main id="app">
@@ -22,10 +22,9 @@
       </div>
       <div class="auth-social-canvas" aria-hidden="true">
         <span class="social-icon social-icon-campaign"><i class="material-symbols-outlined">campaign</i></span>
-        <span class="social-icon social-icon-chat"><i class="material-symbols-outlined">forum</i></span>
         <span class="social-icon social-icon-send"><i class="material-symbols-outlined">send</i></span>
-        <span class="social-icon social-icon-at">@</span>
-        <span class="social-icon social-icon-heart"><i class="material-symbols-outlined">favorite</i></span>
+        <span class="social-icon social-icon-instagram"><img src="assets/instagram.svg" alt=""></span>
+        <span class="social-icon social-icon-whatsapp"><img src="assets/whatsapp.svg" alt=""></span>
       </div>
       <div class="auth-copy">
         <p class="eyebrow">Seu trabalho, organizado.</p>
@@ -33,6 +32,11 @@
         <p>Um espaço simples para acompanhar sua rotina, cuidar dos leads e mostrar resultados.</p>
       </div>
       <form class="auth-card" id="login-form">
+        <button class="oauth-button hidden" type="button" id="google-login">
+          <img src="assets/google.svg" alt="">
+          <span>Continuar com Google</span>
+        </button>
+        <div class="auth-divider hidden" id="google-divider"><span>ou use seu e-mail</span></div>
         <div class="field">
           <label for="email">E-mail</label>
           <input id="email" type="email" autocomplete="email" placeholder="voce@empresa.com" required>
@@ -47,6 +51,25 @@
         <button class="primary-button" type="submit">Entrar</button>
         <button class="text-button" type="button" id="forgot-password">Esqueci minha senha</button>
         <p class="form-note">Acesso exclusivo para usuários convidados.</p>
+      </form>
+      <form class="auth-card recovery-card hidden" id="recovery-form">
+        <div class="recovery-heading">
+          <span class="material-symbols-outlined">lock_reset</span>
+          <div>
+            <p class="eyebrow">Acesso recuperado</p>
+            <h2>Crie sua nova senha</h2>
+          </div>
+        </div>
+        <p class="recovery-copy">Defina uma senha segura e você entrará no aplicativo logo em seguida.</p>
+        <div class="field">
+          <label for="new-password">Nova senha</label>
+          <input id="new-password" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" minlength="8" required>
+        </div>
+        <div class="field">
+          <label for="confirm-password">Confirmar nova senha</label>
+          <input id="confirm-password" type="password" autocomplete="new-password" placeholder="Repita sua senha" minlength="8" required>
+        </div>
+        <button class="primary-button" type="submit" id="save-password">Salvar senha e entrar</button>
       </form>
       <p class="auth-footer">Munnius · ambiente privado</p>
     </section>
@@ -201,7 +224,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=8"></script>
-  <script type="module" src="app.js?v=8"></script>
+  <script src="config.js?v=9"></script>
+  <script type="module" src="app.js?v=9"></script>
 </body>
 </html>
