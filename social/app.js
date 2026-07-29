@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=6";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=7";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -480,8 +480,13 @@ $("#toggle-password").addEventListener("click", () => { const input = $("#passwo
 $("#forgot-password").addEventListener("click", async () => {
   const email = $("#email").value;
   if (!email) return showToast("Digite seu e-mail primeiro");
+  const button = $("#forgot-password");
+  button.disabled = true;
+  button.textContent = "Enviando...";
   const result = await authGateway.resetPassword?.(email);
-  showToast(result?.ok ? "Confira seu e-mail" : "Recuperação disponível após conectar o Supabase");
+  button.disabled = false;
+  button.textContent = "Esqueci minha senha";
+  showToast(result?.message || "Não foi possível solicitar a recuperação.");
 });
 $("#signout").addEventListener("click", async () => { await authGateway.signOut(); location.reload(); });
 $$("[data-view]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.view)));

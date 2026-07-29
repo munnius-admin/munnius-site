@@ -39,12 +39,34 @@ export const authGateway = {
     if (client) await client.auth.signOut();
   },
   async resetPassword(email) {
-    if (!isSupabaseConfigured) return { ok: false };
-    const client = await getClient();
-    const { error } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: `${location.origin}${location.pathname}`
-    });
-    return { ok: !error };
+    if (!isSupabaseConfigured) {
+      return { ok: false, message: "A recuperação de senha ainda não está configurada." };
+    }
+    try {
+      const client = await getClient();
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: `${location.origin}${location.pathname}`
+      });
+      if (!error) {
+        return { ok: true, message: "E-mail de recuperação enviado. Confira também o spam." };
+      }
+      if (error.code === "over_email_send_rate_limit" || error.status === 429) {
+        return {
+          ok: false,
+          message: "Muitos e-mails foram solicitados. Aguarde alguns minutos e tente novamente."
+        };
+      }
+      return {
+        ok: false,
+        message: "Não foi possível enviar o e-mail agora. Tente novamente em instantes."
+      };
+    } catch (error) {
+      console.warn("Falha ao solicitar recuperação de senha.", error);
+      return {
+        ok: false,
+        message: "Não foi possível falar com o serviço de acesso. Verifique sua conexão e tente novamente."
+      };
+    }
   }
 };
 
