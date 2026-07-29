@@ -1,11 +1,11 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=16";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=17";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const STORAGE_KEY = "munnius-social-v3";
 const LEGACY_STORAGE_KEY = "munnius-social-v2";
 const countLabels = { profiles: "Novos follows", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
-const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", followups: "Follow-ups", more: "Mais", clinics: "Clínicas", reports: "Relatórios" };
+const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", more: "Mais", clinics: "Clínicas e metas", reports: "Relatórios" };
 const statusNames = {
   new: "Lead mapeado",
   talking: "Conversando",
@@ -88,6 +88,7 @@ const seed = {
     { id: "fu-2", leadId: "lead-1", scheduledFor: new Date(Date.now() + 5400000).toISOString(), step: "Pedir WhatsApp", status: "pending" }
   ],
   sessions: [],
+  goals: { phones: 60, scheduled: 30 },
   templates: [
     { id: "first", title: "1º contato", category: "first_contact", message: "Oi, {{nome}}! Vi seu perfil e achei que talvez você gostasse de conhecer o trabalho da {{clinica}}. Posso te contar mais?" },
     { id: "follow1", title: "1º follow-up", category: "first_follow_up", message: "Oi, {{nome}}! Passando só para saber se você conseguiu ver minha mensagem 😊" },
@@ -104,6 +105,9 @@ function normalizeState(candidate) {
   normalized.directs ||= [];
   normalized.followups ||= [];
   normalized.sessions ||= [];
+  normalized.goals ||= structuredClone(seed.goals);
+  normalized.goals.phones = Number(normalized.goals.phones || 60);
+  normalized.goals.scheduled = Number(normalized.goals.scheduled || 30);
   normalized.templates ||= structuredClone(seed.templates);
   normalized.clinics.forEach(clinic => {
     clinic.priority = priorityFromInvestment(clinic.trafficInvestment, clinic.priority);
@@ -112,6 +116,7 @@ function normalizeState(candidate) {
     if (lead.status === "no_response") lead.status = "lost";
     if (lead.status === "qualified") lead.status = lead.whatsapp ? "sent_to_hunter" : "talking";
     lead.qualification ||= {};
+    lead.qualificationNotes ||= {};
     lead.timeline ||= [];
     lead.scheduledAt ||= null;
     lead.attendedAt ||= null;
@@ -356,9 +361,10 @@ function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = 
     direct.timeline.push({ at, label: "Direct enviado" });
   }
   if (stage === "responded") {
+    const firstResponse = !direct.respondedAt;
     direct.respondedAt ||= at;
     direct.status = direct.status === "phone" ? "phone" : "responded";
-    direct.timeline.push({ at, label: "Resposta recebida" });
+    if (firstResponse) direct.timeline.push({ at, label: "Resposta recebida" });
   }
   if (stage === "phone") {
     direct.respondedAt ||= at;
@@ -390,11 +396,14 @@ function upsertLeadFromExtension(event, stage = "mapped") {
     source: "chrome_extension",
     sessionId: event.session_id
   });
-  if (eventStage === "phone" && result.lead) {
+  if (["responded", "phone"].includes(eventStage) && result.lead) {
+    result.lead.name = event.payload?.name || result.lead.name || "";
     result.lead.qualification = { ...(result.lead.qualification || {}), ...(event.payload?.qualification || {}) };
+    result.lead.qualificationNotes = { ...(result.lead.qualificationNotes || {}), ...(event.payload?.qualificationNotes || {}) };
     result.lead.interest = event.payload?.interest || result.lead.interest || "";
     result.lead.temperature = event.payload?.temperature || result.lead.temperature || "warm";
-    if (event.payload?.sendToHunter) {
+    result.lead.whatsapp = phoneDigits(event.payload?.phone || result.lead.whatsapp || "");
+    if (eventStage === "phone" && event.payload?.sendToHunter) {
       result.lead.status = "sent_to_hunter";
       result.lead.sentToHunterAt ||= event.event_at || new Date().toISOString();
       result.lead.timeline.push({ at: result.lead.sentToHunterAt, label: "Encaminhado para a Hunter pela extensão" });
@@ -427,6 +436,7 @@ async function applyExtensionEvents(events, notify = false) {
       if (countKey) session.counts[countKey] = Number(session.counts[countKey] || 0) + 1;
       if (event.event_type === "direct_sent") upsertLeadFromExtension(event, "mapped");
       if (event.event_type === "response_detected") upsertLeadFromExtension(event, "responded");
+      if (event.event_type === "lead_qualified") upsertLeadFromExtension(event, "responded");
       if (event.event_type === "phone_captured") upsertLeadFromExtension(event, "phone");
     }
     processedExtensionEvents.add(event.id);
@@ -437,7 +447,6 @@ async function applyExtensionEvents(events, notify = false) {
   await dataGateway.markExtensionEventsProcessed?.(freshEvents.map(event => event.id));
   renderDashboard();
   renderSessionClinicTracker();
-  renderDirectHistory();
   renderLeads();
   renderReport();
   if (notify) showToast("Ação do Instagram sincronizada");
@@ -512,9 +521,7 @@ async function openWorkspace(message = "Bem-vindo") {
   renderProfile();
   renderDashboard();
   renderLeads();
-  renderFollowups();
   renderReport();
-  renderDirectHistory();
   stopWorkspaceRealtime?.();
   try {
     stopWorkspaceRealtime = await dataGateway.subscribeToWorkspace?.(applyRemoteSnapshot);
@@ -568,12 +575,8 @@ function navigate(view) {
   if (view === "home") renderDashboard();
   if (view === "clinics") renderClinics();
   if (view === "leads") renderLeads();
-  if (view === "followups") renderFollowups();
   if (view === "reports") renderReport();
-  if (view === "session") {
-    renderSessionClinicTracker();
-    renderDirectHistory();
-  }
+  if (view === "session") renderSessionClinicTracker();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -606,7 +609,7 @@ function renderDashboard() {
   expireUnansweredLeads();
   const stats = periodStats(state.period);
   const activeClinics = state.clinics.filter(clinic => clinic.active);
-  const pending = state.followups.filter(item => item.status === "pending").length;
+  const conversations = state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length;
   const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
   const talking = state.leads.filter(lead => lead.status === "talking").length;
   const followingUp = state.leads.filter(lead => lead.status === "follow_up").length;
@@ -615,10 +618,11 @@ function renderDashboard() {
   const scheduled = state.leads.filter(lead => lead.status === "scheduled").length;
   const attended = state.leads.filter(lead => lead.status === "attended").length;
   $("#actions-total").textContent = actions;
-  $("#leads-total").textContent = stats.leads;
+  const monthly = periodStats("month");
+  $("#leads-total").textContent = `${monthly.phones}/${state.goals.phones}`;
   $("#clinics-total").textContent = activeClinics.length;
-  $("#hunters-total").textContent = stats.hunters;
-  $("#followups-total").textContent = pending;
+  $("#hunters-total").textContent = `${monthly.scheduled}/${state.goals.scheduled}`;
+  $("#followups-total").textContent = conversations;
   $("#pipeline-mapped").textContent = stats.directs;
   $("#pipeline-talking").textContent = talking;
   $("#pipeline-followups").textContent = followingUp;
@@ -629,22 +633,19 @@ function renderDashboard() {
   $("#hero-summary").textContent = actions
     ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phones} telefones`
     : activeClinics.length ? "Escolha uma clínica abaixo e comece a sessão." : "Cadastre sua primeira clínica para começar.";
-  const badge = $(".bottom-nav [data-view='followups'] i");
-  badge.textContent = pending;
-  badge.classList.toggle("hidden", pending === 0);
   renderClinics();
 }
 
 function clinicLeadCount(clinicId, period = "day") { return state.leads.filter(lead => lead.clinicId === clinicId && inPeriod(lead.prospectedAt, period)).length; }
 function clinicMarkup(clinic, detailed = false) {
-  const leads = clinicLeadCount(clinic.id);
-  const pct = Math.min(100, clinic.target ? leads / clinic.target * 100 : 0);
   const active = state.session?.clinicId === clinic.id;
   const priority = clinicPriority(clinic);
+  const activity = clinicActivityToday(clinic.id);
+  const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, "month")).length;
   return `<article class="clinic-card ${detailed ? "clickable" : ""} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
     <div class="clinic-avatar" style="background:${clinic.color}">${clinic.name.split(" ").slice(-1)[0][0]}</div>
-    <div class="clinic-main"><strong>${clinic.name} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${clinic.instagram} · Closer ${clinic.hunter} · ${priority.minutes} min</span><div class="progress"><i style="width:${pct}%"></i></div></div>
-    <div class="clinic-card-side"><div class="clinic-score"><strong>${leads}/${clinic.target}</strong><span>leads hoje</span></div>
+    <div class="clinic-main"><strong>${clinic.name} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${clinic.instagram} · Closer ${clinic.hunter} · ${priority.minutes} min</span><div class="progress"><i style="width:${Math.min(100, activity.seconds / (priority.minutes * 60) * 100)}%"></i></div></div>
+    <div class="clinic-card-side"><div class="clinic-score"><strong>${activity.actions}</strong><span>ações hoje · ${scheduled} agend.</span></div>
       ${detailed ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>`}
     </div>
   </article>`;
@@ -661,7 +662,39 @@ function renderClinics() {
     startSession(clinicId);
   }));
   $$("[data-clinic-detail]").forEach(card => card.addEventListener("click", () => openClinicForm(card.dataset.clinicDetail)));
+  renderGoals();
   renderSessionClinicTracker();
+}
+
+function renderGoals() {
+  const phoneNode = $("#goal-phones-progress");
+  const scheduledNode = $("#goal-scheduled-progress");
+  if (!phoneNode || !scheduledNode) return;
+  const monthly = periodStats("month");
+  phoneNode.textContent = `${monthly.phones} / ${state.goals.phones}`;
+  scheduledNode.textContent = `${monthly.scheduled} / ${state.goals.scheduled}`;
+}
+
+function openGoalsForm() {
+  openSheet(`<h2 class="sheet-title">Metas globais</h2><p class="sheet-subtitle">Defina o alvo atual da operação inteira. Nenhuma meta é vinculada a uma clínica específica.</p>
+    <form class="sheet-form" id="goals-form">
+      ${field("goals-phones", "Números prospectados no período", state.goals.phones, true, "number", "60")}
+      ${field("goals-scheduled", "Agendamentos no período", state.goals.scheduled, true, "number", "30")}
+      <button class="primary-button" type="submit">Salvar metas</button>
+    </form>`, () => {
+    $("#goals-form").addEventListener("submit", event => {
+      event.preventDefault();
+      state.goals = {
+        phones: Math.max(1, Number($("#goals-phones").value || 60)),
+        scheduled: Math.max(1, Number($("#goals-scheduled").value || 30))
+      };
+      persist();
+      renderDashboard();
+      renderGoals();
+      closeSheet();
+      showToast("Metas globais atualizadas");
+    });
+  });
 }
 
 function sessionActionCount(session) {
@@ -701,7 +734,11 @@ function clinicActivityToday(clinicId) {
     worked: sessions.length > 0,
     visits: sessions.length,
     actions: sessions.reduce((total, session) => total + sessionActionCount(session), 0),
-    seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0)
+    seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0),
+    counts: sessions.reduce((totals, session) => {
+      Object.keys(countLabels).forEach(key => totals[key] += Number(session.counts?.[key] || 0));
+      return totals;
+    }, { profiles: 0, likes: 0, comments: 0, directs: 0, responses: 0, phones: 0 })
   };
 }
 
@@ -738,6 +775,14 @@ function renderSessionClinicTracker() {
         <div class="session-clinic-copy">
           <div><strong>${escapeHtml(clinic.name)}</strong><span class="session-round-status ${activity.active ? "active" : activity.worked ? "worked" : "pending"}">${status}</span></div>
           <small>${escapeHtml(clinic.instagram)} · ${compactDuration(activity.seconds)} de ${priority.minutes} min · ${activity.actions} ${activity.actions === 1 ? "ação" : "ações"}</small>
+          <div class="session-clinic-counts">
+            <span><i class="material-symbols-outlined">person_add</i>${activity.counts.profiles}</span>
+            <span><i class="material-symbols-outlined">favorite</i>${activity.counts.likes}</span>
+            <span><i class="material-symbols-outlined">chat_bubble</i>${activity.counts.comments}</span>
+            <span><i class="material-symbols-outlined">send</i>${activity.counts.directs}</span>
+            <span><i class="material-symbols-outlined">mark_chat_read</i>${activity.counts.responses}</span>
+            <span><i class="material-symbols-outlined">phone_in_talk</i>${activity.counts.phones}</span>
+          </div>
           <span class="clinic-time-track" aria-hidden="true"><i style="width:${spentPct}%"></i></span>
         </div>
         <button class="session-round-button ${activity.active ? "active" : ""}" data-session-clinic="${clinic.id}" ${state.session && !activity.active ? "disabled" : ""}>
@@ -878,19 +923,21 @@ function renderHunterFollowups(filteredLeads = state.leads) {
     if (!groups.has(key)) groups.set(key, { hunter: clinic?.hunter || "Hunter", phone: clinic?.hunterPhone || "", leads: [] });
     groups.get(key).leads.push(lead);
   });
-  container.innerHTML = [...groups.values()].map(group => `<section class="hunter-group">
-    <header><span class="material-symbols-outlined">support_agent</span><div><strong>${escapeHtml(group.hunter)}</strong><small>${group.leads.length} ${group.leads.length === 1 ? "retorno pendente" : "retornos pendentes"}</small></div></header>
+  const groupedItems = [...groups.values()];
+  container.innerHTML = groupedItems.map((group, groupIndex) => `<section class="hunter-group">
+    <header><span class="material-symbols-outlined">support_agent</span><div><strong>${escapeHtml(group.hunter)}</strong><small>${group.leads.length} ${group.leads.length === 1 ? "retorno pendente" : "retornos pendentes"}</small></div>
+      <button class="hunter-group-message" data-hunter-group="${groupIndex}"><span class="material-symbols-outlined">chat</span>Cobrar todos</button>
+    </header>
     <div>${group.leads.map(lead => {
       const clinic = clinicById(lead.clinicId);
       return `<article><div><strong>${escapeHtml(lead.name || lead.instagram)}</strong><small>${escapeHtml(clinic?.name || "")} · ${lead.status === "scheduled" ? `agendado ${formatDate(lead.scheduledAt, true)}` : "aguardando agendamento"}</small></div>
-        <button data-hunter-remind="${lead.id}"><span class="material-symbols-outlined">chat</span>Cobrar</button>
         <button class="update" data-hunter-update="${lead.id}"><span class="material-symbols-outlined">edit_calendar</span>Atualizar</button>
       </article>`;
     }).join("")}</div>
   </section>`).join("") || `<p class="report-empty">Nenhum retorno pendente com as Hunters.</p>`;
-  $$("[data-hunter-remind]").forEach(button => button.addEventListener("click", event => {
+  $$("[data-hunter-group]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
-    openHunterReminder(leadById(button.dataset.hunterRemind));
+    openHunterGroupReminder(groupedItems[Number(button.dataset.hunterGroup)]);
   }));
   $$("[data-hunter-update]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
@@ -898,16 +945,23 @@ function renderHunterFollowups(filteredLeads = state.leads) {
   }));
 }
 
-function openHunterReminder(lead) {
-  const clinic = clinicById(lead.clinicId);
-  if (!clinic?.hunterPhone) return showToast("Cadastre o WhatsApp da Hunter.");
-  const message = lead.status === "scheduled"
-    ? `Oi, ${clinic.hunter}! Consegue me confirmar se ${lead.name || lead.instagram} compareceu ao agendamento da ${clinic.name}?`
-    : `Oi, ${clinic.hunter}! Consegue me atualizar se ${lead.name || lead.instagram} avançou para agendamento na ${clinic.name}?`;
-  window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+function openHunterGroupReminder(group) {
+  if (!group?.phone) return showToast("Cadastre o WhatsApp da Hunter.");
+  const calendar = "\u{1F4C5}";
+  const phone = "\u{1F4F2}";
+  const lines = group.leads.map((lead, index) => {
+    const clinic = clinicById(lead.clinicId);
+    const pending = lead.status === "scheduled"
+      ? `confirmar comparecimento (${formatDate(lead.scheduledAt, true)})`
+      : "confirmar se avançou para agendamento";
+    return `${index + 1}. *${lead.name || lead.instagram}* · ${clinic?.name || "Clínica"}\n   ${pending}`;
+  });
+  const message = `${phone} *CHECK-IN DOS LEADS*\n\nOi, ${group.hunter}! Pode me atualizar estes ${group.leads.length} contatos?\n\n${lines.join("\n\n")}\n\n${calendar} Assim eu deixo nosso acompanhamento certinho por aqui. Obrigada!`;
+  window.open(`https://wa.me/${group.phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
 
 function renderFollowups() {
+  if (!$("#followup-list")) return;
   const now = new Date();
   const endToday = new Date(); endToday.setHours(23, 59, 59, 999);
   const items = state.followups
@@ -963,13 +1017,14 @@ function renderReport() {
     const clinicActions = clinicSessions.reduce((total, session) => total + Object.keys(countLabels).reduce((sum, key) => sum + Number(session.counts?.[key] || 0), 0), 0);
     const clinicLeads = state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length;
     const qualified = state.leads.filter(lead => lead.clinicId === clinic.id && lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, state.reportPeriod)).length;
+    const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, state.reportPeriod)).length;
     const attended = state.leads.filter(lead => lead.clinicId === clinic.id && lead.attendedAt && inPeriod(lead.attendedAt, state.reportPeriod)).length;
-    return { clinic, clinicActions, clinicLeads, qualified, attended };
-  }).filter(row => row.clinicActions || row.clinicLeads || row.qualified).sort((a, b) => (b.qualified - a.qualified) || (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.slice(0, 8).map(({ clinic, clinicActions, clinicLeads, qualified, attended }) => `
+    return { clinic, clinicActions, clinicLeads, qualified, scheduled, attended };
+  }).filter(row => row.clinicActions || row.clinicLeads || row.qualified || row.scheduled || row.attended).sort((a, b) => (b.qualified - a.qualified) || (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
+  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, clinicActions, clinicLeads, qualified, scheduled, attended }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
       <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ações · ${clinicLeads} leads</small></p>
-      <b>${qualified} qualif. · ${attended} comp.</b>
+      <b>${qualified} qualif. · ${scheduled} agend. · ${attended} comp.</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
@@ -1245,7 +1300,7 @@ function openClinicForm(clinicId = null) {
       <div class="form-grid">${field("clinic-hunter", "Closer responsável", clinic.hunter, true)}${field("clinic-hunter-phone", "WhatsApp da closer", clinic.hunterPhone, true, "tel", "(00) 00000-0000")}</div>
       ${field("clinic-protocol", "Protocolo da clínica", clinic.protocol)}
       ${field("clinic-location", "Localização", clinic.location)}
-      <div class="form-grid">${field("clinic-price", "Valor da avaliação", clinic.evaluationPrice, false, "number", "300")}${field("clinic-target", "Meta diária de leads", clinic.target || 5, true, "number", "5")}</div>
+      ${field("clinic-price", "Valor da avaliação", clinic.evaluationPrice, false, "number", "300")}
       <div class="priority-form-block">
         ${field("clinic-investment", "Faixa mensal de faturamento", clinic.trafficInvestment, true, "number", "5000")}
         <div class="priority-preview" id="priority-preview">
@@ -1272,7 +1327,7 @@ function openClinicForm(clinicId = null) {
         hunterPhone: phoneDigits($("#clinic-hunter-phone").value), protocol: $("#clinic-protocol").value.trim(),
         location: $("#clinic-location").value.trim(), evaluationPrice: Number($("#clinic-price").value || 0),
         trafficInvestment, priority: priorityFromInvestment(trafficInvestment),
-        target: Number($("#clinic-target").value || 0), color: clinic.color || ["#75566f", "#df765f", "#1f6b57", "#dda94c"][state.clinics.length % 4], active: true
+        color: clinic.color || ["#75566f", "#df765f", "#1f6b57", "#dda94c"][state.clinics.length % 4], active: true
       };
       if (edit) Object.assign(clinic, record); else state.clinics.push(record);
       persist(); renderClinics(); closeSheet(); showToast(edit ? "Clínica atualizada" : "Clínica cadastrada");
@@ -1300,11 +1355,16 @@ function qualificationChecklist(lead = {}) {
         </button>
         <div class="bant-checks">${group.items.map(([key, label]) => `
           <label class="qualification-check"><input id="qualification-${key}" type="checkbox" ${lead.qualification?.[key] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
+        <label class="bant-note"><span>O que ela respondeu</span><textarea id="qualification-note-${group.key}" placeholder="Resumo curto da resposta">${escapeHtml(lead.qualificationNotes?.[group.key] || "")}</textarea></label>
       </section>`).join("")}</div>`;
 }
 
 function readQualification() {
   return Object.fromEntries(qualificationItems.map(([key]) => [key, Boolean($(`#qualification-${key}`)?.checked)]));
+}
+
+function readQualificationNotes() {
+  return Object.fromEntries(qualificationGroups.map(group => [group.key, $(`#qualification-note-${group.key}`)?.value.trim() || ""]));
 }
 
 function qualificationProgress(qualification = {}) {
@@ -1383,7 +1443,8 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
         clinicId, status, lastContactAt: now,
         interest: $("#lead-interest").value.trim(),
         temperature: $("#lead-temperature").value,
-        qualification: readQualification()
+        qualification: readQualification(),
+        qualificationNotes: readQualificationNotes()
       });
       if (!originalLead && !existing) state.leads.unshift(record);
       if (isResponse) record.timeline.push({ at: now, label: existing ? "Nova resposta registrada" : "Lead respondeu ao direct" });
@@ -1417,7 +1478,8 @@ function openLeadDetail(leadId) {
   const progress = qualificationProgress(lead.qualification);
   const bantSummary = qualificationGroups.map(group => {
     const checked = group.items.filter(([key]) => lead.qualification?.[key]);
-    return `<section class="bant-summary-group"><span>${group.key}</span><div><strong>${group.title}</strong>${checked.length ? checked.map(([, label]) => `<small>✓ ${escapeHtml(label)}</small>`).join("") : "<small>Ainda não explorado</small>"}</div></section>`;
+    const note = lead.qualificationNotes?.[group.key];
+    return `<section class="bant-summary-group"><span>${group.key}</span><div><strong>${group.title}</strong>${checked.length ? checked.map(([, label]) => `<small>✓ ${escapeHtml(label)}</small>`).join("") : "<small>Ainda não explorado</small>"}${note ? `<small class="bant-summary-note">${escapeHtml(note)}</small>` : ""}</div></section>`;
   }).join("");
   const canSend = lead.whatsapp && !lead.sentToHunterAt;
   const hunterTracking = lead.sentToHunterAt ? `<div class="hunter-tracking">
@@ -1488,14 +1550,21 @@ function saveAttendanceOutcome(lead, outcome) {
 function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
   if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
-  const temperature = { hot: "🔥 Quente", warm: "🌤️ Morno", cold: "❄️ Frio" }[lead.temperature] || "Não avaliada";
+  const icons = {
+    party: "\u{1F389}", rocket: "\u{1F680}", person: "\u{1F464}", compass: "\u{1F9ED}",
+    sparkle: "\u{2728}", calendar: "\u{1F4C5}", check: "\u{2705}", dot: "\u{25AB}\u{FE0F}",
+    hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}"
+  };
+  const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[lead.temperature] || "Não avaliada";
   const alignedGroups = qualificationGroups.map(group => {
     const checked = group.items.filter(([key]) => lead.qualification?.[key]);
-    return checked.length ? `*${group.key} · ${group.title}*\n${checked.map(([, label]) => `✅ ${label}`).join("\n")}` : "";
+    const note = lead.qualificationNotes?.[group.key];
+    if (!checked.length && !note) return "";
+    return `*${group.key} · ${group.title}*\n${checked.map(([, label]) => `${icons.check} ${label}`).join("\n")}${note ? `${checked.length ? "\n" : ""}\u{1F4AC} ${note}` : ""}`;
   }).filter(Boolean);
-  const aligned = alignedGroups.length ? alignedGroups.join("\n\n") : "▫️ Contexto mínimo — seguir a qualificação na conversa.";
-  const message = `🎉 *NOVA OPORTUNIDADE PARA VOCÊ!*\n\nBoa, ${clinic.hunter}! A *${clinic.name}* recebeu um novo contato para você assumir. 🚀\n\n👤 *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram || "Não informado"}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n🧭 *O que a social seller conseguiu alinhar*\n${aligned}\n\n✨ Continue a qualificação a partir daqui e avance para o agendamento.\n\n📅 Captado em ${formatDate(lead.prospectedAt, true)}`;
-  showToast("🎉 Lead qualificado e mensagem preparada!");
+  const aligned = alignedGroups.length ? alignedGroups.join("\n\n") : `${icons.dot} Contexto mínimo — seguir a qualificação na conversa.`;
+  const message = `${icons.party} *NOVA OPORTUNIDADE PARA VOCÊ!*\n\nBoa, ${clinic.hunter}! A *${clinic.name}* recebeu um novo contato para você assumir. ${icons.rocket}\n\n${icons.person} *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram || "Não informado"}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n${icons.compass} *O que a social seller conseguiu alinhar*\n${aligned}\n\n${icons.sparkle} Continue a qualificação a partir daqui e avance para o agendamento.\n\n${icons.calendar} Captado em ${formatDate(lead.prospectedAt, true)}`;
+  showToast(`${icons.party} Lead qualificado e mensagem preparada!`);
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
 
@@ -1583,12 +1652,25 @@ async function exportReport(share = false) {
   const responseRate = stats.directs ? Math.round(stats.responses / stats.directs * 100) : 0;
   const appointmentRate = stats.hunters ? Math.round(stats.scheduled / stats.hunters * 100) : 0;
   const attendanceRate = stats.scheduled ? Math.round(stats.attended / stats.scheduled * 100) : 0;
+  const reportClinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
+    const sessions = stats.sessions.filter(session => session.clinicId === clinic.id);
+    return {
+      clinic,
+      actions: sessions.reduce((total, session) => total + sessionActionCount(session), 0),
+      seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0),
+      leads: state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length,
+      qualified: state.leads.filter(lead => lead.clinicId === clinic.id && lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, state.reportPeriod)).length,
+      scheduled: state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, state.reportPeriod)).length,
+      attended: state.leads.filter(lead => lead.clinicId === clinic.id && lead.attendedAt && inPeriod(lead.attendedAt, state.reportPeriod)).length
+    };
+  }).filter(row => row.actions || row.leads || row.qualified || row.scheduled || row.attended)
+    .sort((a, b) => (b.qualified - a.qualified) || (b.leads - a.leads) || (b.actions - a.actions));
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = 1350;
+  canvas.height = Math.max(1350, 1130 + reportClinicRows.length * 82 + 150);
   const ctx = canvas.getContext("2d");
 
-  const background = ctx.createLinearGradient(0, 0, 1080, 1350);
+  const background = ctx.createLinearGradient(0, 0, 1080, canvas.height);
   background.addColorStop(0, "#eef3ef");
   background.addColorStop(.48, "#f6f3ed");
   background.addColorStop(1, "#e9efeb");
@@ -1597,13 +1679,13 @@ async function exportReport(share = false) {
   ctx.fillStyle = "rgba(31,107,87,.07)";
   ctx.beginPath(); ctx.arc(1030, 90, 245, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(117,86,111,.045)";
-  ctx.beginPath(); ctx.arc(40, 1290, 225, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(40, canvas.height - 60, 225, 0, Math.PI * 2); ctx.fill();
 
   ctx.save();
   ctx.shadowColor = "rgba(27,55,46,.12)";
   ctx.shadowBlur = 42;
   ctx.shadowOffsetY = 18;
-  canvasRoundedRect(ctx, 44, 38, 992, 1274, 42, "#fffefa");
+  canvasRoundedRect(ctx, 44, 38, 992, canvas.height - 76, 42, "#fffefa");
   ctx.restore();
 
   try {
@@ -1704,18 +1786,10 @@ async function exportReport(share = false) {
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
   ctx.fillText("Destaques por clínica", 82, 1015);
-  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
-    const sessions = stats.sessions.filter(session => session.clinicId === clinic.id);
-    return {
-      clinic,
-      actions: sessions.reduce((total, session) => total + sessionActionCount(session), 0),
-      seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0),
-      leads: state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length
-    };
-  }).filter(row => row.actions || row.leads).sort((a, b) => (b.leads - a.leads) || (b.actions - a.actions)).slice(0, 3);
+  const clinicRows = reportClinicRows;
   if (clinicRows.length) {
-    clinicRows.forEach(({ clinic, actions: clinicActions, seconds, leads }, index) => {
-      const y = 1040 + index * 66;
+    clinicRows.forEach(({ clinic, actions: clinicActions, seconds, leads, qualified, scheduled, attended }, index) => {
+      const y = 1040 + index * 82;
       ctx.fillStyle = clinic.color || "#1f6b57";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#ffffff";
@@ -1729,15 +1803,15 @@ async function exportReport(share = false) {
       ctx.fillText(clinicName, 134, y + 21);
       ctx.fillStyle = "#7a8782";
       ctx.font = "400 16px Arial";
-      ctx.fillText(`${clinicActions} ações · ${compactDuration(seconds)}`, 134, y + 45);
+      ctx.fillText(`${clinicActions} ações · ${compactDuration(seconds)} · ${leads} leads`, 134, y + 45);
       ctx.fillStyle = "#1f6b57";
-      ctx.font = "700 19px Arial";
+      ctx.font = "700 16px Arial";
       ctx.textAlign = "right";
-      ctx.fillText(`${leads} ${leads === 1 ? "lead" : "leads"}`, 982, y + 32);
+      ctx.fillText(`${qualified} qualif. · ${scheduled} agend. · ${attended} comp.`, 982, y + 32);
       ctx.textAlign = "left";
       if (index < clinicRows.length - 1) {
         ctx.strokeStyle = "#e6e9e4";
-        ctx.beginPath(); ctx.moveTo(134, y + 61); ctx.lineTo(982, y + 61); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(134, y + 74); ctx.lineTo(982, y + 74); ctx.stroke();
       }
     });
   } else {
@@ -1746,13 +1820,14 @@ async function exportReport(share = false) {
     ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1062);
   }
 
+  const footerY = canvas.height - 100;
   ctx.strokeStyle = "#e0e5df";
-  ctx.beginPath(); ctx.moveTo(82, 1250); ctx.lineTo(998, 1250); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(82, footerY); ctx.lineTo(998, footerY); ctx.stroke();
   ctx.fillStyle = "#7d8a84";
   ctx.font = "400 15px Arial";
-  ctx.fillText("Relatório de social selling", 82, 1283);
+  ctx.fillText("Relatório de social selling", 82, footerY + 33);
   ctx.textAlign = "right";
-  ctx.fillText(`Gerado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`, 998, 1283);
+  ctx.fillText(`Gerado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`, 998, footerY + 33);
   ctx.textAlign = "left";
 
   const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png", .96));
@@ -1840,8 +1915,9 @@ $("#kanban-next").addEventListener("click", () => $("#lead-kanban").scrollBy({ l
 $$("[data-followup-filter]").forEach(button => button.addEventListener("click", () => { $$("[data-followup-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.followupFilter = button.dataset.followupFilter; renderFollowups(); }));
 $("#sheet-close").addEventListener("click", closeSheet);
 $("#sheet-backdrop").addEventListener("click", event => { if (event.target === $("#sheet-backdrop")) closeSheet(); });
-$$("[data-sheet]").forEach(button => button.addEventListener("click", () => button.dataset.sheet === "messages" ? openMessages() : openSettings()));
+$$("[data-sheet]").forEach(button => button.addEventListener("click", openMessages));
 $("#add-clinic").addEventListener("click", () => openClinicForm());
+$("#edit-goals").addEventListener("click", openGoalsForm);
 $("#export-report").addEventListener("click", () => exportReport(false));
 $("#share-report").addEventListener("click", () => exportReport(true));
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });

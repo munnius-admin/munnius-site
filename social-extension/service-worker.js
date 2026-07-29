@@ -33,6 +33,7 @@ const EVENT_LABELS = {
   comment: "Comentário mapeado",
   direct_sent: "Direct mapeado",
   response_detected: "Resposta registrada",
+  lead_qualified: "Qualificação atualizada",
   phone_candidate: "Possível telefone encontrado",
   phone_captured: "Telefone confirmado"
 };
@@ -175,7 +176,7 @@ function appendHistory(state, event) {
 }
 
 function updateOutreach(state, event) {
-  if (!["direct_sent", "response_detected", "phone_captured"].includes(event.type)) return;
+  if (!["direct_sent", "response_detected", "lead_qualified", "phone_captured"].includes(event.type)) return;
   const handle = event.profileHandle || "";
   if (!handle) return;
   state.outreach ||= [];
@@ -197,7 +198,7 @@ function updateOutreach(state, event) {
     item.sentAt ||= event.eventAt;
     if (!item.respondedAt && !item.phoneAt) item.status = "sent";
   }
-  if (event.type === "response_detected") {
+  if (["response_detected", "lead_qualified"].includes(event.type)) {
     item.respondedAt ||= event.eventAt;
     if (!item.phoneAt) item.status = "responded";
   }
@@ -207,6 +208,11 @@ function updateOutreach(state, event) {
     item.phone = event.phone || item.phone || "";
     item.status = "phone";
   }
+  item.name = event.name || item.name || "";
+  item.interest = event.interest || item.interest || "";
+  item.temperature = event.temperature || item.temperature || "warm";
+  item.qualification = { ...(item.qualification || {}), ...(event.qualification || {}) };
+  item.qualificationNotes = { ...(item.qualificationNotes || {}), ...(event.qualificationNotes || {}) };
   item.updatedAt = event.eventAt;
   state.outreach = state.outreach.slice(0, 100);
 }
@@ -226,8 +232,10 @@ async function uploadEvent(state, event) {
     dedupe_key: event.dedupeKey,
     event_at: event.eventAt || new Date().toISOString(),
     payload: {
+      name: event.name || null,
       phone: event.phone || null,
       qualification: event.qualification || null,
+      qualificationNotes: event.qualificationNotes || null,
       interest: event.interest || null,
       temperature: event.temperature || null,
       sendToHunter: Boolean(event.sendToHunter),
@@ -379,22 +387,32 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === "MARK_RESPONSE") {
       return trackEvent({ type: "response_detected", ...message.context });
     }
-    if (message.type === "CONFIRM_PHONE") {
+    if (["CONFIRM_PHONE", "SAVE_LEAD_CONTEXT"].includes(message.type)) {
       const state = await readState();
-      const candidate = state.phoneCandidate || {
+      const explicitCandidate = {
         phone: message.phone || "",
         profileHandle: message.profileHandle || "",
         instagramUrl: message.instagramUrl || ""
       };
+      const candidate = message.type === "SAVE_LEAD_CONTEXT"
+        ? explicitCandidate
+        : state.phoneCandidate || explicitCandidate;
       if (!candidate) return state;
       state.phoneCandidate = null;
       await writeState(state);
+      const alreadyResponded = message.stage === "response" && state.outreach?.some(item =>
+        item.clinicId === state.activeSession?.clinicId
+        && item.profileHandle === (message.profileHandle || candidate.profileHandle)
+        && ["responded", "phone"].includes(item.status)
+      );
       return trackEvent({
-        type: "phone_captured",
+        type: message.stage === "response" ? alreadyResponded ? "lead_qualified" : "response_detected" : "phone_captured",
         ...candidate,
+        name: message.name || candidate.name || "",
         phone: message.phone || candidate.phone || "",
         profileHandle: message.profileHandle || candidate.profileHandle || "",
         qualification: message.qualification || {},
+        qualificationNotes: message.qualificationNotes || {},
         interest: message.interest || "",
         temperature: message.temperature || "warm",
         sendToHunter: Boolean(message.sendToHunter)

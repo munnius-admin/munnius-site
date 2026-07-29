@@ -18,7 +18,8 @@ agendamento, comparecimento ou ausência.
 
 A passagem registra procedimento, temperatura e oito pontos de pré-qualificação,
 agrupados em BANT: momento/investimento, autoridade de decisão, necessidade e tempo.
-Cada grupo oferece uma pergunta conversacional pronta para copiar. O checklist é um
+Cada grupo oferece uma pergunta conversacional pronta para copiar e um resumo curto da
+resposta dada pelo lead. O checklist é um
 guia, não uma trava: nenhum item é obrigatório para salvar o telefone ou enviar para a
 Hunter. A mensagem de WhatsApp inclui apenas o contexto realmente apurado; quando não
 há checklist preenchido, entrega os dados mínimos do lead sem inventar informações.
@@ -28,15 +29,16 @@ reinicia em quatorze dias. A atividade seguinte atualiza a data de referência; 
 evolução são movidos para Perdidos quando o aplicativo é aberto. A fila da Hunter fica
 agrupada por responsável, com atalhos para cobrar agendamento e registrar comparecimento.
 
-A aba Sessão também funciona como uma ronda diária das clínicas, agrupada por prioridade
+A aba Sessão funciona como uma ronda diária das clínicas, agrupada por prioridade
 calculada a partir da faixa mensal informada no cadastro: A (30 min), B (20 min) e C
 (15 min). O cronômetro é regressivo e avisa quando é hora de seguir, sem encerrar a
 sessão à força. Ao sair da seção Sessão, ele pausa; ao retornar, continua do saldo
 restante. Encerrar e reabrir a mesma clínica no mesmo dia desconta o tempo já trabalhado
-do limite diário, em vez de começar novamente do zero. Cada linha consolida tempo e
-ações de todas as sessões do dia. A
-imagem compartilhável do relatório é gerada sob demanda em formato 4:5, com identidade
-discreta, ações, qualificados, agendamentos, comparecimentos e destaques por clínica;
+do limite diário, em vez de começar novamente do zero. Cada linha consolida tempo e os
+seis contadores de todas as sessões do dia. As metas de telefones e agendamentos são
+globais, configuráveis por período e nunca vinculadas individualmente a uma clínica.
+A imagem compartilhável do relatório é gerada sob demanda, com altura adaptável para
+incluir todas as clínicas, identidade discreta, ações, qualificados, agendamentos e comparecimentos;
 nenhuma imagem é armazenada.
 
 Identidade nunca faz parte do estado operacional compartilhado. Nome, e-mail e papel são
@@ -49,9 +51,9 @@ demonstração apareçam para outro usuário.
 - Interface: PWA mobile-first, funcionando também no desktop.
 - Cadastro público: inexistente. Usuários entram somente por convite.
 - Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação.
-- Extensão Chrome: MV3 em `social-extension`, com painel lateral, captura de eventos,
-  fila offline, histórico por `@` e revisão de telefone/BANT; não executa ações no
-  Instagram.
+- Extensão Chrome: MV3 em `social-extension`, com painel lateral compacto, captura de
+  eventos, fila offline, controles manuais independentes e card completo de BANT por `@`;
+  não executa ações no Instagram.
 - Auditoria: ações volumosas agregadas na sessão; fatos comerciais relevantes são append-only.
 - Segurança de prévia: o modo demonstração só funciona em `localhost`; sem Supabase,
   um endereço público não aceita login.

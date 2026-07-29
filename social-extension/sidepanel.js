@@ -58,7 +58,9 @@ function escapeHtml(value = "") {
 }
 
 function renderHistory() {
-  $("#history-list").innerHTML = (state.recentEvents || []).slice(0, 10).map(event => `
+  const container = $("#history-list");
+  if (!container) return;
+  container.innerHTML = (state.recentEvents || []).slice(0, 10).map(event => `
     <article class="history-item">
       <i></i><div><strong>${escapeHtml(event.label)}</strong><small>${escapeHtml(event.detail || "Instagram")}</small></div>
       <time>${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(event.at))}</time>
@@ -76,6 +78,8 @@ function renderOutreach() {
       <div><strong>${escapeHtml(item.profileHandle)}</strong><small>${status}</small></div>
       <div class="outreach-actions">
         ${item.status === "sent" ? `<button data-outreach-response="${item.id}">Respondeu</button>` : ""}
+        ${item.status === "responded" ? `<button data-outreach-qualify="${item.id}">Qualificar</button>` : ""}
+        ${item.status === "phone" ? `<button data-outreach-review="${item.id}">Revisar</button>` : ""}
         ${item.status !== "phone" ? `<button class="phone" data-outreach-phone="${item.id}">Telefone</button>` : ""}
       </div>
     </article>`;
@@ -83,33 +87,53 @@ function renderOutreach() {
   document.querySelectorAll("[data-outreach-response]").forEach(button => button.addEventListener("click", async () => {
     const item = state.outreach.find(record => record.id === button.dataset.outreachResponse);
     if (!item) return;
-    render(await message("MARK_RESPONSE", {
-      context: {
-        profileHandle: item.profileHandle,
-        instagramUrl: `https://www.instagram.com/${item.profileHandle.replace("@", "")}/`
-      }
-    }));
-    toast(`${item.profileHandle} avançou para Respondido`);
+    openQualification({ ...item, stage: "response", instagramUrl: `https://www.instagram.com/${item.profileHandle.replace("@", "")}/` });
   }));
   document.querySelectorAll("[data-outreach-phone]").forEach(button => button.addEventListener("click", () => {
     const item = state.outreach.find(record => record.id === button.dataset.outreachPhone);
-    if (item) openQualification({ profileHandle: item.profileHandle, phone: item.phone || "" });
+    if (item) openQualification({ ...item, stage: "phone", phone: item.phone || "" });
+  }));
+  document.querySelectorAll("[data-outreach-qualify]").forEach(button => button.addEventListener("click", () => {
+    const item = state.outreach.find(record => record.id === button.dataset.outreachQualify);
+    if (item) openQualification({ ...item, stage: "response" });
+  }));
+  document.querySelectorAll("[data-outreach-review]").forEach(button => button.addEventListener("click", () => {
+    const item = state.outreach.find(record => record.id === button.dataset.outreachReview);
+    if (item) openQualification({ ...item, stage: "phone" });
   }));
 }
 
 function openQualification(candidate = {}) {
   qualificationDraft = {
+    stage: candidate.stage || (candidate.phone ? "phone" : "response"),
+    name: candidate.name || "",
     phone: candidate.phone || "",
     profileHandle: candidate.profileHandle || state.currentContext?.profileHandle || "",
-    instagramUrl: candidate.instagramUrl || state.currentContext?.instagramUrl || ""
+    instagramUrl: candidate.instagramUrl || state.currentContext?.instagramUrl || "",
+    qualification: candidate.qualification || {},
+    qualificationNotes: candidate.qualificationNotes || {},
+    interest: candidate.interest || "",
+    temperature: candidate.temperature || "warm"
   };
-  $("#qualification-profile").textContent = qualificationDraft.profileHandle || "Perfil não identificado";
+  const isPhone = qualificationDraft.stage === "phone";
+  $("#qualification-eyebrow").textContent = isPhone ? "Entrega para a Hunter" : "Atualizar mini CRM";
+  $("#qualification-title").textContent = isPhone ? "Telefone captado" : "Lead respondeu";
+  $("#qualification-name").value = qualificationDraft.name;
+  $("#qualification-profile").value = qualificationDraft.profileHandle;
   $("#qualification-phone").value = qualificationDraft.phone;
-  $("#qualification-interest").value = "";
-  $("#qualification-temperature").value = "warm";
-  document.querySelectorAll("[data-extension-qualification]").forEach(input => { input.checked = false; });
+  $("#qualification-interest").value = qualificationDraft.interest;
+  $("#qualification-temperature").value = qualificationDraft.temperature;
+  document.querySelectorAll("[data-extension-qualification]").forEach(input => {
+    input.checked = Boolean(qualificationDraft.qualification[input.dataset.extensionQualification]);
+  });
+  document.querySelectorAll("[data-extension-note]").forEach(input => {
+    input.value = qualificationDraft.qualificationNotes[input.dataset.extensionNote] || "";
+  });
+  const syncHunterAction = () => $("#send-phone-hunter").classList.toggle("hidden", !isPhone && !$("#qualification-phone").value.trim());
+  $("#qualification-phone").oninput = syncHunterAction;
+  syncHunterAction();
   $("#qualification-card").classList.remove("hidden");
-  $("#qualification-phone").focus();
+  (isPhone ? $("#qualification-phone") : $("#qualification-name")).focus();
 }
 
 function closeQualification() {
@@ -120,6 +144,11 @@ function closeQualification() {
 function readExtensionQualification() {
   return Object.fromEntries([...document.querySelectorAll("[data-extension-qualification]")]
     .map(input => [input.dataset.extensionQualification, input.checked]));
+}
+
+function readExtensionQualificationNotes() {
+  return Object.fromEntries([...document.querySelectorAll("[data-extension-note]")]
+    .map(input => [input.dataset.extensionNote, input.value.trim()]));
 }
 
 function hunterMessage(candidate, qualification) {
@@ -134,25 +163,36 @@ function hunterMessage(candidate, qualification) {
     interestedThisMonth: "Interesse ainda este mês",
     importantDate: "Tem uma data importante"
   };
-  const checked = Object.entries(qualification).filter(([, value]) => value).map(([key]) => `✅ ${labels[key]}`);
-  const temperature = { hot: "🔥 Quente", warm: "🌤️ Morno", cold: "❄️ Frio" }[$("#qualification-temperature").value];
+  const icons = {
+    party: "\u{1F389}", rocket: "\u{1F680}", person: "\u{1F464}", compass: "\u{1F9ED}",
+    sparkle: "\u{2728}", check: "\u{2705}", dot: "\u{25AB}\u{FE0F}",
+    hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}", message: "\u{1F4AC}"
+  };
+  const notes = readExtensionQualificationNotes();
+  const checked = Object.entries(qualification).filter(([, value]) => value).map(([key]) => `${icons.check} ${labels[key]}`);
+  const noteLines = Object.entries(notes).filter(([, value]) => value).map(([key, value]) => `${icons.message} ${key}: ${value}`);
+  const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[$("#qualification-temperature").value];
   return {
     clinic,
-    text: `🎉 *NOVA OPORTUNIDADE PARA VOCÊ!*\n\nBoa, ${clinic?.hunter || "Hunter"}! Novo contato da *${clinic?.name || "clínica"}* para você assumir. 🚀\n\n👤 *Lead*\n• Instagram: ${candidate.profileHandle || "Não informado"}\n• WhatsApp: ${$("#qualification-phone").value || "Não informado"}\n• Interesse: ${$("#qualification-interest").value || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n🧭 *Contexto já alinhado*\n${checked.length ? checked.join("\n") : "▫️ Contexto mínimo — continue a qualificação por aqui."}\n\n✨ Avance para o agendamento sem repetir o que já foi conversado.`
+    text: `${icons.party} *NOVA OPORTUNIDADE PARA VOCÊ!*\n\nBoa, ${clinic?.hunter || "Hunter"}! Novo contato da *${clinic?.name || "clínica"}* para você assumir. ${icons.rocket}\n\n${icons.person} *Lead*\n• Nome: ${$("#qualification-name").value || "Não informado"}\n• Instagram: ${candidate.profileHandle || "Não informado"}\n• WhatsApp: ${$("#qualification-phone").value || "Não informado"}\n• Interesse: ${$("#qualification-interest").value || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n${icons.compass} *Contexto já alinhado*\n${checked.length || noteLines.length ? [...checked, ...noteLines].join("\n") : `${icons.dot} Contexto mínimo — continue a qualificação por aqui.`}\n\n${icons.sparkle} Avance para o agendamento sem repetir o que já foi conversado.`
   };
 }
 
-async function savePhoneCapture(sendToHunter = false) {
+async function saveLeadContext(sendToHunter = false) {
   if (!state.activeSession) return toast("Inicie uma sessão primeiro");
   const candidate = qualificationDraft || {};
   const qualification = readExtensionQualification();
+  candidate.profileHandle = normalizeHandle($("#qualification-profile").value);
   const phone = $("#qualification-phone").value.trim();
   const handoff = hunterMessage(candidate, qualification);
-  render(await message("CONFIRM_PHONE", {
+  render(await message("SAVE_LEAD_CONTEXT", {
+    stage: phone ? "phone" : candidate.stage || "response",
+    name: $("#qualification-name").value.trim(),
     phone,
     profileHandle: candidate.profileHandle || "",
     instagramUrl: candidate.instagramUrl || "",
     qualification,
+    qualificationNotes: readExtensionQualificationNotes(),
     interest: $("#qualification-interest").value.trim(),
     temperature: $("#qualification-temperature").value,
     sendToHunter
@@ -164,8 +204,24 @@ async function savePhoneCapture(sendToHunter = false) {
     chrome.tabs.create({ url: `https://wa.me/${handoff.clinic.hunterPhone}?text=${encodeURIComponent(handoff.text)}` });
     toast("Entrega preparada para a Hunter");
   } else {
-    toast("Telefone salvo no funil");
+    toast(candidate.stage === "phone" ? "Telefone salvo no CRM" : "Conversa salva no CRM");
   }
+}
+
+function normalizeHandle(value = "") {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const match = trimmed.match(/instagram\.com\/([^/?#]+)/i);
+  return `@${(match?.[1] || trimmed).replace(/^@/, "").replace(/\/$/, "")}`;
+}
+
+function manualContext() {
+  const profileHandle = normalizeHandle($("#manual-profile").value || state.currentContext?.profileHandle || "");
+  return {
+    profileHandle,
+    instagramUrl: profileHandle ? `https://www.instagram.com/${profileHandle.replace("@", "")}/` : "",
+    context: { profileHandle, instagramUrl: profileHandle ? `https://www.instagram.com/${profileHandle.replace("@", "")}/` : "", source: "manual_extension" }
+  };
 }
 
 function render(nextState) {
@@ -186,7 +242,9 @@ function render(nextState) {
   const counts = state.counters || {};
   Object.entries({ profiles: "profiles", likes: "likes", comments: "comments", directs: "directs", responses: "responses", phones: "phones" })
     .forEach(([key, id]) => $(`#count-${id}`).textContent = counts[key] || 0);
-  $("#current-profile").textContent = state.currentContext?.profileHandle || "Abra um perfil no Instagram";
+  if (document.activeElement !== $("#manual-profile") && state.currentContext?.profileHandle) {
+    $("#manual-profile").value = state.currentContext.profileHandle;
+  }
   const candidate = state.phoneCandidate;
   $("#phone-card").classList.toggle("hidden", !candidate);
   if (candidate) {
@@ -197,7 +255,6 @@ function render(nextState) {
   renderTimer();
   renderMessages();
   renderOutreach();
-  renderHistory();
 }
 
 $("#login-button").addEventListener("click", async () => {
@@ -223,18 +280,24 @@ $("#session-button").addEventListener("click", async () => {
       : await message("START_SESSION", { clinicId: $("#clinic-select").value }));
   } catch (error) { toast(error.message); }
 });
-$("#mark-response").addEventListener("click", async () => {
-  if (!state.activeSession) return toast("Inicie uma sessão primeiro");
-  render(await message("MARK_RESPONSE", { context: state.currentContext || {} }));
-  toast("Resposta registrada");
-});
 $("#confirm-phone").addEventListener("click", async () => {
-  if (state.phoneCandidate) openQualification(state.phoneCandidate);
+  if (state.phoneCandidate) openQualification({ ...state.phoneCandidate, stage: "phone" });
 });
 $("#dismiss-phone").addEventListener("click", async () => render(await message("DISMISS_PHONE")));
 $("#close-qualification").addEventListener("click", closeQualification);
-$("#save-phone").addEventListener("click", () => savePhoneCapture(false).catch(error => toast(error.message)));
-$("#send-phone-hunter").addEventListener("click", () => savePhoneCapture(true).catch(error => toast(error.message)));
+$("#save-phone").addEventListener("click", () => saveLeadContext(false).catch(error => toast(error.message)));
+$("#send-phone-hunter").addEventListener("click", () => saveLeadContext(true).catch(error => toast(error.message)));
+document.querySelectorAll("[data-manual-event]").forEach(button => button.addEventListener("click", async () => {
+  if (!state.activeSession) return toast("Inicie uma sessão primeiro");
+  const type = button.dataset.manualEvent;
+  const context = manualContext();
+  if (type === "response_detected" || type === "phone_captured") {
+    openQualification({ ...context, stage: type === "phone_captured" ? "phone" : "response" });
+    return;
+  }
+  render(await message("TRACKED_EVENT", { event: { type, ...context } }));
+  toast("Ação adicionada manualmente");
+}));
 $("#refresh-workspace").addEventListener("click", async () => {
   try { render(await message("REFRESH_WORKSPACE")); toast("Clínicas atualizadas"); }
   catch (error) { toast(error.message); }

@@ -5,6 +5,7 @@
   ]);
   let previousUrl = "";
   let lastPhone = "";
+  let lastConversationHandle = "";
   let scanTimer;
   const lastEmission = new Map();
 
@@ -12,36 +13,83 @@
     return value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
-  function singleHandleFromPath(pathname = location.pathname) {
-    const parts = pathname.split("/").filter(Boolean);
-    if (parts.length !== 1 || RESERVED_PATHS.has(parts[0].toLowerCase())) return "";
-    return `@${parts[0]}`;
+  function handleFromHref(href = "") {
+    try {
+      const pathname = href.startsWith("http") ? new URL(href).pathname : href;
+      const parts = pathname.split("/").filter(Boolean);
+      if (parts.length !== 1 || RESERVED_PATHS.has(parts[0].toLowerCase())) return "";
+      return `@${parts[0]}`;
+    } catch {
+      return "";
+    }
   }
 
-  function handleFromContainer(container) {
-    const anchors = [...(container || document).querySelectorAll('a[href^="/"]')];
-    const candidate = anchors.find(anchor => {
-      const path = anchor.getAttribute("href") || "";
-      const parts = path.split("/").filter(Boolean);
-      return parts.length === 1 && !RESERVED_PATHS.has(parts[0].toLowerCase());
-    });
-    return candidate ? singleHandleFromPath(candidate.getAttribute("href")) : "";
+  function singleHandleFromPath(pathname = location.pathname) {
+    return handleFromHref(pathname);
+  }
+
+  function handlesFrom(container) {
+    const handles = [...(container || document).querySelectorAll('a[href^="/"], a[href^="https://www.instagram.com/"]')]
+      .map(anchor => handleFromHref(anchor.getAttribute("href") || ""))
+      .filter(Boolean);
+    return [...new Set(handles)];
+  }
+
+  function handleFromVisibleText(container) {
+    const text = container?.innerText || "";
+    const explicit = text.match(/@[\w.]{2,30}/)?.[0];
+    return explicit || "";
+  }
+
+  function directScope(target) {
+    return target?.closest?.('[role="dialog"]')
+      || target?.closest?.("form")
+      || (location.pathname.startsWith("/direct/") ? document.querySelector('main, [role="main"]') : null);
+  }
+
+  function isDirectComposer(target) {
+    if (!target?.matches?.('textarea, [contenteditable="true"], [role="textbox"]')) return false;
+    const hint = normalizeText([
+      target.getAttribute?.("placeholder"),
+      target.getAttribute?.("aria-label")
+    ].filter(Boolean).join(" "));
+    if (/(mensagem|message|direct)/.test(hint)) return true;
+    const scope = directScope(target);
+    const scopeText = normalizeText(scope?.innerText || "");
+    return location.pathname.startsWith("/direct/") || /(enviar|send|mensagem|message)/.test(scopeText);
+  }
+
+  function conversationHandle(target = document) {
+    const profilePageHandle = singleHandleFromPath(location.pathname);
+    if (profilePageHandle) return profilePageHandle;
+    const scopes = [
+      target?.closest?.('[role="dialog"]'),
+      target?.closest?.("article"),
+      target?.closest?.("form"),
+      document.querySelector('[role="dialog"]'),
+      document.querySelector('main header, [role="main"] header')
+    ].filter(Boolean);
+    for (const scope of scopes) {
+      const textHandle = handleFromVisibleText(scope);
+      if (textHandle) return textHandle;
+      const handles = handlesFrom(scope);
+      if (handles.length === 1) return handles[0];
+      if (handles.length > 1 && lastConversationHandle && handles.includes(lastConversationHandle)) return lastConversationHandle;
+    }
+    return lastConversationHandle;
   }
 
   function contextFor(target = document) {
-    const article = target?.closest?.("article");
-    const main = document.querySelector('main, [role="main"]');
-    const profileHandle = singleHandleFromPath(location.pathname)
-      || handleFromContainer(article)
-      || handleFromContainer(main?.querySelector("header"))
-      || "";
+    const profileHandle = conversationHandle(target);
+    if (profileHandle) lastConversationHandle = profileHandle;
+    const inDirect = location.pathname.startsWith("/direct/") || Boolean(directScope(target));
     return {
       profileHandle,
       instagramUrl: profileHandle
         ? `https://www.instagram.com/${profileHandle.replace("@", "")}/`
         : location.href,
       pageUrl: location.href,
-      route: location.pathname.startsWith("/direct/") ? "direct" : profileHandle ? "profile" : "feed"
+      route: inDirect ? "direct" : profileHandle ? "profile" : "feed"
     };
   }
 
@@ -77,40 +125,49 @@
     return /coment|comment/.test(placeholder);
   }
 
-  function isDirectComposer(target) {
-    if (!location.pathname.startsWith("/direct/")) return false;
-    return target?.matches?.('textarea, [contenteditable="true"], [role="textbox"]');
-  }
-
   document.addEventListener("click", event => {
-    if (location.pathname.startsWith("/direct/")) {
-      const conversationRow = event.target.closest?.('a[href*="/direct/t/"], [role="row"], [role="listitem"]');
+    const conversationRow = event.target.closest?.('a[href*="/direct/t/"], [role="row"], [role="listitem"]');
+    if (conversationRow && location.pathname.startsWith("/direct/")) {
+      lastConversationHandle = handleFromVisibleText(conversationRow) || handlesFrom(conversationRow)[0] || lastConversationHandle;
       const unreadText = normalizeText([
-        conversationRow?.innerText,
-        conversationRow?.getAttribute?.("aria-label"),
-        conversationRow?.querySelector?.('[aria-label*="lida" i], [aria-label*="unread" i]')?.getAttribute?.("aria-label")
+        conversationRow.innerText,
+        conversationRow.getAttribute?.("aria-label"),
+        conversationRow.querySelector?.('[aria-label*="lida" i], [aria-label*="unread" i]')?.getAttribute?.("aria-label")
       ].filter(Boolean).join(" "));
-      if (conversationRow && /(nao lida|unread|nova mensagem|new message)/.test(unreadText)) {
-        setTimeout(() => emit("response_detected", { target: document }, 0), 900);
+      if (/(nao lida|unread|nova mensagem|new message)/.test(unreadText)) {
+        setTimeout(() => emit("response_detected", { target: conversationRow }, 0), 900);
       }
     }
+
     const button = event.target.closest?.('button, [role="button"]');
     if (!button) return;
     const text = buttonText(button);
     if (/(^|\s)(seguir|follow)(\s|$)/.test(text) && !/(seguindo|following|deixar de seguir|unfollow)/.test(text)) {
-      return emit("follow", { target: button }, 1200);
+      emit("follow", { target: button }, 1200);
+      return;
     }
     if (/(^| )(curtir|like)( |$)/.test(text) && !/(descurtir|unlike)/.test(text)) {
-      return emit("like", { target: button }, 900);
+      emit("like", { target: button }, 900);
+      return;
     }
     if (/(^|\s)(publicar|post)(\s|$)/.test(text)) {
       const scope = button.closest("form, article, [role='dialog']") || document;
       if (scope.querySelector('textarea, [contenteditable="true"]')) emit("comment", { target: button }, 1200);
       return;
     }
-    if (location.pathname.startsWith("/direct/") && /(^|\s)(enviar|send)(\s|$)/.test(text)) {
-      emit("direct_sent", { target: button }, 1200);
+    if (/(^|\s)(enviar|send)(\s|$)/.test(text)) {
+      const scope = button.closest("form, [role='dialog']") || button.parentElement;
+      if (scope?.querySelector?.('textarea, [contenteditable="true"], [role="textbox"]') || location.pathname.startsWith("/direct/")) {
+        emit("direct_sent", { target: button }, 1200);
+      }
     }
+  }, true);
+
+  document.addEventListener("dblclick", event => {
+    const media = event.target.closest?.("img, video");
+    if (!media) return;
+    const scope = media.closest("article, [role='dialog']") || media.parentElement;
+    emit("like", { target: scope }, 1200);
   }, true);
 
   document.addEventListener("keydown", event => {
@@ -124,10 +181,8 @@
     previousUrl = location.href;
     const handle = singleHandleFromPath(location.pathname);
     if (handle) {
-      emit("profile_viewed", {
-        target: document,
-        dedupeKey: `profile:${handle}`
-      }, 0);
+      lastConversationHandle = handle;
+      emit("profile_viewed", { target: document }, 0);
     }
     schedulePhoneScan();
   }
@@ -135,15 +190,20 @@
   function schedulePhoneScan() {
     clearTimeout(scanTimer);
     scanTimer = setTimeout(() => {
-      if (!location.pathname.startsWith("/direct/")) return;
+      const dialog = document.querySelector('[role="dialog"]');
       const main = document.querySelector('main, [role="main"]');
-      const visibleText = (main?.innerText || "").slice(-24000);
-      const matches = visibleText.match(/(?:\+?55\s*)?(?:\(?\d{2}\)?[\s.-]*)?(?:9\s*)?\d{4}[\s.-]*\d{4}/g) || [];
-      const candidate = matches.map(value => value.trim()).find(value => value.replace(/\D/g, "").length >= 10);
+      const scope = dialog || (location.pathname.startsWith("/direct/") ? main : null);
+      if (!scope) return;
+      const visibleText = (scope.innerText || "").slice(-30000);
+      const matches = visibleText.match(/(?:\+?55[\s.-]*)?(?:\(?\d{2}\)?[\s.-]*)?(?:9[\s.-]*)?\d{4}[\s.-]*\d{4}/g) || [];
+      const candidate = [...matches].reverse().map(value => value.trim()).find(value => {
+        const length = value.replace(/\D/g, "").length;
+        return length >= 8 && length <= 13;
+      });
       if (!candidate || candidate === lastPhone) return;
       lastPhone = candidate;
-      emit("phone_candidate", { target: main, phone: candidate }, 0);
-    }, 1100);
+      emit("phone_candidate", { target: scope, phone: candidate }, 0);
+    }, 950);
   }
 
   const observer = new MutationObserver(() => {

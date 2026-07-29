@@ -9,7 +9,7 @@
 <body>
   <main>
     <header class="topbar">
-      <span class="brand"><img src="mark.svg" alt=""><span><small>Assistente</small><strong>Social selling</strong></span></span>
+      <span class="brand"><img src="icon.png" alt=""><span><small>Assistente</small><strong>Social selling</strong></span></span>
       <span class="connection" id="connection-status"><i></i>Pronto</span>
     </header>
 
@@ -36,16 +36,16 @@
 
       <section class="current-context" id="current-context">
         <span>@</span>
-        <div><small>Perfil atual</small><strong id="current-profile">Abra um perfil no Instagram</strong></div>
+        <label><small>Perfil em atendimento</small><input id="manual-profile" placeholder="@usuario"></label>
       </section>
 
       <section class="counter-grid">
-        <article><span>↗</span><strong id="count-profiles">0</strong><small>Follows</small></article>
-        <article><span>♡</span><strong id="count-likes">0</strong><small>Curtidas</small></article>
-        <article><span>◌</span><strong id="count-comments">0</strong><small>Comentários</small></article>
-        <article><span>➤</span><strong id="count-directs">0</strong><small>Directs</small></article>
-        <article><span>↩</span><strong id="count-responses">0</strong><small>Respostas</small></article>
-        <article class="success"><span>☎</span><strong id="count-phones">0</strong><small>Telefones</small></article>
+        <article><span>↗</span><strong id="count-profiles">0</strong><small>Follows</small><button data-manual-event="follow" aria-label="Adicionar follow">+</button></article>
+        <article><span>♡</span><strong id="count-likes">0</strong><small>Curtidas</small><button data-manual-event="like" aria-label="Adicionar curtida">+</button></article>
+        <article><span>◌</span><strong id="count-comments">0</strong><small>Comentários</small><button data-manual-event="comment" aria-label="Adicionar comentário">+</button></article>
+        <article><span>➤</span><strong id="count-directs">0</strong><small>Directs</small><button data-manual-event="direct_sent" aria-label="Adicionar direct">+</button></article>
+        <article><span>↩</span><strong id="count-responses">0</strong><small>Respostas</small><button data-manual-event="response_detected" aria-label="Registrar resposta">+</button></article>
+        <article class="success"><span>☎</span><strong id="count-phones">0</strong><small>Telefones</small><button data-manual-event="phone_captured" aria-label="Registrar telefone">+</button></article>
       </section>
 
       <section class="phone-card hidden" id="phone-card">
@@ -57,23 +57,24 @@
 
       <section class="qualification-card hidden" id="qualification-card">
         <div class="qualification-head">
-          <div><p class="eyebrow">Entrega para a Hunter</p><strong id="qualification-profile">@perfil</strong></div>
+          <div><p class="eyebrow" id="qualification-eyebrow">Atualizar CRM</p><strong id="qualification-title">Lead respondeu</strong></div>
           <button id="close-qualification" aria-label="Fechar">×</button>
         </div>
+        <label>Nome <span>(opcional)</span><input id="qualification-name" placeholder="Nome do lead"></label>
+        <label>Instagram <input id="qualification-profile" placeholder="@usuario"></label>
         <label>WhatsApp <span>(opcional para salvar)</span><input id="qualification-phone" type="tel" placeholder="(00) 00000-0000"></label>
         <label>Procedimento <span>(opcional)</span><input id="qualification-interest" placeholder="Ex.: Botox"></label>
         <label>Temperatura<select id="qualification-temperature"><option value="cold">Frio</option><option value="warm" selected>Morno</option><option value="hot">Quente</option></select></label>
         <div class="extension-bant">
-          <div><b>B</b><label><input type="checkbox" data-extension-qualification="priorInvestment">Pesquisou/investiu antes</label><label><input type="checkbox" data-extension-qualification="valueUnderstood">Entendeu o valor</label></div>
-          <div><b>A</b><label><input type="checkbox" data-extension-qualification="decisionAuthority">Decide por conta própria</label><label><input type="checkbox" data-extension-qualification="knowsDoctor">Conhece a Dra.</label></div>
-          <div><b>N</b><label><input type="checkbox" data-extension-qualification="procedureDiscussed">Falou do incômodo</label><label><input type="checkbox" data-extension-qualification="fitConfirmed">Solução faz sentido</label></div>
-          <div><b>T</b><label><input type="checkbox" data-extension-qualification="interestedThisMonth">Interesse neste mês</label><label><input type="checkbox" data-extension-qualification="importantDate">Tem data importante</label></div>
+          <div><b>B</b><section><label><input type="checkbox" data-extension-qualification="priorInvestment">Pesquisou/investiu antes</label><label><input type="checkbox" data-extension-qualification="valueUnderstood">Entendeu o valor</label><textarea data-extension-note="B" placeholder="O que ela respondeu"></textarea></section></div>
+          <div><b>A</b><section><label><input type="checkbox" data-extension-qualification="decisionAuthority">Decide por conta própria</label><label><input type="checkbox" data-extension-qualification="knowsDoctor">Conhece a Dra.</label><textarea data-extension-note="A" placeholder="O que ela respondeu"></textarea></section></div>
+          <div><b>N</b><section><label><input type="checkbox" data-extension-qualification="procedureDiscussed">Falou do incômodo</label><label><input type="checkbox" data-extension-qualification="fitConfirmed">Solução faz sentido</label><textarea data-extension-note="N" placeholder="O que ela respondeu"></textarea></section></div>
+          <div><b>T</b><section><label><input type="checkbox" data-extension-qualification="interestedThisMonth">Interesse neste mês</label><label><input type="checkbox" data-extension-qualification="importantDate">Tem data importante</label><textarea data-extension-note="T" placeholder="O que ela respondeu"></textarea></section></div>
         </div>
-        <div class="qualification-actions"><button class="quiet" id="save-phone">Salvar telefone</button><button class="primary compact" id="send-phone-hunter">Enviar à Hunter</button></div>
+        <div class="qualification-actions"><button class="quiet" id="save-phone">Salvar no CRM</button><button class="primary compact" id="send-phone-hunter">Salvar e enviar à Hunter</button></div>
       </section>
 
       <section class="quick-actions">
-        <button id="mark-response"><span>↩</span><div><strong>Lead respondeu</strong><small>Adicionar ao contador e ao histórico</small></div></button>
         <button id="refresh-workspace"><span>⟳</span><div><strong>Atualizar clínicas</strong><small>Buscar alterações feitas no app</small></div></button>
       </section>
 
@@ -83,13 +84,8 @@
       </section>
 
       <section class="outreach">
-        <div class="section-title"><div><p class="eyebrow">Funil ao vivo</p><h2>Directs rastreados</h2></div></div>
+        <div class="section-title"><div><p class="eyebrow">Nesta clínica</p><h2>Leads da sessão</h2></div></div>
         <div id="outreach-list"></div>
-      </section>
-
-      <section class="history">
-        <div class="section-title"><div><p class="eyebrow">Ao vivo</p><h2>Histórico recente</h2></div></div>
-        <div id="history-list"></div>
       </section>
 
       <footer>
