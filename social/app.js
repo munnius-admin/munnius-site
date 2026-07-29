@@ -1,27 +1,27 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=9";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=10";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const STORAGE_KEY = "munnius-social-v2";
 const countLabels = { profiles: "Perfis", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Respostas", phones: "Telefones" };
 const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", followups: "Follow-ups", more: "Mais", clinics: "Clínicas", reports: "Relatórios" };
-const statusNames = { new: "Novo", talking: "Conversando", no_response: "Sem resposta", follow_up: "Follow-up", sent_to_hunter: "Enviado à Hunter", finished: "Finalizado" };
+const statusNames = { new: "Novo", talking: "Conversando", no_response: "Sem resposta", follow_up: "Follow-up", qualified: "Pré-qualificado", sent_to_hunter: "Enviado à closer", finished: "Finalizado" };
 const googleEnabled = Boolean(window.MUNNIUS_SOCIAL_CONFIG?.googleEnabled);
 const recoveryLinkDetected = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery"
   || new URLSearchParams(location.search).get("type") === "recovery";
 
 const seed = {
   version: 2,
-  profile: { name: "Hiara Munhoz", initials: "HM", role: "social_seller" },
+  profile: { name: "Usuário", initials: "US", role: "social_seller" },
   clinics: [
     { id: "bella", name: "Clínica Bella", doctor: "Dra. Beatriz", instagram: "@clinicabella", hunter: "Ana", hunterPhone: "5541999990001", protocol: "Glow", location: "Curitiba, PR", evaluationPrice: 300, target: 8, color: "#75566f", active: true },
     { id: "aura", name: "Instituto Aura", doctor: "Dra. Camila", instagram: "@institutoaura", hunter: "Marina", hunterPhone: "5541999990002", protocol: "Aura Natural", location: "São Paulo, SP", evaluationPrice: 250, target: 6, color: "#df765f", active: true },
     { id: "leve", name: "Clínica Leve", doctor: "Dra. Renata", instagram: "@clinicaleve", hunter: "Clara", hunterPhone: "5541999990003", protocol: "Leve Face", location: "Belo Horizonte, MG", evaluationPrice: 280, target: 5, color: "#1f6b57", active: true }
   ],
   leads: [
-    { id: "lead-1", name: "Mariana Costa", instagram: "@maricosta", whatsapp: "", clinicId: "bella", status: "talking", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: null, timeline: [{ at: new Date().toISOString(), label: "Primeiro contato realizado" }] },
-    { id: "lead-2", name: "Júlia Martins", instagram: "@jumartins", whatsapp: "", clinicId: "aura", status: "follow_up", prospectedAt: new Date(Date.now() - 86400000).toISOString(), lastContactAt: new Date(Date.now() - 86400000).toISOString(), sentToHunterAt: null, timeline: [{ at: new Date(Date.now() - 86400000).toISOString(), label: "Primeiro contato realizado" }] },
-    { id: "lead-3", name: "Fernanda Lima", instagram: "@fernandalima", whatsapp: "41999990010", clinicId: "leve", status: "sent_to_hunter", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: new Date().toISOString(), timeline: [{ at: new Date().toISOString(), label: "Enviado para Hunter" }] }
+    { id: "lead-1", name: "Mariana Costa", instagram: "@maricosta", whatsapp: "", clinicId: "bella", status: "talking", interest: "Harmonização facial", location: "Curitiba", temperature: "warm", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: null, timeline: [{ at: new Date().toISOString(), label: "Primeiro contato realizado" }] },
+    { id: "lead-2", name: "Júlia Martins", instagram: "@jumartins", whatsapp: "", clinicId: "aura", status: "follow_up", interest: "Botox", location: "São Paulo", temperature: "warm", prospectedAt: new Date(Date.now() - 86400000).toISOString(), lastContactAt: new Date(Date.now() - 86400000).toISOString(), sentToHunterAt: null, timeline: [{ at: new Date(Date.now() - 86400000).toISOString(), label: "Primeiro contato realizado" }] },
+    { id: "lead-3", name: "Fernanda Lima", instagram: "@fernandalima", whatsapp: "41999990010", clinicId: "leve", status: "sent_to_hunter", interest: "Preenchimento labial", location: "Belo Horizonte", temperature: "hot", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: new Date().toISOString(), timeline: [{ at: new Date().toISOString(), label: "Enviado para closer" }] }
   ],
   followups: [
     { id: "fu-1", leadId: "lead-2", scheduledFor: new Date(Date.now() - 3600000).toISOString(), step: "1º follow-up", status: "pending" },
@@ -38,11 +38,14 @@ const seed = {
 
 function loadState() {
   const base = isSupabaseConfigured
-    ? { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] }
+    ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], followups: [], sessions: [] }
     : structuredClone(seed);
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (stored?.version === 2) return { ...base, ...stored, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+    if (stored?.version === 2) {
+      const { profile: _ignoredProfile, ...operationalState } = stored;
+      return { ...base, ...operationalState, profile: base.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+    }
   } catch (error) { console.warn("Não foi possível recuperar os dados locais.", error); }
   return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
 }
@@ -52,7 +55,7 @@ let syncTimer;
 let workspaceOpened = false;
 let recoveryMode = recoveryLinkDetected;
 function persist() {
-  const { timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
+  const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
   if (isSupabaseConfigured) {
     clearTimeout(syncTimer);
@@ -73,8 +76,9 @@ async function hydrateRemoteState() {
     return;
   }
   const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
-  state = { ...base, ...remote, profile: workspace.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
-  const { timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
+  const { profile: _ignoredProfile, ...operationalState } = remote;
+  state = { ...base, ...operationalState, profile: workspace.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+  const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
 }
 
@@ -103,7 +107,10 @@ async function openWorkspace(message = "Bem-vindo") {
     await hydrateRemoteState();
   } catch (error) {
     console.warn("Não foi possível carregar a nuvem.", error);
-    showToast("Entrou, mas a sincronização será retomada");
+    workspaceOpened = false;
+    showToast("Não foi possível confirmar este perfil. Entre novamente.");
+    await authGateway.signOut();
+    return;
   }
   $("#auth-screen").classList.add("hidden");
   $("#app-shell").classList.remove("hidden");
@@ -167,10 +174,20 @@ function renderDashboard() {
   const stats = periodStats(state.period);
   const activeClinics = state.clinics.filter(clinic => clinic.active);
   const pending = state.followups.filter(item => item.status === "pending").length;
+  const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
+  const talking = state.leads.filter(lead => lead.status === "talking").length;
+  const qualified = state.leads.filter(lead => lead.status === "qualified").length;
+  $("#actions-total").textContent = actions;
   $("#leads-total").textContent = stats.leads;
   $("#clinics-total").textContent = activeClinics.length;
   $("#hunters-total").textContent = stats.hunters;
   $("#followups-total").textContent = pending;
+  $("#pipeline-talking").textContent = talking;
+  $("#pipeline-followups").textContent = pending;
+  $("#pipeline-qualified").textContent = qualified;
+  $("#hero-summary").textContent = actions
+    ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phones} telefones`
+    : activeClinics.length ? "Escolha uma clínica abaixo e comece a sessão." : "Cadastre sua primeira clínica para começar.";
   const badge = $(".bottom-nav [data-view='followups'] i");
   badge.textContent = pending;
   badge.classList.toggle("hidden", pending === 0);
@@ -181,16 +198,26 @@ function clinicLeadCount(clinicId, period = "day") { return state.leads.filter(l
 function clinicMarkup(clinic, detailed = false) {
   const leads = clinicLeadCount(clinic.id);
   const pct = Math.min(100, clinic.target ? leads / clinic.target * 100 : 0);
-  return `<article class="clinic-card ${detailed ? "clickable" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
+  const active = state.session?.clinicId === clinic.id;
+  return `<article class="clinic-card ${detailed ? "clickable" : ""} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
     <div class="clinic-avatar" style="background:${clinic.color}">${clinic.name.split(" ").slice(-1)[0][0]}</div>
-    <div class="clinic-main"><strong>${clinic.name}</strong><span>${clinic.doctor} · Hunter ${clinic.hunter}</span><div class="progress"><i style="width:${pct}%"></i></div></div>
-    <div class="clinic-score"><strong>${leads}/${clinic.target}</strong><span>leads hoje</span></div>
+    <div class="clinic-main"><strong>${clinic.name}</strong><span>${clinic.instagram} · Closer ${clinic.hunter}</span><div class="progress"><i style="width:${pct}%"></i></div></div>
+    <div class="clinic-card-side"><div class="clinic-score"><strong>${leads}/${clinic.target}</strong><span>leads hoje</span></div>
+      ${detailed ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>`}
+    </div>
   </article>`;
 }
 function renderClinics() {
   const active = state.clinics.filter(clinic => clinic.active);
   $("#clinic-list").innerHTML = active.map(clinic => clinicMarkup(clinic)).join("") || emptyState("Nenhuma clínica ativa.");
   $("#clinics-page-list").innerHTML = active.map(clinic => clinicMarkup(clinic, true)).join("") || emptyState("Cadastre sua primeira clínica.");
+  $$("[data-start-session]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    const clinicId = button.dataset.startSession;
+    if (state.session?.clinicId === clinicId) return navigate("session");
+    if (state.session) return showToast("Encerre a sessão atual antes de iniciar outra.");
+    startSession(clinicId);
+  }));
   $$("[data-clinic-detail]").forEach(card => card.addEventListener("click", () => openClinicForm(card.dataset.clinicDetail)));
 }
 
@@ -204,8 +231,8 @@ function renderLeads() {
     const clinic = clinicById(lead.clinicId);
     return `<article class="lead-card clickable" data-lead="${lead.id}">
       <div class="lead-top"><div class="lead-avatar">${initials(lead.name || lead.instagram)}</div>
-      <div class="lead-info"><strong>${escapeHtml(lead.name || lead.instagram)}</strong><span>${escapeHtml(lead.instagram)}</span></div><span class="status ${lead.status}">${statusNames[lead.status]}</span></div>
-      <div class="lead-meta"><span>${clinic?.name || "Clínica removida"}</span><span>${formatDate(lead.prospectedAt, true)}</span></div>
+      <div class="lead-info"><strong>${escapeHtml(lead.name || lead.instagram)}</strong><span>${escapeHtml(lead.instagram)}${lead.interest ? ` · ${escapeHtml(lead.interest)}` : ""}</span></div><span class="status ${lead.status}">${statusNames[lead.status] || "Novo"}</span></div>
+      <div class="lead-meta"><span>${clinic?.name || "Clínica removida"}</span><span class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliado"}</span><span>${formatDate(lead.prospectedAt, true)}</span></div>
     </article>`;
   }).join("") || emptyState("Nenhum lead encontrado.");
   $$("[data-lead]").forEach(card => card.addEventListener("click", () => openLeadDetail(card.dataset.lead)));
@@ -237,6 +264,7 @@ function renderFollowups() {
 
 function renderReport() {
   const stats = periodStats(state.reportPeriod);
+  const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
   const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Últimos 30 dias" };
   $("#report-label").textContent = labels[state.reportPeriod];
   $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
@@ -244,7 +272,16 @@ function renderReport() {
   $("#report-hunters").textContent = stats.hunters;
   $("#report-directs").textContent = stats.directs;
   $("#report-hours").textContent = `${(stats.seconds / 3600).toFixed(1).replace(".", ",")}h`;
-  $("#report-efficiency").textContent = stats.directs ? `1 lead a cada ${(stats.directs / Math.max(1, stats.leads)).toFixed(1).replace(".", ",")} directs` : "Comece uma sessão";
+  $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação" : "ações"}`;
+  $("#report-profiles").textContent = stats.profiles;
+  $("#report-likes").textContent = stats.likes;
+  $("#report-comments").textContent = stats.comments;
+  $("#report-directs-detail").textContent = stats.directs;
+  $("#report-responses").textContent = stats.responses;
+  $("#report-phones").textContent = stats.phones;
+  $("#report-efficiency").textContent = stats.directs && stats.phones
+    ? `1 telefone a cada ${(stats.directs / stats.phones).toFixed(1).replace(".", ",")} directs`
+    : stats.responses && stats.directs ? `${Math.round(stats.responses / stats.directs * 100)}% de respostas` : "Comece uma sessão";
   const days = state.reportPeriod === "day" ? 1 : state.reportPeriod === "week" ? 7 : 10;
   const values = Array.from({ length: days }, (_, index) => {
     const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (days - 1 - index));
@@ -252,9 +289,20 @@ function renderReport() {
   });
   const max = Math.max(1, ...values);
   $("#report-chart").innerHTML = values.map((value, index) => `<div><span style="height:${Math.max(8, value / max * 88)}%"></span><small>${state.reportPeriod === "day" ? "Hoje" : index === values.length - 1 ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { weekday: "narrow" }).format(new Date(Date.now() - (values.length - 1 - index) * 86400000))}</small></div>`).join("");
+  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
+    const clinicSessions = stats.sessions.filter(session => session.clinicId === clinic.id);
+    const clinicActions = clinicSessions.reduce((total, session) => total + Object.keys(countLabels).reduce((sum, key) => sum + Number(session.counts?.[key] || 0), 0), 0);
+    const clinicLeads = state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length;
+    return { clinic, clinicActions, clinicLeads };
+  }).filter(row => row.clinicActions || row.clinicLeads).sort((a, b) => (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
+  $("#report-clinic-breakdown").innerHTML = clinicRows.slice(0, 8).map(({ clinic, clinicActions, clinicLeads }) => `
+    <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
+      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ações</small></p>
+      <b>${clinicLeads} ${clinicLeads === 1 ? "lead" : "leads"}</b>
+    </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
-function emptyState(message) { return `<div class="empty-inline"><span>◇</span><p>${message}</p></div>`; }
+function emptyState(message) { return `<div class="empty-inline"><span class="material-symbols-outlined">inbox</span><p>${message}</p></div>`; }
 function initials(value = "") { return value.replace("@", "").split(/[ ._-]+/).filter(Boolean).map(part => part[0]).slice(0, 2).join("").toUpperCase(); }
 function escapeHtml(value = "") { const div = document.createElement("div"); div.textContent = value; return div.innerHTML; }
 function phoneDigits(value = "") { return value.replace(/\D/g, ""); }
@@ -274,13 +322,14 @@ function closeSheet() { $("#sheet-backdrop").classList.add("hidden"); }
 function clinicPicker() {
   const clinics = state.clinics.filter(clinic => clinic.active);
   openSheet(`<h2 class="sheet-title">Escolha a clínica</h2><p class="sheet-subtitle">Todos os registros desta sessão ficarão associados a ela.</p>
-    <div class="clinic-options">${clinics.map(clinic => `<button class="clinic-option" data-clinic-pick="${clinic.id}"><span><strong>${clinic.name}</strong><small>${clinic.instagram}</small></span><b>›</b></button>`).join("")}</div>`, () => {
+    <div class="clinic-options">${clinics.map(clinic => `<button class="clinic-option" data-clinic-pick="${clinic.id}"><span><strong>${clinic.name}</strong><small>${clinic.instagram}</small></span><b class="material-symbols-outlined">chevron_right</b></button>`).join("")}</div>`, () => {
     $$("[data-clinic-pick]").forEach(button => button.addEventListener("click", () => startSession(button.dataset.clinicPick)));
   });
 }
 
 function startSession(clinicId) {
   const clinic = clinicById(clinicId);
+  if (!clinic) return showToast("Clínica não encontrada.");
   state.session = { id: uid("session"), clinicId, startedAt: new Date().toISOString(), counts: Object.fromEntries(Object.keys(countLabels).map(key => [key, 0])) };
   $("#session-clinic").textContent = clinic.name;
   $("#session-empty").classList.add("hidden");
@@ -289,7 +338,7 @@ function startSession(clinicId) {
   closeSheet();
   clearInterval(state.timerId);
   state.timerId = setInterval(updateTimer, 1000);
-  updateTimer(); navigate("session");
+  updateTimer(); renderClinics(); navigate("session");
   showToast(`Sessão iniciada · ${clinic.name}`);
 }
 function updateTimer() {
@@ -301,7 +350,10 @@ function updateAction(action, delta = 1) {
   if (!state.session) return;
   const previous = state.session.counts[action];
   state.session.counts[action] = Math.max(0, previous + delta);
-  $(`[data-action="${action}"] strong`).textContent = state.session.counts[action];
+  const countNode = $(`[data-action="${action}"] strong`);
+  countNode.textContent = state.session.counts[action];
+  countNode.classList.remove("count-pop");
+  requestAnimationFrame(() => countNode.classList.add("count-pop"));
   if (delta > 0) state.lastAction = action;
   if (action === "phones" && delta > 0) openLeadForm({ hasPhone: true });
 }
@@ -314,7 +366,7 @@ async function finishSession() {
   persist(); clearInterval(state.timerId); state.session = null; state.lastAction = null;
   $("#session-empty").classList.remove("hidden"); $("#session-active").classList.add("hidden");
   $$("[data-action] strong").forEach(node => node.textContent = "0");
-  renderDashboard(); showToast("Sessão salva no histórico");
+  renderDashboard(); renderReport(); showToast("Sessão salva no histórico");
 }
 
 function openAdjustCounts() {
@@ -331,12 +383,12 @@ function openAdjustCounts() {
 function openClinicForm(clinicId = null) {
   const clinic = clinicId ? clinicById(clinicId) : {};
   const edit = Boolean(clinicId);
-  openSheet(`<h2 class="sheet-title">${edit ? "Editar clínica" : "Nova clínica"}</h2><p class="sheet-subtitle">A Hunter fica vinculada para agilizar cada entrega.</p>
+  openSheet(`<h2 class="sheet-title">${edit ? "Editar clínica" : "Nova clínica"}</h2><p class="sheet-subtitle">A closer fica vinculada para agilizar cada entrega.</p>
     <form class="sheet-form" id="clinic-form">
       ${field("clinic-name", "Nome da clínica", clinic.name, true)}
       ${field("clinic-doctor", "Dra. responsável", clinic.doctor, true)}
       ${field("clinic-instagram", "Instagram", clinic.instagram, true, "text", "@clinica")}
-      <div class="form-grid">${field("clinic-hunter", "Hunter responsável", clinic.hunter, true)}${field("clinic-hunter-phone", "WhatsApp da Hunter", clinic.hunterPhone, true, "tel", "(00) 00000-0000")}</div>
+      <div class="form-grid">${field("clinic-hunter", "Closer responsável", clinic.hunter, true)}${field("clinic-hunter-phone", "WhatsApp da closer", clinic.hunterPhone, true, "tel", "(00) 00000-0000")}</div>
       ${field("clinic-protocol", "Protocolo da clínica", clinic.protocol)}
       ${field("clinic-location", "Localização", clinic.location)}
       <div class="form-grid">${field("clinic-price", "Valor da avaliação", clinic.evaluationPrice, false, "number", "300")}${field("clinic-target", "Meta diária de leads", clinic.target || 5, true, "number", "5")}</div>
@@ -372,9 +424,20 @@ function openLeadForm({ leadId = null, hasPhone = false } = {}) {
       ${field("lead-name", "Nome", lead.name, false, "text", "Nome do lead")}
       ${field("lead-phone", "WhatsApp", lead.whatsapp, hasPhone, "tel", "(00) 00000-0000")}
       <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic">${state.clinics.filter(c=>c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
-      <div class="field"><label for="lead-status">Status</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || (hasPhone ? "sent_to_hunter" : "new")) === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>
+      <div class="qualification-block">
+        <div class="qualification-heading"><span class="material-symbols-outlined">verified</span><div><strong>Pré-qualificação rápida</strong><small>O suficiente para a closer continuar bem.</small></div></div>
+        ${field("lead-interest", "Interesse / procedimento", lead.interest, false, "text", "Ex.: Botox, avaliação facial")}
+        <div class="form-grid">${field("lead-location", "Cidade ou região", lead.location, false, "text", "Curitiba")}
+          <div class="field"><label for="lead-temperature">Temperatura</label><select id="lead-temperature">
+            <option value="cold" ${lead.temperature === "cold" ? "selected" : ""}>Frio</option>
+            <option value="warm" ${(!lead.temperature || lead.temperature === "warm") ? "selected" : ""}>Morno</option>
+            <option value="hot" ${lead.temperature === "hot" ? "selected" : ""}>Quente</option>
+          </select></div>
+        </div>
+      </div>
+      <div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || (hasPhone ? "qualified" : "new")) === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>
       <div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>
-      <button class="primary-button" type="submit">${hasPhone ? "Salvar e enviar para Hunter" : edit ? "Salvar alterações" : "Salvar lead"}</button>
+      <button class="primary-button" type="submit">${edit ? "Salvar alterações" : "Salvar lead"}</button>
     </form>`, () => {
     $("#lead-instagram").addEventListener("blur", event => { event.target.value = instagramHandle(event.target.value); });
     $("#lead-form").addEventListener("submit", async event => {
@@ -385,9 +448,12 @@ function openLeadForm({ leadId = null, hasPhone = false } = {}) {
       const record = edit ? lead : {
         id: uid("lead"), prospectedAt: now, timeline: [{ at: now, label: "Lead criado" }], sentToHunterAt: null
       };
+      record.timeline ||= [];
       Object.assign(record, {
         name: $("#lead-name").value.trim(), instagram: instagramHandle($("#lead-instagram").value),
-        whatsapp: phoneDigits($("#lead-phone").value), clinicId, status, lastContactAt: now
+        whatsapp: phoneDigits($("#lead-phone").value), clinicId, status, lastContactAt: now,
+        interest: $("#lead-interest").value.trim(), location: $("#lead-location").value.trim(),
+        temperature: $("#lead-temperature").value
       });
       if (!edit) state.leads.unshift(record);
       record.timeline.push({ at: now, label: edit ? `Status alterado para ${statusNames[status]}` : "Primeiro contato registrado" });
@@ -396,7 +462,8 @@ function openLeadForm({ leadId = null, hasPhone = false } = {}) {
         state.followups.push({ id: uid("fu"), leadId: record.id, scheduledFor: new Date(followupAt).toISOString(), step: "Follow-up", status: "pending" });
         record.status = "follow_up"; record.timeline.push({ at: now, label: `Follow-up agendado para ${formatDate(followupAt, true)}` });
       }
-      const shouldSend = hasPhone || status === "sent_to_hunter";
+      if (status === "qualified" && !edit) record.timeline.push({ at: now, label: "Lead pré-qualificado" });
+      const shouldSend = status === "sent_to_hunter";
       if (shouldSend) record.sentToHunterAt = now;
       persist(); renderDashboard(); renderLeads(); renderFollowups(); closeSheet();
       if (shouldSend) openHunterWhatsApp(record); else showToast(edit ? "Lead atualizado" : "Lead salvo");
@@ -407,18 +474,24 @@ function openLeadForm({ leadId = null, hasPhone = false } = {}) {
 function openLeadDetail(leadId) {
   const lead = leadById(leadId); const clinic = clinicById(lead.clinicId);
   openSheet(`<div class="lead-detail-head"><div class="lead-avatar">${initials(lead.name || lead.instagram)}</div><div><h2 class="sheet-title">${escapeHtml(lead.name || lead.instagram)}</h2><p class="sheet-subtitle">${escapeHtml(lead.instagram)} · ${clinic?.name || ""}</p></div></div>
+    <div class="qualification-summary">
+      <div><span>Interesse</span><strong>${escapeHtml(lead.interest || "Ainda não informado")}</strong></div>
+      <div><span>Região</span><strong>${escapeHtml(lead.location || "Ainda não informada")}</strong></div>
+      <div><span>Temperatura</span><strong class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliado"}</strong></div>
+      <div><span>WhatsApp</span><strong>${lead.whatsapp ? escapeHtml(lead.whatsapp) : "Ainda não captado"}</strong></div>
+    </div>
     <div class="detail-actions"><button class="secondary-button" id="edit-lead">Editar</button><button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
     <h3 class="timeline-title">Histórico resumido</h3><div class="timeline">${[...(lead.timeline || [])].reverse().map(item => `<div><i></i><span><strong>${escapeHtml(item.label)}</strong><small>${formatDate(item.at, true)}</small></span></div>`).join("")}</div>
-    ${lead.whatsapp && !lead.sentToHunterAt ? `<button class="primary-button" id="send-hunter">Enviar para Hunter</button>` : ""}`, () => {
+    ${lead.whatsapp && !lead.sentToHunterAt ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}`, () => {
     $("#edit-lead").addEventListener("click", () => openLeadForm({ leadId }));
     $("#contact-lead").addEventListener("click", () => window.open(`https://instagram.com/${lead.instagram.replace("@", "")}`, "_blank", "noopener"));
-    $("#send-hunter")?.addEventListener("click", () => { lead.status = "sent_to_hunter"; lead.sentToHunterAt = new Date().toISOString(); lead.timeline.push({ at: lead.sentToHunterAt, label: `Enviado para ${clinic.hunter}` }); persist(); openHunterWhatsApp(lead); });
+    $("#send-hunter")?.addEventListener("click", () => { lead.status = "sent_to_hunter"; lead.sentToHunterAt = new Date().toISOString(); lead.timeline.push({ at: lead.sentToHunterAt, label: `Enviado para ${clinic.hunter}` }); persist(); renderLeads(); renderDashboard(); openHunterWhatsApp(lead); });
   });
 }
 
 function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
-  const message = `Oi, ${clinic.hunter}! Novo lead da ${clinic.name}.\n\nNome: ${lead.name || "Não informado"}\nInstagram: ${lead.instagram}\nWhatsApp: ${lead.whatsapp || "Não informado"}\nData: ${formatDate(lead.prospectedAt, true)}`;
+  const message = `Oi, ${clinic.hunter}! Novo lead pré-qualificado da ${clinic.name}.\n\nNome: ${lead.name || "Não informado"}\nInstagram: ${lead.instagram}\nWhatsApp: ${lead.whatsapp || "Não informado"}\nInteresse: ${lead.interest || "Não informado"}\nRegião: ${lead.location || "Não informada"}\nTemperatura: ${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliada"}\nData: ${formatDate(lead.prospectedAt, true)}`;
   showToast("Lead salvo e mensagem preparada");
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
@@ -454,7 +527,7 @@ function openMessages() {
 }
 
 function openSettings() {
-  openSheet(`<h2 class="sheet-title">Preferências</h2><p class="sheet-subtitle">Munnius Social · MVP manual</p>
+  openSheet(`<h2 class="sheet-title">Preferências</h2><p class="sheet-subtitle">Seu espaço de operação manual</p>
     <div class="template-card"><strong>Dados</strong><p>${isSupabaseConfigured ? "Sincronização segura com Supabase ativa." : "Modo local de validação. Os dados ficam somente neste navegador."}</p></div>
     <div class="template-card"><strong>Instalar no iPhone</strong><p>No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p></div>
     <button class="danger-link" id="reset-demo">Apagar dados locais de demonstração</button>`, () => {
@@ -467,22 +540,28 @@ function openSettings() {
 
 async function exportReport(share = false) {
   const stats = periodStats(state.reportPeriod);
-  const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
-  const ctx = canvas.getContext("2d"); ctx.fillStyle = "#f7f5f0"; ctx.fillRect(0, 0, 1080, 1350);
+  const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
+  const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1600;
+  const ctx = canvas.getContext("2d"); ctx.fillStyle = "#f7f5f0"; ctx.fillRect(0, 0, 1080, 1600);
   ctx.fillStyle = "#1f6b57"; ctx.fillRect(70, 70, 940, 18);
-  ctx.fillStyle = "#172521"; ctx.font = "700 44px Arial"; ctx.fillText("Munnius Social", 70, 160);
-  ctx.font = "700 76px Arial"; ctx.fillText($("#report-label").textContent, 70, 270);
-  ctx.fillStyle = "#71807a"; ctx.font = "32px Arial"; ctx.fillText($("#report-date").textContent, 70, 325);
-  const metrics = [[stats.leads, "Leads captados"], [stats.hunters, "Enviados à Hunter"], [stats.directs, "Directs enviados"], [`${(stats.seconds / 3600).toFixed(1)}h`, "Horas trabalhadas"]];
+  ctx.fillStyle = "#1f6b57"; ctx.font = "700 28px Arial"; ctx.fillText("MUNNIUS", 70, 145);
+  ctx.fillStyle = "#172521"; ctx.font = "700 72px Arial"; ctx.fillText($("#report-label").textContent, 70, 245);
+  ctx.fillStyle = "#71807a"; ctx.font = "30px Arial"; ctx.fillText($("#report-date").textContent, 70, 295);
+  const metrics = [
+    [stats.leads, "Leads captados"], [stats.hunters, "Para closer"],
+    [stats.profiles, "Perfis prospectados"], [stats.likes, "Curtidas"],
+    [stats.comments, "Comentários"], [stats.directs, "Directs enviados"],
+    [stats.responses, "Respostas"], [stats.phones, "Telefones captados"]
+  ];
   metrics.forEach(([value, label], index) => {
-    const x = 70 + (index % 2) * 480, y = 420 + Math.floor(index / 2) * 260;
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, 430, 210);
-    ctx.fillStyle = "#172521"; ctx.font = "700 70px Arial"; ctx.fillText(String(value), x + 35, y + 95);
-    ctx.fillStyle = "#71807a"; ctx.font = "28px Arial"; ctx.fillText(label, x + 35, y + 150);
+    const x = 70 + (index % 2) * 480, y = 365 + Math.floor(index / 2) * 225;
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, 430, 180);
+    ctx.fillStyle = "#172521"; ctx.font = "700 60px Arial"; ctx.fillText(String(value), x + 32, y + 82);
+    ctx.fillStyle = "#71807a"; ctx.font = "25px Arial"; ctx.fillText(label, x + 32, y + 132);
   });
-  ctx.fillStyle = "#1f6b57"; ctx.fillRect(70, 1000, 940, 180);
-  ctx.fillStyle = "#ffffff"; ctx.font = "700 38px Arial"; ctx.fillText(stats.directs ? `1 lead a cada ${(stats.directs / Math.max(1, stats.leads)).toFixed(1)} directs` : "Operação pronta para começar", 110, 1090);
-  ctx.font = "26px Arial"; ctx.fillText("Relatório gerado pelo Munnius Social", 110, 1140);
+  ctx.fillStyle = "#1f6b57"; ctx.fillRect(70, 1300, 940, 190);
+  ctx.fillStyle = "#ffffff"; ctx.font = "700 38px Arial"; ctx.fillText(`${actions} ações · ${(stats.seconds / 3600).toFixed(1)}h trabalhadas`, 110, 1385);
+  ctx.font = "26px Arial"; ctx.fillText(stats.directs && stats.phones ? `1 telefone a cada ${(stats.directs / stats.phones).toFixed(1)} directs` : "Operação pronta para começar", 110, 1440);
   const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
   const file = new File([blob], `munnius-social-${state.reportPeriod}.png`, { type: "image/png" });
   if (share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Relatório Munnius Social" });

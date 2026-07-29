@@ -1,6 +1,8 @@
 // Preencha somente as chaves públicas em config.js. A service role nunca pertence ao navegador.
 const config = window.MUNNIUS_SOCIAL_CONFIG || {};
-export const isSupabaseConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey);
+const isLocalPreview = new Set(["localhost", "127.0.0.1", "[::1]"]).has(location.hostname)
+  && new URLSearchParams(location.search).has("demo");
+export const isSupabaseConfigured = Boolean(config.supabaseUrl && config.supabaseAnonKey) && !isLocalPreview;
 let clientPromise;
 
 async function getClient() {
@@ -145,7 +147,18 @@ export const dataGateway = {
     ]);
     if (error) throw error;
     if (profileError) throw profileError;
-    const name = profile.full_name || user.email?.split("@")[0] || "Usuário";
+    const email = (profile.email || user.email || "").toLowerCase();
+    const accountName = user.user_metadata?.full_name || user.user_metadata?.name;
+    const knownAccountNames = {
+      "grmunhoz7@gmail.com": "Gabriel Munhoz"
+    };
+    const name = knownAccountNames[email] || accountName || profile.full_name || user.email?.split("@")[0] || "Usuário";
+    if (knownAccountNames[email] && profile.full_name !== name) {
+      client.from("profiles").update({ full_name: name, updated_at: new Date().toISOString() }).eq("id", user.id)
+        .then(({ error: updateError }) => {
+          if (updateError) console.warn("O nome correto será mantido nesta sessão.", updateError);
+        });
+    }
     return {
       snapshot: data?.payload || null,
       profile: {

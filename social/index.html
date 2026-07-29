@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <main id="app">
@@ -76,9 +76,12 @@
 
     <section class="app-shell hidden" id="app-shell">
       <header class="topbar">
-        <div>
-          <p class="overline" id="greeting">Bem-vindo</p>
-          <h1 id="page-title">Visão geral</h1>
+        <div class="app-brand">
+          <span class="app-mark"><img src="assets/munnius-mark.png" alt="Munnius"></span>
+          <div>
+            <p class="overline" id="greeting">Bem-vindo</p>
+            <h1 id="page-title">Visão geral</h1>
+          </div>
         </div>
         <button class="avatar-button" id="profile-avatar-button" data-view="more" aria-label="Abrir perfil">••</button>
       </header>
@@ -90,26 +93,36 @@
             <button data-period="week">Semana</button>
             <button data-period="month">Mês</button>
           </div>
-          <div class="hero-card">
-            <div>
-              <p class="card-label">Leads captados</p>
-              <strong class="hero-number" id="leads-total">12</strong>
-              <span class="trend">↑ 20% vs. período anterior</span>
+          <div class="hero-card operation-hero">
+            <div class="hero-copy">
+              <p class="card-label">Ritmo da operação</p>
+              <div class="hero-value-row"><strong class="hero-number" id="actions-total">0</strong><span>ações</span></div>
+              <p id="hero-summary">Comece por uma clínica para registrar o dia.</p>
             </div>
-            <div class="mini-chart" aria-label="Tendência positiva"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <button class="hero-report-button" data-view="reports">
+              <span class="material-symbols-outlined">monitoring</span>
+              Ver relatório
+            </button>
           </div>
-          <div class="metrics-grid">
-            <article class="metric-card"><span class="metric-icon plum">⌁</span><strong id="clinics-total">4</strong><p>Clínicas ativas</p></article>
-            <article class="metric-card"><span class="metric-icon coral">↗</span><strong id="hunters-total">7</strong><p>Enviados à Hunter</p></article>
-            <article class="metric-card wide"><span class="metric-icon amber">◷</span><div><strong id="followups-total">5</strong><p>Follow-ups pendentes</p></div><button class="small-link" data-view="followups">Ver lista →</button></article>
+          <div class="metrics-grid dashboard-metrics">
+            <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">person_add</span></span><strong id="leads-total">0</strong><p>Leads captados</p></article>
+            <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">forward_to_inbox</span></span><strong id="hunters-total">0</strong><p>Prontos para closer</p></article>
+            <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">domain</span></span><strong id="clinics-total">0</strong><p>Clínicas ativas</p></article>
+            <article class="metric-card metric-card-action" data-view="followups"><span class="ui-icon"><span class="material-symbols-outlined">notifications_active</span></span><strong id="followups-total">0</strong><p>Follow-ups pendentes</p></article>
           </div>
-          <div class="section-heading"><div><p class="overline">Operação</p><h2>Suas clínicas</h2></div><button class="small-link" data-view="clinics">Ver todas</button></div>
+          <div class="section-heading"><div><p class="overline">Próximo passo</p><h2>Fila de oportunidades</h2></div><button class="small-link" data-view="leads">Abrir CRM</button></div>
+          <div class="pipeline-strip">
+            <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">forum</span></span><strong id="pipeline-talking">0</strong><small>Conversando</small></button>
+            <button data-view="followups"><span class="pipeline-icon"><span class="material-symbols-outlined">schedule</span></span><strong id="pipeline-followups">0</strong><small>Para retomar</small></button>
+            <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">verified</span></span><strong id="pipeline-qualified">0</strong><small>Qualificados</small></button>
+          </div>
+          <div class="section-heading"><div><p class="overline">Operação</p><h2>Começar por uma clínica</h2></div><button class="small-link" data-view="clinics">Gerenciar</button></div>
           <div class="clinic-list" id="clinic-list"></div>
         </section>
 
         <section class="view" data-view-panel="session">
           <div class="session-empty" id="session-empty">
-            <span class="large-icon">◎</span>
+            <span class="large-icon"><span class="material-symbols-outlined">timer</span></span>
             <h2>Pronta para começar?</h2>
             <p>Escolha uma clínica e registre seu trabalho sem perder o ritmo.</p>
             <button class="primary-button" id="choose-clinic">Escolher clínica</button>
@@ -120,12 +133,12 @@
               <div class="timer" id="timer">00:00:00</div>
             </div>
             <div class="action-grid" id="action-grid">
-              <button data-action="profiles"><span>◎</span><strong>0</strong><small>Perfis</small></button>
-              <button data-action="likes"><span>♡</span><strong>0</strong><small>Curtidas</small></button>
-              <button data-action="comments"><span>◌</span><strong>0</strong><small>Comentários</small></button>
-              <button data-action="directs"><span>↗</span><strong>0</strong><small>Directs</small></button>
-              <button data-action="responses"><span>↩</span><strong>0</strong><small>Respostas</small></button>
-              <button class="accent-action" data-action="phones"><span>✦</span><strong>0</strong><small>Telefones</small></button>
+              <button data-action="profiles"><span class="material-symbols-outlined">person_search</span><strong>0</strong><small>Perfis</small></button>
+              <button data-action="likes"><span class="material-symbols-outlined">favorite</span><strong>0</strong><small>Curtidas</small></button>
+              <button data-action="comments"><span class="material-symbols-outlined">chat_bubble</span><strong>0</strong><small>Comentários</small></button>
+              <button data-action="directs"><span class="material-symbols-outlined">send</span><strong>0</strong><small>Directs</small></button>
+              <button data-action="responses"><span class="material-symbols-outlined">mark_chat_read</span><strong>0</strong><small>Respostas</small></button>
+              <button class="accent-action" data-action="phones"><span class="material-symbols-outlined">phone_in_talk</span><strong>0</strong><small>Telefones</small></button>
             </div>
             <div class="session-actions">
               <button class="secondary-button" id="open-instagram">Abrir Instagram</button>
@@ -141,17 +154,18 @@
 
         <section class="view" data-view-panel="leads">
           <div class="search-row">
-            <label class="search"><span>⌕</span><input id="lead-search" placeholder="Buscar nome ou @"></label>
-            <button class="filter-button" aria-label="Filtrar">≡</button>
+            <label class="search"><span class="material-symbols-outlined">search</span><input id="lead-search" placeholder="Buscar nome ou @"></label>
+            <button class="filter-button" aria-label="Filtrar"><span class="material-symbols-outlined">tune</span></button>
           </div>
           <div class="filter-chips" id="lead-filters">
             <button class="active" data-status="all">Todos</button>
             <button data-status="new">Novos</button>
             <button data-status="talking">Conversando</button>
             <button data-status="follow_up">Follow-up</button>
+            <button data-status="qualified">Qualificados</button>
           </div>
           <div class="lead-list" id="lead-list"></div>
-          <button class="fab" id="new-lead" aria-label="Novo lead">+</button>
+          <button class="fab" id="new-lead" aria-label="Novo lead"><span class="material-symbols-outlined">person_add</span></button>
         </section>
 
         <section class="view" data-view-panel="followups">
@@ -160,17 +174,17 @@
             <button data-followup-filter="overdue">Atrasados</button>
             <button data-followup-filter="next">Próximos</button>
           </div>
-          <div class="notice-card"><span>◷</span><div><strong id="followup-priority-title">Prioridades de hoje</strong><p>Comece pelos contatos mais antigos.</p></div></div>
+          <div class="notice-card"><span class="material-symbols-outlined">notifications_active</span><div><strong id="followup-priority-title">Prioridades de hoje</strong><p>Comece pelos contatos mais antigos.</p></div></div>
           <div class="followup-list" id="followup-list"></div>
         </section>
 
         <section class="view" data-view-panel="more">
           <div class="profile-card"><div class="avatar-large" id="profile-avatar-large">••</div><div><h2 id="profile-name">Perfil</h2><p id="profile-role">Social seller</p></div></div>
           <div class="menu-list">
-            <button data-view="clinics"><span>◇</span><div><strong>Clínicas</strong><small>Dados, metas e Hunters</small></div><b>›</b></button>
-            <button data-sheet="messages"><span>✉</span><div><strong>Mensagens</strong><small>Respostas rápidas e naturais</small></div><b>›</b></button>
-            <button data-view="reports"><span>▥</span><div><strong>Relatórios</strong><small>Exporte para WhatsApp ou Discord</small></div><b>›</b></button>
-            <button data-sheet="settings"><span>⚙</span><div><strong>Preferências</strong><small>Conta e notificações</small></div><b>›</b></button>
+            <button data-view="clinics"><span class="material-symbols-outlined">domain</span><div><strong>Clínicas</strong><small>Dados, metas e Closers</small></div><b>›</b></button>
+            <button data-sheet="messages"><span class="material-symbols-outlined">quick_phrases</span><div><strong>Mensagens</strong><small>Respostas rápidas e naturais</small></div><b>›</b></button>
+            <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><div><strong>Relatórios</strong><small>Exporte para WhatsApp ou Discord</small></div><b>›</b></button>
+            <button data-sheet="settings"><span class="material-symbols-outlined">settings</span><div><strong>Preferências</strong><small>Conta e instalação</small></div><b>›</b></button>
           </div>
           <button class="signout-button" id="signout">Sair da conta</button>
         </section>
@@ -187,17 +201,28 @@
             <button data-report-period="month">Mês</button>
           </div>
           <article class="report-card" id="report-card">
-            <div class="report-brand"><img src="assets/munnius-mark.png" alt=""><span>Munnius Social</span></div>
+            <div class="report-brand"><img src="assets/munnius-mark.png" alt="Munnius"></div>
             <p class="overline">Resumo da operação</p>
             <div class="report-heading"><div><h2 id="report-label">Hoje</h2><p id="report-date"></p></div><span class="report-badge">Social selling</span></div>
             <div class="report-metrics">
               <div><strong id="report-leads">0</strong><span>Leads</span></div>
-              <div><strong id="report-hunters">0</strong><span>Para Hunter</span></div>
+              <div><strong id="report-hunters">0</strong><span>Para closer</span></div>
               <div><strong id="report-directs">0</strong><span>Directs</span></div>
               <div><strong id="report-hours">0h</strong><span>Trabalhadas</span></div>
             </div>
+            <div class="report-section-title"><span>Atividade da operação</span><small id="report-actions-total">0 ações</small></div>
+            <div class="report-actions-grid">
+              <div><span class="material-symbols-outlined">person_search</span><strong id="report-profiles">0</strong><small>Perfis</small></div>
+              <div><span class="material-symbols-outlined">favorite</span><strong id="report-likes">0</strong><small>Curtidas</small></div>
+              <div><span class="material-symbols-outlined">chat_bubble</span><strong id="report-comments">0</strong><small>Comentários</small></div>
+              <div><span class="material-symbols-outlined">send</span><strong id="report-directs-detail">0</strong><small>Directs</small></div>
+              <div><span class="material-symbols-outlined">mark_chat_read</span><strong id="report-responses">0</strong><small>Respostas</small></div>
+              <div><span class="material-symbols-outlined">phone_in_talk</span><strong id="report-phones">0</strong><small>Telefones</small></div>
+            </div>
             <div class="report-chart" id="report-chart"></div>
-            <div class="report-footer"><span>Operação registrada com Munnius Social</span><strong id="report-efficiency">—</strong></div>
+            <div class="report-section-title"><span>Por clínica</span><small>Resultado e esforço</small></div>
+            <div class="report-clinic-breakdown" id="report-clinic-breakdown"></div>
+            <div class="report-footer"><span>Relatório de social selling</span><strong id="report-efficiency">—</strong></div>
           </article>
           <div class="report-actions">
             <button class="primary-button" id="export-report">Baixar imagem</button>
@@ -207,11 +232,11 @@
       </div>
 
       <nav class="bottom-nav" aria-label="Navegação principal">
-        <button class="active" data-view="home"><span>⌂</span><small>Início</small></button>
-        <button data-view="session"><span>◎</span><small>Sessão</small></button>
-        <button data-view="leads"><span>♙</span><small>Leads</small></button>
-        <button data-view="followups"><span>◷</span><small>Follow-ups</small><i>5</i></button>
-        <button data-view="more"><span>•••</span><small>Mais</small></button>
+        <button class="active" data-view="home"><span class="material-symbols-outlined">home</span><small>Início</small></button>
+        <button data-view="session"><span class="material-symbols-outlined">timer</span><small>Sessão</small></button>
+        <button data-view="leads"><span class="material-symbols-outlined">group</span><small>Leads</small></button>
+        <button data-view="followups"><span class="material-symbols-outlined">notifications</span><small>Follow-ups</small><i>5</i></button>
+        <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><small>Relatórios</small></button>
       </nav>
     </section>
   </main>
@@ -224,7 +249,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=9"></script>
-  <script type="module" src="app.js?v=9"></script>
+  <script src="config.js?v=10"></script>
+  <script type="module" src="app.js?v=10"></script>
 </body>
 </html>

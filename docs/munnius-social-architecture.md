@@ -1,5 +1,21 @@
 # Munnius Social — fundação do MVP
 
+## Direção de produto da operação manual
+
+O aplicativo funciona como dois produtos leves no mesmo fluxo:
+
+1. **contador de rotina**, com sessões agregadas por clínica;
+2. **mini CRM de pré-qualificação**, com o mínimo necessário para uma closer continuar o atendimento.
+
+O dashboard inicia ou retoma uma sessão diretamente em cada clínica. O lead passa
+por `Novo → Conversando → Follow-up → Pré-qualificado → Enviado à closer`, com
+interesse, região e temperatura como campos rápidos. Relatórios permanecem em uma
+área principal da navegação e separam resultado comercial de esforço operacional.
+
+Identidade nunca faz parte do snapshot operacional. Nome, e-mail e papel são
+obtidos da conta autenticada a cada abertura, evitando que cache ou dados de
+demonstração apareçam para outro usuário.
+
 ## Decisões
 
 - Custo inicial: R$ 0 com GitHub Pages, Cloudflare Free e Supabase Free.
