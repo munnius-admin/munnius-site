@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=10";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=11";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -40,6 +40,9 @@ function loadState() {
   const base = isSupabaseConfigured
     ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], followups: [], sessions: [] }
     : structuredClone(seed);
+  if (isSupabaseConfigured) {
+    return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+  }
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (stored?.version === 2) {
@@ -54,9 +57,23 @@ let state = loadState();
 let syncTimer;
 let workspaceOpened = false;
 let recoveryMode = recoveryLinkDetected;
+function operationalStorageKey(profileId = state.profile?.id) {
+  return isSupabaseConfigured && profileId ? `${STORAGE_KEY}:${profileId}` : STORAGE_KEY;
+}
+function loadLocalOperational(profile) {
+  const base = { ...structuredClone(seed), profile, clinics: [], leads: [], followups: [], sessions: [] };
+  try {
+    const stored = JSON.parse(localStorage.getItem(operationalStorageKey(profile?.id)));
+    if (stored?.version === 2) {
+      const { profile: _ignoredProfile, ...operationalState } = stored;
+      return { ...base, ...operationalState, profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+    }
+  } catch (error) { console.warn("Não foi possível recuperar o cache desta conta.", error); }
+  return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
+}
 function persist() {
   const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  localStorage.setItem(operationalStorageKey(), JSON.stringify(serializable));
   if (isSupabaseConfigured) {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => dataGateway.saveSnapshot(serializable).catch(error => {
@@ -79,7 +96,7 @@ async function hydrateRemoteState() {
   const { profile: _ignoredProfile, ...operationalState } = remote;
   state = { ...base, ...operationalState, profile: workspace.profile, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
   const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+  localStorage.setItem(operationalStorageKey(profile.id), JSON.stringify(serializable));
 }
 
 function renderProfile() {
@@ -103,14 +120,20 @@ function showRecoveryForm() {
 async function openWorkspace(message = "Bem-vindo") {
   if (workspaceOpened) return;
   workspaceOpened = true;
+  let identity;
   try {
+    identity = await dataGateway.loadIdentity();
+    if (identity) state.profile = identity;
     await hydrateRemoteState();
   } catch (error) {
     console.warn("Não foi possível carregar a nuvem.", error);
-    workspaceOpened = false;
-    showToast("Não foi possível confirmar este perfil. Entre novamente.");
-    await authGateway.signOut();
-    return;
+    if (!identity && isSupabaseConfigured) {
+      workspaceOpened = false;
+      showToast("Sua sessão expirou. Entre novamente.");
+      return;
+    }
+    state = loadLocalOperational(identity || state.profile);
+    message = "Conta aberta · sincronização será retomada";
   }
   $("#auth-screen").classList.add("hidden");
   $("#app-shell").classList.remove("hidden");
@@ -533,7 +556,7 @@ function openSettings() {
     <button class="danger-link" id="reset-demo">Apagar dados locais de demonstração</button>`, () => {
     $("#reset-demo").addEventListener("click", () => {
       if (!confirm("Apagar os dados locais e voltar ao estado inicial?")) return;
-      localStorage.removeItem(STORAGE_KEY); location.reload();
+      localStorage.removeItem(operationalStorageKey()); location.reload();
     });
   });
 }

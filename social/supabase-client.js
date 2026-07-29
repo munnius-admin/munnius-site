@@ -132,6 +132,26 @@ export const authGateway = {
 };
 
 export const dataGateway = {
+  async loadIdentity() {
+    if (!isSupabaseConfigured) return null;
+    const client = await getClient();
+    const { data: { user }, error } = await client.auth.getUser();
+    if (error || !user) throw error || new Error("Sessão expirada.");
+    const email = (user.email || "").toLowerCase();
+    const knownAccounts = {
+      "grmunhoz7@gmail.com": { name: "Gabriel Munhoz", role: "admin" },
+      "hiara@harmoniza.pro": { name: "Hiara Munhoz", role: "social_seller" }
+    };
+    const known = knownAccounts[email];
+    const name = known?.name || user.user_metadata?.full_name || user.user_metadata?.name || email.split("@")[0] || "Usuário";
+    return {
+      id: user.id,
+      name,
+      email,
+      initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
+      role: known?.role || "social_seller"
+    };
+  },
   async loadWorkspace() {
     if (!isSupabaseConfigured) return null;
     const client = await getClient();
@@ -162,6 +182,7 @@ export const dataGateway = {
     return {
       snapshot: data?.payload || null,
       profile: {
+        id: user.id,
         name,
         email: profile.email || user.email,
         initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
