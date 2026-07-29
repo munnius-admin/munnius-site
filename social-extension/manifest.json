@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Munnius Social Assistant",
+  "short_name": "Social",
+  "version": "0.1.0",
+  "description": "Acompanha a rotina de social selling no Instagram Web e organiza as ações em um painel lateral.",
+  "minimum_chrome_version": "114",
+  "permissions": [
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.instagram.com/*",
+    "https://fyjerbxkjxlxtccyutyn.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_title": "Abrir Munnius Social"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

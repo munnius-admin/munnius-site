@@ -31,7 +31,8 @@ demonstração apareçam para outro usuário.
 - Interface: PWA mobile-first, funcionando também no desktop.
 - Cadastro público: inexistente. Usuários entram somente por convite.
 - Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação.
-- Extensão Chrome: fora desta fase, mas o campo `source` já aceita `chrome_extension`.
+- Extensão Chrome: fundação MV3 em `social-extension`, com painel lateral, captura
+  de eventos e fila offline; não executa ações no Instagram.
 - Auditoria: ações volumosas agregadas na sessão; fatos comerciais relevantes são append-only.
 - Segurança de prévia: o modo demonstração só funciona em `localhost`; sem Supabase,
   um endereço público não aceita login.
@@ -42,6 +43,11 @@ O repositório existente é um site estático. O app segue a mesma stack para ev
 servidor próprio e mensalidade. A pasta `/social` contém HTML, CSS e JavaScript nativos.
 O Supabase entra como autenticação, banco e RLS quando as credenciais públicas forem
 adicionadas em `social/config.js`.
+
+A extensão usa somente APIs nativas do Chrome e chamadas REST ao Supabase. Não carrega
+JavaScript remoto, não armazena senha e limita o acesso de página a
+`https://www.instagram.com/*`. Os eventos seguem para `extension_events` e são
+consolidados pelo PWA no mesmo snapshot operacional.
 
 ## Modelo de dados
 

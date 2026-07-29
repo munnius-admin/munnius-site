@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=13";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=14";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -83,6 +83,8 @@ let syncTimer;
 let workspaceOpened = false;
 let recoveryMode = recoveryLinkDetected;
 let stopWorkspaceRealtime;
+let stopExtensionRealtime;
+const processedExtensionEvents = new Set();
 function operationalStorageKey(profileId = state.profile?.id) {
   return isSupabaseConfigured && profileId ? `${STORAGE_KEY}:${profileId}` : STORAGE_KEY;
 }
@@ -129,8 +131,12 @@ function mergeOperationalState(localState, remoteState, profile) {
     reportPeriod: "day"
   });
 }
-function persist() {
+function operationalSnapshot() {
   const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
+  return serializable;
+}
+function persist() {
+  const serializable = operationalSnapshot();
   localStorage.setItem(operationalStorageKey(), JSON.stringify(serializable));
   if (isSupabaseConfigured) {
     clearTimeout(syncTimer);
@@ -139,6 +145,11 @@ function persist() {
       showToast("Salvo neste aparelho; sincronização pendente");
     }), 500);
   }
+}
+async function persistImmediately() {
+  const serializable = operationalSnapshot();
+  localStorage.setItem(operationalStorageKey(), JSON.stringify(serializable));
+  if (isSupabaseConfigured) await dataGateway.saveSnapshot(serializable);
 }
 
 async function hydrateRemoteState() {
@@ -171,6 +182,115 @@ function applyRemoteSnapshot(remote) {
   renderFollowups();
   renderReport();
   showToast("Dados atualizados por outro aparelho");
+}
+
+const extensionCounterMap = {
+  follow: "profiles",
+  like: "likes",
+  comment: "comments",
+  direct_sent: "directs",
+  response_detected: "responses",
+  phone_captured: "phones"
+};
+
+function ensureExtensionSession(event) {
+  let session = state.sessions.find(item => item.id === event.session_id);
+  if (session) return session;
+  session = {
+    id: event.session_id,
+    clinicId: event.clinic_id,
+    startedAt: event.payload?.startedAt || event.event_at,
+    endedAt: null,
+    durationSeconds: 0,
+    counts: Object.fromEntries(Object.keys(countLabels).map(key => [key, 0])),
+    source: "chrome_extension"
+  };
+  state.sessions.push(session);
+  return session;
+}
+
+function upsertLeadFromExtension(event, stage = "mapped") {
+  const instagram = instagramHandle(event.instagram_handle || "");
+  if (instagram === "@") return null;
+  let lead = state.leads.find(item => item.clinicId === event.clinic_id && instagramHandle(item.instagram) === instagram);
+  const now = event.event_at || new Date().toISOString();
+  if (!lead) {
+    lead = {
+      id: uid("lead"),
+      clinicId: event.clinic_id,
+      name: "",
+      instagram,
+      whatsapp: "",
+      status: stage === "mapped" ? "new" : "talking",
+      interest: "",
+      temperature: "warm",
+      qualification: {},
+      prospectedAt: now,
+      lastContactAt: now,
+      sentToHunterAt: null,
+      source: "chrome_extension",
+      timeline: []
+    };
+    state.leads.unshift(lead);
+  }
+  lead.lastContactAt = now;
+  lead.timeline ||= [];
+  if (stage === "phone") {
+    lead.status = lead.status === "sent_to_hunter" ? lead.status : "talking";
+    lead.whatsapp = phoneDigits(event.payload?.phone || "");
+    lead.timeline.push({ at: now, label: "Telefone captado pela extensão · completar qualificação" });
+  } else if (stage === "responded") {
+    lead.status = lead.status === "sent_to_hunter" ? lead.status : "talking";
+    lead.timeline.push({ at: now, label: "Resposta registrada pela extensão" });
+  } else {
+    lead.timeline.push({ at: now, label: "Direct enviado pela extensão" });
+  }
+  return lead;
+}
+
+async function applyExtensionEvents(events, notify = false) {
+  const freshEvents = (Array.isArray(events) ? events : [events])
+    .filter(event => event?.id && !processedExtensionEvents.has(event.id))
+    .sort((a, b) => new Date(a.event_at) - new Date(b.event_at));
+  if (!freshEvents.length) return;
+  let changed = false;
+  for (const event of freshEvents) {
+    const session = ensureExtensionSession(event);
+    const eventAt = new Date(event.event_at || Date.now());
+    session.durationSeconds = Math.max(
+      Number(session.durationSeconds || 0),
+      Math.max(1, Math.floor((eventAt - new Date(session.startedAt)) / 1000))
+    );
+    if (event.event_type === "session_finished") {
+      session.endedAt = event.event_at;
+      session.durationSeconds = Number(event.payload?.context?.durationSeconds || session.durationSeconds);
+      if (event.payload?.context?.counts) {
+        session.counts = { ...session.counts, ...event.payload.context.counts };
+      }
+    } else {
+      const countKey = extensionCounterMap[event.event_type];
+      if (countKey) session.counts[countKey] = Number(session.counts[countKey] || 0) + 1;
+      if (event.event_type === "direct_sent") upsertLeadFromExtension(event, "mapped");
+      if (event.event_type === "response_detected") upsertLeadFromExtension(event, "responded");
+      if (event.event_type === "phone_captured") upsertLeadFromExtension(event, "phone");
+    }
+    processedExtensionEvents.add(event.id);
+    changed = true;
+  }
+  if (!changed) return;
+  await persistImmediately();
+  await dataGateway.markExtensionEventsProcessed?.(freshEvents.map(event => event.id));
+  renderDashboard();
+  renderSessionClinicTracker();
+  renderLeads();
+  renderReport();
+  if (notify) showToast("Ação do Instagram sincronizada");
+}
+
+async function syncPendingExtensionEvents() {
+  if (!isSupabaseConfigured || !dataGateway.loadPendingExtensionEvents) return;
+  const events = await dataGateway.loadPendingExtensionEvents();
+  await applyExtensionEvents(events, false);
 }
 
 function expireUnansweredLeads() {
@@ -238,6 +358,15 @@ async function openWorkspace(message = "Bem-vindo") {
     stopWorkspaceRealtime = await dataGateway.subscribeToWorkspace?.(applyRemoteSnapshot);
   } catch (error) {
     console.warn("Atualização em tempo real será retomada depois.", error);
+  }
+  stopExtensionRealtime?.();
+  try {
+    await syncPendingExtensionEvents();
+    stopExtensionRealtime = await dataGateway.subscribeToExtensionEvents?.(event => {
+      applyExtensionEvents(event, true).catch(error => console.warn("Evento da extensão pendente.", error));
+    });
+  } catch (error) {
+    console.info("Extensão Chrome ainda não conectada.", error);
   }
   showToast(message);
 }

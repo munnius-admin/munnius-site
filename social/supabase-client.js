@@ -211,6 +211,46 @@ export const dataGateway = {
       .subscribe();
     return () => client.removeChannel(channel);
   },
+  async loadPendingExtensionEvents() {
+    if (!isSupabaseConfigured) return [];
+    const client = await getClient();
+    const { organizationId } = await getContext(client);
+    const { data, error } = await client
+      .from("extension_events")
+      .select("id, clinic_id, session_id, event_type, instagram_handle, instagram_url, event_at, payload")
+      .eq("organization_id", organizationId)
+      .is("processed_at", null)
+      .order("event_at", { ascending: true })
+      .limit(500);
+    if (error) throw error;
+    return data || [];
+  },
+  async markExtensionEventsProcessed(ids) {
+    if (!isSupabaseConfigured || !ids?.length) return;
+    const client = await getClient();
+    const { organizationId } = await getContext(client);
+    const { error } = await client
+      .from("extension_events")
+      .update({ processed_at: new Date().toISOString() })
+      .eq("organization_id", organizationId)
+      .in("id", ids);
+    if (error) throw error;
+  },
+  async subscribeToExtensionEvents(callback) {
+    if (!isSupabaseConfigured) return null;
+    const client = await getClient();
+    const { organizationId } = await getContext(client);
+    const channel = client
+      .channel(`extension-events-${organizationId}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "extension_events",
+        filter: `organization_id=eq.${organizationId}`
+      }, message => callback(message.new))
+      .subscribe();
+    return () => client.removeChannel(channel);
+  },
   async saveSession(session) {
     const rows = JSON.parse(localStorage.getItem("munnius-social-sessions") || "[]");
     rows.push({ ...session, endedAt: session.endedAt || new Date().toISOString() });

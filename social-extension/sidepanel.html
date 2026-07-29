@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Munnius Social Assistant</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <main>
+    <header class="topbar">
+      <span class="brand"><img src="mark.svg" alt=""><span><small>Assistente</small><strong>Social selling</strong></span></span>
+      <span class="connection" id="connection-status"><i></i>Pronto</span>
+    </header>
+
+    <section class="login-card" id="login-view">
+      <span class="login-icon">↗</span>
+      <p class="eyebrow">Conectar ao painel</p>
+      <h1>Entre com a mesma conta do app.</h1>
+      <p>A extensão salva somente eventos, contadores e telefones confirmados.</p>
+      <label>E-mail<input id="email" type="email" autocomplete="email" placeholder="voce@empresa.com"></label>
+      <label>Senha<input id="password" type="password" autocomplete="current-password" placeholder="Sua senha"></label>
+      <button class="primary" id="login-button">Entrar</button>
+      <small class="privacy-note">A senha é enviada diretamente ao Supabase e não é armazenada.</small>
+    </section>
+
+    <section class="workspace hidden" id="workspace-view">
+      <section class="session-card">
+        <div class="session-top">
+          <div><p class="eyebrow">Sessão de trabalho</p><strong id="session-title">Escolha a clínica</strong></div>
+          <time id="session-timer">00:00:00</time>
+        </div>
+        <select id="clinic-select"><option value="">Selecionar clínica</option></select>
+        <button class="primary" id="session-button">Iniciar acompanhamento</button>
+      </section>
+
+      <section class="current-context" id="current-context">
+        <span>@</span>
+        <div><small>Perfil atual</small><strong id="current-profile">Abra um perfil no Instagram</strong></div>
+      </section>
+
+      <section class="counter-grid">
+        <article><span>↗</span><strong id="count-profiles">0</strong><small>Follows</small></article>
+        <article><span>♡</span><strong id="count-likes">0</strong><small>Curtidas</small></article>
+        <article><span>◌</span><strong id="count-comments">0</strong><small>Comentários</small></article>
+        <article><span>➤</span><strong id="count-directs">0</strong><small>Directs</small></article>
+        <article><span>↩</span><strong id="count-responses">0</strong><small>Respostas</small></article>
+        <article class="success"><span>☎</span><strong id="count-phones">0</strong><small>Telefones</small></article>
+      </section>
+
+      <section class="phone-card hidden" id="phone-card">
+        <p class="eyebrow">Possível telefone</p>
+        <strong id="phone-value"></strong>
+        <small id="phone-profile"></small>
+        <div><button class="quiet" id="dismiss-phone">Ignorar</button><button class="primary compact" id="confirm-phone">Confirmar</button></div>
+      </section>
+
+      <section class="quick-actions">
+        <button id="mark-response"><span>↩</span><div><strong>Lead respondeu</strong><small>Adicionar ao contador e ao histórico</small></div></button>
+        <button id="refresh-workspace"><span>⟳</span><div><strong>Atualizar clínicas</strong><small>Buscar alterações feitas no app</small></div></button>
+      </section>
+
+      <section class="messages">
+        <div class="section-title"><div><p class="eyebrow">Mensagens rápidas</p><h2>Copiar e personalizar</h2></div></div>
+        <div id="message-list"></div>
+      </section>
+
+      <section class="history">
+        <div class="section-title"><div><p class="eyebrow">Ao vivo</p><h2>Histórico recente</h2></div></div>
+        <div id="history-list"></div>
+      </section>
+
+      <footer>
+        <button id="open-app">Abrir painel completo</button>
+        <button id="logout-button">Sair</button>
+      </footer>
+    </section>
+  </main>
+  <div class="toast hidden" id="toast"></div>
+  <script src="config.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
