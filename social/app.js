@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=12";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=13";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -276,12 +276,19 @@ function navigate(view) {
   if (view === "leads") renderLeads();
   if (view === "followups") renderFollowups();
   if (view === "reports") renderReport();
+  if (view === "session") renderSessionClinicTracker();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function periodStats(period = state.period || "day") {
   const leads = state.leads.filter(lead => inPeriod(lead.prospectedAt, period));
   const sessions = state.sessions.filter(session => inPeriod(session.startedAt, period));
+  if (state.session && inPeriod(state.session.startedAt, period)) {
+    sessions.push({
+      ...state.session,
+      durationSeconds: Math.max(1, Math.floor((Date.now() - new Date(state.session.startedAt)) / 1000))
+    });
+  }
   const counts = sessions.reduce((total, session) => {
     Object.keys(countLabels).forEach(key => total[key] += Number(session.counts?.[key] || 0));
     total.seconds += Number(session.durationSeconds || 0);
@@ -343,6 +350,75 @@ function renderClinics() {
     startSession(clinicId);
   }));
   $$("[data-clinic-detail]").forEach(card => card.addEventListener("click", () => openClinicForm(card.dataset.clinicDetail)));
+  renderSessionClinicTracker();
+}
+
+function sessionActionCount(session) {
+  return Object.keys(countLabels).reduce((total, key) => total + Number(session.counts?.[key] || 0), 0);
+}
+
+function compactDuration(seconds = 0) {
+  const safeSeconds = Math.max(0, Math.round(seconds));
+  if (safeSeconds < 60) return safeSeconds ? "<1 min" : "0 min";
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  return hours ? `${hours}h${minutes ? ` ${minutes}min` : ""}` : `${minutes} min`;
+}
+
+function clinicActivityToday(clinicId) {
+  const completed = state.sessions.filter(session => session.clinicId === clinicId && isSameDay(session.startedAt));
+  const active = state.session?.clinicId === clinicId ? state.session : null;
+  const sessions = active ? [...completed, {
+    ...active,
+    durationSeconds: Math.max(1, Math.floor((Date.now() - new Date(active.startedAt)) / 1000))
+  }] : completed;
+  return {
+    active: Boolean(active),
+    worked: sessions.length > 0,
+    visits: sessions.length,
+    actions: sessions.reduce((total, session) => total + sessionActionCount(session), 0),
+    seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0)
+  };
+}
+
+function renderSessionClinicTracker() {
+  const list = $("#session-clinic-list");
+  if (!list) return;
+  const clinics = state.clinics.filter(clinic => clinic.active);
+  const rows = clinics.map(clinic => ({ clinic, activity: clinicActivityToday(clinic.id) }))
+    .sort((a, b) => Number(b.activity.active) - Number(a.activity.active)
+      || Number(a.activity.worked) - Number(b.activity.worked)
+      || a.clinic.name.localeCompare(b.clinic.name, "pt-BR"));
+  const worked = rows.filter(row => row.activity.worked).length;
+  const missing = Math.max(0, rows.length - worked);
+  $("#session-day-progress-label").textContent = `${worked} de ${rows.length}`;
+  $("#session-day-progress-bar").style.width = `${rows.length ? worked / rows.length * 100 : 0}%`;
+  $("#session-day-summary").textContent = rows.length
+    ? missing
+      ? `${missing} ${missing === 1 ? "conta ainda falta" : "contas ainda faltam"} na ronda de hoje.`
+      : "Ronda completa. Todas as clínicas foram trabalhadas hoje."
+    : "Cadastre uma clínica para montar sua ronda diária.";
+  list.innerHTML = rows.map(({ clinic, activity }) => {
+    const status = activity.active ? "Agora" : activity.worked ? "Trabalhada" : "Pendente";
+    const buttonLabel = activity.active ? "Continuar" : state.session ? "Em fila" : activity.worked ? "Nova sessão" : "Iniciar";
+    const buttonIcon = activity.active ? "timer" : activity.worked ? "replay" : "play_arrow";
+    return `<article class="session-clinic-row ${activity.active ? "active" : ""} ${activity.worked ? "worked" : "pending"}">
+      <span class="session-clinic-avatar" style="--clinic-color:${clinic.color}">${initials(clinic.name).slice(0, 1)}</span>
+      <div class="session-clinic-copy">
+        <div><strong>${escapeHtml(clinic.name)}</strong><span class="session-round-status ${activity.active ? "active" : activity.worked ? "worked" : "pending"}">${status}</span></div>
+        <small>${escapeHtml(clinic.instagram)} · ${compactDuration(activity.seconds)} · ${activity.actions} ${activity.actions === 1 ? "ação" : "ações"}</small>
+      </div>
+      <button class="session-round-button ${activity.active ? "active" : ""}" data-session-clinic="${clinic.id}" ${state.session && !activity.active ? "disabled" : ""}>
+        <span class="material-symbols-outlined">${buttonIcon}</span>${buttonLabel}
+      </button>
+    </article>`;
+  }).join("") || emptyState("Nenhuma clínica ativa.");
+  $$("[data-session-clinic]").forEach(button => button.addEventListener("click", () => {
+    const clinicId = button.dataset.sessionClinic;
+    if (state.session?.clinicId === clinicId) return navigate("session");
+    if (state.session) return showToast("Encerre a sessão atual antes de iniciar outra.");
+    startSession(clinicId);
+  }));
 }
 
 function renderLeads() {
@@ -469,6 +545,7 @@ function updateTimer() {
   if (!state.session) return;
   const elapsed = Math.floor((Date.now() - new Date(state.session.startedAt)) / 1000);
   $("#timer").textContent = [Math.floor(elapsed / 3600), Math.floor(elapsed % 3600 / 60), elapsed % 60].map(value => String(value).padStart(2, "0")).join(":");
+  if (elapsed % 10 === 0) renderSessionClinicTracker();
 }
 function updateAction(action, delta = 1) {
   if (!state.session) return;
@@ -479,6 +556,7 @@ function updateAction(action, delta = 1) {
   countNode.classList.remove("count-pop");
   requestAnimationFrame(() => countNode.classList.add("count-pop"));
   if (delta > 0) state.lastAction = action;
+  renderSessionClinicTracker();
 }
 function handleSessionAction(action) {
   if (!state.session) return;
@@ -501,7 +579,7 @@ async function finishSession() {
   persist(); clearInterval(state.timerId); state.session = null; state.lastAction = null;
   $("#session-empty").classList.remove("hidden"); $("#session-active").classList.add("hidden");
   $$("[data-action] strong").forEach(node => node.textContent = "0");
-  renderDashboard(); renderReport(); showToast("Sessão salva no histórico");
+  renderDashboard(); renderReport(); renderSessionClinicTracker(); showToast("Sessão salva no histórico");
 }
 
 function openAdjustCounts() {
@@ -710,35 +788,230 @@ function openSettings() {
   });
 }
 
+function canvasRoundedRect(ctx, x, y, width, height, radius, fill, stroke = null) {
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + safeRadius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, safeRadius);
+  ctx.arcTo(x + width, y + height, x, y + height, safeRadius);
+  ctx.arcTo(x, y + height, x, y, safeRadius);
+  ctx.arcTo(x, y, x + width, y, safeRadius);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+}
+
+function canvasImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function canvasMetric(ctx, x, y, value, label, tone = "#1f6b57") {
+  canvasRoundedRect(ctx, x, y, 282, 106, 20, "#f7f8f5", "#e2e7e1");
+  ctx.fillStyle = tone;
+  ctx.beginPath();
+  ctx.arc(x + 24, y + 27, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#172521";
+  ctx.font = "700 40px Arial";
+  ctx.fillText(String(value), x + 24, y + 70);
+  ctx.fillStyle = "#708079";
+  ctx.font = "500 20px Arial";
+  ctx.fillText(label, x + 88, y + 64);
+}
+
 async function exportReport(share = false) {
   const stats = periodStats(state.reportPeriod);
   const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
-  const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1600;
-  const ctx = canvas.getContext("2d"); ctx.fillStyle = "#f7f5f0"; ctx.fillRect(0, 0, 1080, 1600);
-  ctx.fillStyle = "#1f6b57"; ctx.fillRect(70, 70, 940, 18);
-  ctx.fillStyle = "#1f6b57"; ctx.font = "700 28px Arial"; ctx.fillText("MUNNIUS", 70, 145);
-  ctx.fillStyle = "#172521"; ctx.font = "700 72px Arial"; ctx.fillText($("#report-label").textContent, 70, 245);
-  ctx.fillStyle = "#71807a"; ctx.font = "30px Arial"; ctx.fillText($("#report-date").textContent, 70, 295);
-  const metrics = [
-    [stats.leads, "Leads captados"], [stats.hunters, "Para closer"],
-    [stats.profiles, "Novos follows"], [stats.likes, "Curtidas"],
-    [stats.comments, "Comentários"], [stats.directs, "Directs enviados"],
-    [stats.responses, "Leads que responderam"], [stats.phones, "Telefones captados"]
+  const responseRate = stats.directs ? Math.round(stats.responses / stats.directs * 100) : 0;
+  const captureRate = stats.responses ? Math.round(stats.phones / stats.responses * 100) : 0;
+  const directsPerPhone = stats.phones ? (stats.directs / stats.phones).toFixed(1).replace(".", ",") : "—";
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1350;
+  const ctx = canvas.getContext("2d");
+
+  const background = ctx.createLinearGradient(0, 0, 1080, 1350);
+  background.addColorStop(0, "#eef3ef");
+  background.addColorStop(.48, "#f6f3ed");
+  background.addColorStop(1, "#e9efeb");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(31,107,87,.07)";
+  ctx.beginPath(); ctx.arc(1030, 90, 245, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(117,86,111,.045)";
+  ctx.beginPath(); ctx.arc(40, 1290, 225, 0, Math.PI * 2); ctx.fill();
+
+  ctx.save();
+  ctx.shadowColor = "rgba(27,55,46,.12)";
+  ctx.shadowBlur = 42;
+  ctx.shadowOffsetY = 18;
+  canvasRoundedRect(ctx, 44, 38, 992, 1274, 42, "#fffefa");
+  ctx.restore();
+
+  try {
+    const mark = await canvasImage("assets/munnius-mark.png");
+    ctx.drawImage(mark, 82, 78, 42, 42);
+  } catch {
+    canvasRoundedRect(ctx, 84, 80, 38, 38, 10, null, "#1f6b57");
+  }
+  ctx.fillStyle = "#688078";
+  ctx.font = "700 17px Arial";
+  ctx.letterSpacing = "2px";
+  ctx.fillText("RELATÓRIO DE OPERAÇÃO", 146, 97);
+  ctx.letterSpacing = "0px";
+  ctx.fillStyle = "#172521";
+  ctx.font = "700 62px Arial";
+  ctx.fillText($("#report-label").textContent, 82, 184);
+  ctx.fillStyle = "#71807a";
+  ctx.font = "400 22px Arial";
+  ctx.fillText($("#report-date").textContent, 84, 220);
+  canvasRoundedRect(ctx, 820, 82, 160, 42, 21, "#e8f2ed");
+  ctx.fillStyle = "#1f6b57";
+  ctx.font = "700 17px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("SOCIAL SELLING", 900, 109);
+  ctx.textAlign = "left";
+
+  const heroGradient = ctx.createLinearGradient(74, 255, 1000, 490);
+  heroGradient.addColorStop(0, "#173e35");
+  heroGradient.addColorStop(.62, "#1f6b57");
+  heroGradient.addColorStop(1, "#3b8d73");
+  canvasRoundedRect(ctx, 74, 254, 932, 226, 32, heroGradient);
+  ctx.fillStyle = "rgba(255,255,255,.08)";
+  ctx.beginPath(); ctx.arc(965, 270, 125, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.72)";
+  ctx.font = "700 16px Arial";
+  ctx.fillText("DESEMPENHO DO PERÍODO", 104, 294);
+  const heroMetrics = [
+    [actions, "Ações"],
+    [stats.leads, "Leads"],
+    [stats.hunters, "Encaminhados"],
+    [compactDuration(stats.seconds), "Tempo"]
   ];
-  metrics.forEach(([value, label], index) => {
-    const x = 70 + (index % 2) * 480, y = 365 + Math.floor(index / 2) * 225;
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, 430, 180);
-    ctx.fillStyle = "#172521"; ctx.font = "700 60px Arial"; ctx.fillText(String(value), x + 32, y + 82);
-    ctx.fillStyle = "#71807a"; ctx.font = "25px Arial"; ctx.fillText(label, x + 32, y + 132);
+  heroMetrics.forEach(([value, label], index) => {
+    const x = 104 + index * 220;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `${String(value).length > 6 ? "700 34px" : "700 47px"} Arial`;
+    ctx.fillText(String(value), x, 384);
+    ctx.fillStyle = "rgba(255,255,255,.68)";
+    ctx.font = "500 19px Arial";
+    ctx.fillText(label, x, 419);
   });
-  ctx.fillStyle = "#1f6b57"; ctx.fillRect(70, 1300, 940, 190);
-  ctx.fillStyle = "#ffffff"; ctx.font = "700 38px Arial"; ctx.fillText(`${actions} ações · ${(stats.seconds / 3600).toFixed(1)}h trabalhadas`, 110, 1385);
-  ctx.font = "26px Arial"; ctx.fillText(stats.directs && stats.phones ? `1 telefone a cada ${(stats.directs / stats.phones).toFixed(1)} directs` : "Operação pronta para começar", 110, 1440);
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-  const file = new File([blob], `munnius-social-${state.reportPeriod}.png`, { type: "image/png" });
-  if (share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Relatório Munnius Social" });
-  else {
-    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = file.name; link.click(); URL.revokeObjectURL(link.href);
+
+  ctx.fillStyle = "#172521";
+  ctx.font = "700 24px Arial";
+  ctx.fillText("Atividade da operação", 82, 535);
+  ctx.fillStyle = "#829089";
+  ctx.font = "400 17px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText("Esforço registrado", 998, 535);
+  ctx.textAlign = "left";
+  const activityMetrics = [
+    [stats.profiles, "Novos follows", "#75566f"],
+    [stats.likes, "Curtidas", "#d9686f"],
+    [stats.comments, "Comentários", "#4b75a9"],
+    [stats.directs, "Directs", "#6b61b3"],
+    [stats.responses, "Responderam", "#c08732"],
+    [stats.phones, "Telefones", "#1f6b57"]
+  ];
+  activityMetrics.forEach(([value, label, tone], index) => {
+    const x = 82 + (index % 3) * 306;
+    const y = 560 + Math.floor(index / 3) * 122;
+    canvasMetric(ctx, x, y, value, label, tone);
+  });
+
+  ctx.fillStyle = "#172521";
+  ctx.font = "700 24px Arial";
+  ctx.fillText("Eficiência do funil", 82, 837);
+  canvasRoundedRect(ctx, 82, 860, 916, 104, 24, "#eff5f1");
+  const efficiency = [
+    [`${responseRate}%`, "Taxa de resposta"],
+    [`${captureRate}%`, "Captação por resposta"],
+    [directsPerPhone, "Directs por telefone"]
+  ];
+  efficiency.forEach(([value, label], index) => {
+    const x = 112 + index * 294;
+    if (index) {
+      ctx.strokeStyle = "#d7e3dc";
+      ctx.beginPath(); ctx.moveTo(x - 24, 886); ctx.lineTo(x - 24, 938); ctx.stroke();
+    }
+    ctx.fillStyle = "#1f6b57";
+    ctx.font = "700 31px Arial";
+    ctx.fillText(value, x, 909);
+    ctx.fillStyle = "#71807a";
+    ctx.font = "500 17px Arial";
+    ctx.fillText(label, x, 938);
+  });
+
+  ctx.fillStyle = "#172521";
+  ctx.font = "700 24px Arial";
+  ctx.fillText("Destaques por clínica", 82, 1015);
+  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
+    const sessions = stats.sessions.filter(session => session.clinicId === clinic.id);
+    return {
+      clinic,
+      actions: sessions.reduce((total, session) => total + sessionActionCount(session), 0),
+      seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0),
+      leads: state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length
+    };
+  }).filter(row => row.actions || row.leads).sort((a, b) => (b.leads - a.leads) || (b.actions - a.actions)).slice(0, 3);
+  if (clinicRows.length) {
+    clinicRows.forEach(({ clinic, actions: clinicActions, seconds, leads }, index) => {
+      const y = 1040 + index * 66;
+      ctx.fillStyle = clinic.color || "#1f6b57";
+      ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 15px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(initials(clinic.name).slice(0, 1), 101, y + 30);
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#253832";
+      ctx.font = "700 19px Arial";
+      const clinicName = clinic.name.length > 30 ? `${clinic.name.slice(0, 29)}…` : clinic.name;
+      ctx.fillText(clinicName, 134, y + 21);
+      ctx.fillStyle = "#7a8782";
+      ctx.font = "400 16px Arial";
+      ctx.fillText(`${clinicActions} ações · ${compactDuration(seconds)}`, 134, y + 45);
+      ctx.fillStyle = "#1f6b57";
+      ctx.font = "700 19px Arial";
+      ctx.textAlign = "right";
+      ctx.fillText(`${leads} ${leads === 1 ? "lead" : "leads"}`, 982, y + 32);
+      ctx.textAlign = "left";
+      if (index < clinicRows.length - 1) {
+        ctx.strokeStyle = "#e6e9e4";
+        ctx.beginPath(); ctx.moveTo(134, y + 61); ctx.lineTo(982, y + 61); ctx.stroke();
+      }
+    });
+  } else {
+    ctx.fillStyle = "#7a8782";
+    ctx.font = "400 18px Arial";
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1062);
+  }
+
+  ctx.strokeStyle = "#e0e5df";
+  ctx.beginPath(); ctx.moveTo(82, 1250); ctx.lineTo(998, 1250); ctx.stroke();
+  ctx.fillStyle = "#7d8a84";
+  ctx.font = "400 15px Arial";
+  ctx.fillText("Relatório de social selling", 82, 1283);
+  ctx.textAlign = "right";
+  ctx.fillText(`Gerado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date())}`, 998, 1283);
+  ctx.textAlign = "left";
+
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png", .96));
+  const file = new File([blob], `relatorio-social-selling-${state.reportPeriod}.png`, { type: "image/png" });
+  if (share && navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title: "Relatório de social selling" });
+  } else {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = file.name;
+    link.click();
+    URL.revokeObjectURL(link.href);
     showToast("Relatório baixado em imagem");
   }
 }

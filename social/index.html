@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
   <main id="app">
@@ -152,6 +152,15 @@
               <button class="undo-link" id="adjust-counts">Ajustar contagens</button>
             </div>
           </div>
+          <section class="session-day-overview" aria-labelledby="session-day-title">
+            <div class="session-day-heading">
+              <div><p class="overline">Ronda de hoje</p><h2 id="session-day-title">Clínicas do dia</h2></div>
+              <strong id="session-day-progress-label">0 de 0</strong>
+            </div>
+            <div class="session-day-progress" aria-hidden="true"><i id="session-day-progress-bar"></i></div>
+            <p class="session-day-summary" id="session-day-summary">Veja rapidamente quais contas ainda faltam trabalhar.</p>
+            <div class="session-clinic-list" id="session-clinic-list"></div>
+          </section>
         </section>
 
         <section class="view" data-view-panel="leads">
@@ -252,7 +261,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=12"></script>
-  <script type="module" src="app.js?v=12"></script>
+  <script src="config.js?v=13"></script>
+  <script type="module" src="app.js?v=13"></script>
 </body>
 </html>

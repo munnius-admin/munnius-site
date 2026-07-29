@@ -16,6 +16,11 @@ A passagem registra procedimento, temperatura e cinco confirmações objetivas d
 conversa. O WhatsApp da closer recebe uma mensagem comemorativa com o contexto já
 alinhado para que a abordagem inicial não seja repetida.
 
+A aba Sessão também funciona como uma ronda diária das clínicas: contas pendentes
+aparecem primeiro e cada linha consolida tempo e ações de todas as sessões do dia. A
+imagem compartilhável do relatório é gerada sob demanda em formato 4:5, com identidade
+discreta, indicadores do funil e destaques por clínica; nenhuma imagem é armazenada.
+
 Identidade nunca faz parte do estado operacional compartilhado. Nome, e-mail e papel são
 obtidos da conta autenticada a cada abertura, evitando que cache ou dados de
 demonstração apareçam para outro usuário.
