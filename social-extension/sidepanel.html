@@ -52,7 +52,24 @@
         <p class="eyebrow">Possível telefone</p>
         <strong id="phone-value"></strong>
         <small id="phone-profile"></small>
-        <div><button class="quiet" id="dismiss-phone">Ignorar</button><button class="primary compact" id="confirm-phone">Confirmar</button></div>
+        <div><button class="quiet" id="dismiss-phone">Ignorar</button><button class="primary compact" id="confirm-phone">Revisar</button></div>
+      </section>
+
+      <section class="qualification-card hidden" id="qualification-card">
+        <div class="qualification-head">
+          <div><p class="eyebrow">Entrega para a Hunter</p><strong id="qualification-profile">@perfil</strong></div>
+          <button id="close-qualification" aria-label="Fechar">×</button>
+        </div>
+        <label>WhatsApp <span>(opcional para salvar)</span><input id="qualification-phone" type="tel" placeholder="(00) 00000-0000"></label>
+        <label>Procedimento <span>(opcional)</span><input id="qualification-interest" placeholder="Ex.: Botox"></label>
+        <label>Temperatura<select id="qualification-temperature"><option value="cold">Frio</option><option value="warm" selected>Morno</option><option value="hot">Quente</option></select></label>
+        <div class="extension-bant">
+          <div><b>B</b><label><input type="checkbox" data-extension-qualification="priorInvestment">Pesquisou/investiu antes</label><label><input type="checkbox" data-extension-qualification="valueUnderstood">Entendeu o valor</label></div>
+          <div><b>A</b><label><input type="checkbox" data-extension-qualification="decisionAuthority">Decide por conta própria</label><label><input type="checkbox" data-extension-qualification="knowsDoctor">Conhece a Dra.</label></div>
+          <div><b>N</b><label><input type="checkbox" data-extension-qualification="procedureDiscussed">Falou do incômodo</label><label><input type="checkbox" data-extension-qualification="fitConfirmed">Solução faz sentido</label></div>
+          <div><b>T</b><label><input type="checkbox" data-extension-qualification="interestedThisMonth">Interesse neste mês</label><label><input type="checkbox" data-extension-qualification="importantDate">Tem data importante</label></div>
+        </div>
+        <div class="qualification-actions"><button class="quiet" id="save-phone">Salvar telefone</button><button class="primary compact" id="send-phone-hunter">Enviar à Hunter</button></div>
       </section>
 
       <section class="quick-actions">
@@ -63,6 +80,11 @@
       <section class="messages">
         <div class="section-title"><div><p class="eyebrow">Mensagens rápidas</p><h2>Copiar e personalizar</h2></div></div>
         <div id="message-list"></div>
+      </section>
+
+      <section class="outreach">
+        <div class="section-title"><div><p class="eyebrow">Funil ao vivo</p><h2>Directs rastreados</h2></div></div>
+        <div id="outreach-list"></div>
       </section>
 
       <section class="history">

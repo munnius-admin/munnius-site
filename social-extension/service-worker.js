@@ -43,10 +43,12 @@ function defaultState() {
     organizationId: null,
     role: null,
     clinics: [],
+    sessions: [],
     templates: [],
     activeSession: null,
     counters: { ...EMPTY_COUNTS },
     recentEvents: [],
+    outreach: [],
     pendingUploads: [],
     phoneCandidate: null,
     currentContext: null
@@ -139,8 +141,18 @@ async function hydrateWorkspace(state) {
   );
   const payload = snapshots?.[0]?.payload || {};
   state.clinics = (payload.clinics || []).filter(clinic => clinic.active);
+  state.sessions = payload.sessions || [];
   state.templates = payload.templates || [];
   return state;
+}
+
+function priorityMinutes(clinic = {}) {
+  const key = clinic.priority || (Number(clinic.trafficInvestment || 0) >= 5000 ? "A" : Number(clinic.trafficInvestment || 0) >= 3000 ? "B" : "C");
+  return key === "A" ? 30 : key === "B" ? 20 : 15;
+}
+
+function isToday(value) {
+  return value && new Date(value).toDateString() === new Date().toDateString();
 }
 
 function eventDedupeKey(state, event) {
@@ -156,9 +168,47 @@ function appendHistory(state, event) {
     type: event.type,
     label: EVENT_LABELS[event.type] || "Ação registrada",
     detail: event.profileHandle || event.phone || "",
+    profileHandle: event.profileHandle || "",
     at: event.eventAt || new Date().toISOString(),
     source: "chrome_extension"
   }, ...(state.recentEvents || [])].slice(0, 40);
+}
+
+function updateOutreach(state, event) {
+  if (!["direct_sent", "response_detected", "phone_captured"].includes(event.type)) return;
+  const handle = event.profileHandle || "";
+  if (!handle) return;
+  state.outreach ||= [];
+  let item = state.outreach.find(record => record.clinicId === state.activeSession?.clinicId && record.profileHandle === handle);
+  if (!item) {
+    item = {
+      id: crypto.randomUUID(),
+      clinicId: state.activeSession?.clinicId,
+      profileHandle: handle,
+      sentAt: event.type === "direct_sent" ? event.eventAt : null,
+      respondedAt: null,
+      phoneAt: null,
+      phone: "",
+      status: event.type === "direct_sent" ? "sent" : event.type === "response_detected" ? "responded" : "phone"
+    };
+    state.outreach.unshift(item);
+  }
+  if (event.type === "direct_sent") {
+    item.sentAt ||= event.eventAt;
+    if (!item.respondedAt && !item.phoneAt) item.status = "sent";
+  }
+  if (event.type === "response_detected") {
+    item.respondedAt ||= event.eventAt;
+    if (!item.phoneAt) item.status = "responded";
+  }
+  if (event.type === "phone_captured") {
+    item.respondedAt ||= event.eventAt;
+    item.phoneAt = event.eventAt;
+    item.phone = event.phone || item.phone || "";
+    item.status = "phone";
+  }
+  item.updatedAt = event.eventAt;
+  state.outreach = state.outreach.slice(0, 100);
 }
 
 async function uploadEvent(state, event) {
@@ -177,6 +227,10 @@ async function uploadEvent(state, event) {
     event_at: event.eventAt || new Date().toISOString(),
     payload: {
       phone: event.phone || null,
+      qualification: event.qualification || null,
+      interest: event.interest || null,
+      temperature: event.temperature || null,
+      sendToHunter: Boolean(event.sendToHunter),
       source: "chrome_extension",
       startedAt: session.startedAt,
       context: event.context || null
@@ -215,12 +269,17 @@ async function startSession(clinicId) {
   if (state.activeSession) throw new Error("Encerre a sessão atual primeiro.");
   const clinic = state.clinics.find(item => item.id === clinicId);
   if (!clinic) throw new Error("Clínica não encontrada.");
+  const spentToday = (state.sessions || [])
+    .filter(session => session.clinicId === clinicId && isToday(session.startedAt))
+    .reduce((total, session) => total + Number(session.durationSeconds || 0), 0);
+  const limitSeconds = Math.max(0, priorityMinutes(clinic) * 60 - spentToday);
   state.activeSession = {
     id: crypto.randomUUID(),
     clinicId,
     clinicName: clinic.name,
     instagram: clinic.instagram,
     startedAt: new Date().toISOString(),
+    limitSeconds,
     seenKeys: []
   };
   state.counters = { ...EMPTY_COUNTS };
@@ -249,6 +308,12 @@ async function finishSession() {
   appendHistory(state, event);
   await queueOrUpload(state, event);
   state.lastSession = { ...state.activeSession, endedAt: event.eventAt, counts: state.counters };
+  state.sessions = [...(state.sessions || []), {
+    ...state.activeSession,
+    endedAt: event.eventAt,
+    durationSeconds: event.context.durationSeconds,
+    counts: state.counters
+  }].slice(-300);
   state.activeSession = null;
   state.currentContext = null;
   state.phoneCandidate = null;
@@ -281,6 +346,7 @@ async function trackEvent(input) {
   state.activeSession.seenKeys = [...state.activeSession.seenKeys, event.dedupeKey].slice(-500);
   const counter = COUNTER_BY_EVENT[event.type];
   if (counter) state.counters[counter] = Number(state.counters[counter] || 0) + 1;
+  updateOutreach(state, event);
   appendHistory(state, event);
   await queueOrUpload(state, event);
   return writeState(state);
@@ -315,11 +381,24 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     if (message.type === "CONFIRM_PHONE") {
       const state = await readState();
-      const candidate = state.phoneCandidate;
+      const candidate = state.phoneCandidate || {
+        phone: message.phone || "",
+        profileHandle: message.profileHandle || "",
+        instagramUrl: message.instagramUrl || ""
+      };
       if (!candidate) return state;
       state.phoneCandidate = null;
       await writeState(state);
-      return trackEvent({ type: "phone_captured", ...candidate });
+      return trackEvent({
+        type: "phone_captured",
+        ...candidate,
+        phone: message.phone || candidate.phone || "",
+        profileHandle: message.profileHandle || candidate.profileHandle || "",
+        qualification: message.qualification || {},
+        interest: message.interest || "",
+        temperature: message.temperature || "warm",
+        sendToHunter: Boolean(message.sendToHunter)
+      });
     }
     if (message.type === "DISMISS_PHONE") {
       const state = await readState();

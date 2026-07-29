@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
   <main id="app">
@@ -158,6 +158,14 @@
               <button class="undo-link" id="adjust-counts">Ajustar contagens</button>
             </div>
           </div>
+          <section class="session-directs-overview" aria-labelledby="session-directs-title">
+            <div class="session-day-heading">
+              <div><p class="overline">Rastreio individual</p><h2 id="session-directs-title">Histórico de directs</h2></div>
+              <strong id="session-directs-total">0</strong>
+            </div>
+            <p class="session-day-summary">Cada @ avança de enviado para respondido e telefone captado.</p>
+            <div class="session-direct-history" id="session-direct-history"></div>
+          </section>
           <section class="session-day-overview" aria-labelledby="session-day-title">
             <div class="session-day-heading">
               <div><p class="overline">Ronda de hoje</p><h2 id="session-day-title">Clínicas do dia</h2></div>
@@ -170,22 +178,25 @@
         </section>
 
         <section class="view" data-view-panel="leads">
-          <div class="search-row">
+          <div class="crm-toolbar">
             <label class="search"><span class="material-symbols-outlined">search</span><input id="lead-search" placeholder="Buscar nome ou @"></label>
-            <button class="filter-button" aria-label="Filtrar"><span class="material-symbols-outlined">tune</span></button>
+            <label class="priority-filter"><span class="material-symbols-outlined">low_priority</span><select id="lead-priority-filter" aria-label="Filtrar prioridade">
+              <option value="all">Todas as prioridades</option>
+              <option value="A">Prioridade A</option>
+              <option value="B">Prioridade B</option>
+              <option value="C">Prioridade C</option>
+            </select></label>
           </div>
-          <div class="filter-chips" id="lead-filters">
-            <button class="active" data-status="all">Todos</button>
-            <button data-status="new">Mapeados</button>
-            <button data-status="talking">Conversando</button>
-            <button data-status="follow_up">Follow-up</button>
-            <button data-status="lost">Perdidos</button>
-            <button data-status="sent_to_hunter">Encaminhados</button>
-            <button data-status="scheduled">Agendados</button>
-            <button data-status="attended">Compareceram</button>
-            <button data-status="no_show">Não compareceram</button>
+          <div class="kanban-navigation">
+            <button id="kanban-prev" aria-label="Etapa anterior"><span class="material-symbols-outlined">arrow_back</span></button>
+            <div><strong>Funil completo</strong><small>Deslize para acompanhar cada etapa</small></div>
+            <button id="kanban-next" aria-label="Próxima etapa"><span class="material-symbols-outlined">arrow_forward</span></button>
           </div>
-          <div class="lead-list" id="lead-list"></div>
+          <div class="kanban-board" id="lead-kanban"></div>
+          <section class="hunter-followup-section">
+            <div class="section-heading"><div><p class="overline">Cobrança de retorno</p><h2>Acompanhamento por Hunter</h2></div></div>
+            <div class="hunter-followup-list" id="hunter-followup-list"></div>
+          </section>
           <button class="fab" id="new-lead" aria-label="Novo lead"><span class="material-symbols-outlined">person_add</span></button>
         </section>
 
@@ -270,7 +281,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=15"></script>
-  <script type="module" src="app.js?v=15"></script>
+  <script src="config.js?v=16"></script>
+  <script type="module" src="app.js?v=16"></script>
 </body>
 </html>

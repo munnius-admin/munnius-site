@@ -83,6 +83,17 @@
   }
 
   document.addEventListener("click", event => {
+    if (location.pathname.startsWith("/direct/")) {
+      const conversationRow = event.target.closest?.('a[href*="/direct/t/"], [role="row"], [role="listitem"]');
+      const unreadText = normalizeText([
+        conversationRow?.innerText,
+        conversationRow?.getAttribute?.("aria-label"),
+        conversationRow?.querySelector?.('[aria-label*="lida" i], [aria-label*="unread" i]')?.getAttribute?.("aria-label")
+      ].filter(Boolean).join(" "));
+      if (conversationRow && /(nao lida|unread|nova mensagem|new message)/.test(unreadText)) {
+        setTimeout(() => emit("response_detected", { target: document }, 0), 900);
+      }
+    }
     const button = event.target.closest?.('button, [role="button"]');
     if (!button) return;
     const text = buttonText(button);

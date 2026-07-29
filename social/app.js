@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=15";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=16";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -82,6 +82,7 @@ const seed = {
     { id: "lead-2", name: "Júlia Martins", instagram: "@jumartins", whatsapp: "", clinicId: "aura", status: "follow_up", interest: "Botox", location: "São Paulo", temperature: "warm", prospectedAt: new Date(Date.now() - 86400000).toISOString(), lastContactAt: new Date(Date.now() - 86400000).toISOString(), sentToHunterAt: null, timeline: [{ at: new Date(Date.now() - 86400000).toISOString(), label: "Primeiro contato realizado" }] },
     { id: "lead-3", name: "Fernanda Lima", instagram: "@fernandalima", whatsapp: "41999990010", clinicId: "leve", status: "sent_to_hunter", interest: "Preenchimento labial", location: "Belo Horizonte", temperature: "hot", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: new Date().toISOString(), timeline: [{ at: new Date().toISOString(), label: "Enviado para closer" }] }
   ],
+  directs: [],
   followups: [
     { id: "fu-1", leadId: "lead-2", scheduledFor: new Date(Date.now() - 3600000).toISOString(), step: "1º follow-up", status: "pending" },
     { id: "fu-2", leadId: "lead-1", scheduledFor: new Date(Date.now() + 5400000).toISOString(), step: "Pedir WhatsApp", status: "pending" }
@@ -100,6 +101,7 @@ function normalizeState(candidate) {
   normalized.version = 3;
   normalized.clinics ||= [];
   normalized.leads ||= [];
+  normalized.directs ||= [];
   normalized.followups ||= [];
   normalized.sessions ||= [];
   normalized.templates ||= structuredClone(seed.templates);
@@ -115,12 +117,16 @@ function normalizeState(candidate) {
     lead.attendedAt ||= null;
     lead.noShowAt ||= null;
   });
+  normalized.directs.forEach(direct => {
+    direct.status ||= direct.phoneAt ? "phone" : direct.respondedAt ? "responded" : "sent";
+    direct.timeline ||= [];
+  });
   return normalized;
 }
 
 function loadState() {
   const base = isSupabaseConfigured
-    ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], followups: [], sessions: [] }
+    ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], directs: [], followups: [], sessions: [] }
     : structuredClone(seed);
   if (isSupabaseConfigured) {
     return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
@@ -149,7 +155,7 @@ function legacyOperationalStorageKey(profileId = state.profile?.id) {
   return isSupabaseConfigured && profileId ? `${LEGACY_STORAGE_KEY}:${profileId}` : LEGACY_STORAGE_KEY;
 }
 function loadLocalOperational(profile) {
-  const base = { ...structuredClone(seed), profile, clinics: [], leads: [], followups: [], sessions: [] };
+  const base = { ...structuredClone(seed), profile, clinics: [], leads: [], directs: [], followups: [], sessions: [] };
   try {
     const stored = JSON.parse(
       localStorage.getItem(operationalStorageKey(profile?.id))
@@ -177,6 +183,7 @@ function mergeOperationalState(localState, remoteState, profile) {
     profile,
     clinics: mergeById(local.clinics, remote.clinics),
     leads: mergeById(local.leads, remote.leads),
+    directs: mergeById(local.directs, remote.directs),
     followups: mergeById(local.followups, remote.followups),
     sessions: mergeById(local.sessions, remote.sessions),
     templates: mergeById(local.templates, remote.templates),
@@ -189,7 +196,7 @@ function mergeOperationalState(localState, remoteState, profile) {
   });
 }
 function operationalSnapshot() {
-  const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
+  const { profile, timerId, session, lastAction, leadFilter, priorityFilter, followupFilter, reportPeriod, ...serializable } = state;
   return serializable;
 }
 function persist() {
@@ -219,10 +226,10 @@ async function hydrateRemoteState() {
     persist();
     return;
   }
-  const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
+  const base = { ...structuredClone(seed), clinics: [], leads: [], directs: [], followups: [], sessions: [] };
   const { profile: _ignoredProfile, ...operationalState } = remote;
   state = mergeOperationalState(local, { ...base, ...operationalState }, workspace.profile);
-  const { profile, timerId, session, lastAction, leadFilter, followupFilter, reportPeriod, ...serializable } = state;
+  const { profile, timerId, session, lastAction, leadFilter, priorityFilter, followupFilter, reportPeriod, ...serializable } = state;
   localStorage.setItem(operationalStorageKey(profile.id), JSON.stringify(serializable));
   persist();
 }
@@ -230,7 +237,7 @@ async function hydrateRemoteState() {
 function applyRemoteSnapshot(remote) {
   if (!remote || Number(remote.version || 0) < 2 || state.session) return;
   const profile = state.profile;
-  const base = { ...structuredClone(seed), clinics: [], leads: [], followups: [], sessions: [] };
+  const base = { ...structuredClone(seed), clinics: [], leads: [], directs: [], followups: [], sessions: [] };
   const { profile: _ignoredProfile, ...operationalState } = remote;
   state = mergeOperationalState(state, { ...base, ...operationalState }, profile);
   localStorage.setItem(operationalStorageKey(profile.id), JSON.stringify(state));
@@ -266,15 +273,18 @@ function ensureExtensionSession(event) {
   return session;
 }
 
-function upsertLeadFromExtension(event, stage = "mapped") {
-  const instagram = instagramHandle(event.instagram_handle || "");
+function isOpenCommercialStatus(status) {
+  return !["sent_to_hunter", "scheduled", "attended", "no_show", "finished"].includes(status);
+}
+
+function upsertLeadFromActivity({ clinicId, instagram: rawInstagram = "", stage = "mapped", at = new Date().toISOString(), phone = "", source = "manual_web" }) {
+  const instagram = instagramHandle(rawInstagram);
   if (instagram === "@") return null;
-  let lead = state.leads.find(item => item.clinicId === event.clinic_id && instagramHandle(item.instagram) === instagram);
-  const now = event.event_at || new Date().toISOString();
+  let lead = state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram);
   if (!lead) {
     lead = {
       id: uid("lead"),
-      clinicId: event.clinic_id,
+      clinicId,
       name: "",
       instagram,
       whatsapp: "",
@@ -282,27 +292,115 @@ function upsertLeadFromExtension(event, stage = "mapped") {
       interest: "",
       temperature: "warm",
       qualification: {},
-      prospectedAt: now,
-      lastContactAt: now,
+      prospectedAt: at,
+      lastContactAt: at,
       sentToHunterAt: null,
-      source: "chrome_extension",
+      source,
       timeline: []
     };
     state.leads.unshift(lead);
   }
-  lead.lastContactAt = now;
+  lead.lastContactAt = at;
   lead.timeline ||= [];
   if (stage === "phone") {
-    lead.status = lead.status === "sent_to_hunter" ? lead.status : "talking";
-    lead.whatsapp = phoneDigits(event.payload?.phone || "");
-    lead.timeline.push({ at: now, label: "Telefone captado pela extensão · completar qualificação" });
+    if (isOpenCommercialStatus(lead.status)) lead.status = "talking";
+    lead.whatsapp = phoneDigits(phone || lead.whatsapp || "");
+    lead.phoneCapturedAt = at;
+    lead.timeline.push({ at, label: source === "chrome_extension" ? "Telefone captado pela extensão" : "Telefone captado" });
   } else if (stage === "responded") {
-    lead.status = lead.status === "sent_to_hunter" ? lead.status : "talking";
-    lead.timeline.push({ at: now, label: "Resposta registrada pela extensão" });
+    if (isOpenCommercialStatus(lead.status)) lead.status = "talking";
+    lead.respondedAt = at;
+    lead.timeline.push({ at, label: source === "chrome_extension" ? "Resposta registrada pela extensão" : "Lead respondeu ao direct" });
   } else {
-    lead.timeline.push({ at: now, label: "Direct enviado pela extensão" });
+    lead.directSentAt ||= at;
+    if (!lead.status || lead.status === "lost") lead.status = "new";
+    lead.timeline.push({ at, label: source === "chrome_extension" ? "Direct enviado pela extensão" : "Direct enviado" });
   }
   return lead;
+}
+
+function findLatestDirect(clinicId, instagram) {
+  const normalized = instagramHandle(instagram);
+  return state.directs
+    .filter(item => item.clinicId === clinicId && instagramHandle(item.instagram || "") === normalized)
+    .sort((a, b) => new Date(b.sentAt || b.createdAt) - new Date(a.sentAt || a.createdAt))[0] || null;
+}
+
+function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = "sent", at = new Date().toISOString(), phone = "", source = "manual_web", sessionId = null }) {
+  const instagram = instagramHandle(rawInstagram);
+  if (instagram === "@") return { direct: null, lead: null };
+  let direct = findLatestDirect(clinicId, instagram);
+  const shouldCreate = !direct || (stage === "sent" && ["phone", "lost"].includes(direct.status));
+  if (shouldCreate) {
+    direct = {
+      id: uid("direct"),
+      clinicId,
+      instagram,
+      leadId: null,
+      sessionId,
+      sentAt: stage === "sent" ? at : null,
+      respondedAt: null,
+      phoneAt: null,
+      phone: "",
+      status: stage === "sent" ? "sent" : stage,
+      source,
+      createdAt: at,
+      timeline: []
+    };
+    state.directs.unshift(direct);
+  }
+  direct.timeline ||= [];
+  if (stage === "sent") {
+    direct.sentAt ||= at;
+    direct.status = direct.status === "sent" ? "sent" : direct.status;
+    direct.timeline.push({ at, label: "Direct enviado" });
+  }
+  if (stage === "responded") {
+    direct.respondedAt ||= at;
+    direct.status = direct.status === "phone" ? "phone" : "responded";
+    direct.timeline.push({ at, label: "Resposta recebida" });
+  }
+  if (stage === "phone") {
+    direct.respondedAt ||= at;
+    direct.phoneAt = at;
+    direct.phone = phoneDigits(phone || direct.phone || "");
+    direct.status = "phone";
+    direct.timeline.push({ at, label: "Telefone captado" });
+  }
+  const lead = upsertLeadFromActivity({
+    clinicId,
+    instagram,
+    stage: stage === "sent" ? "mapped" : stage,
+    at,
+    phone,
+    source
+  });
+  direct.leadId = lead?.id || direct.leadId;
+  return { direct, lead };
+}
+
+function upsertLeadFromExtension(event, stage = "mapped") {
+  const eventStage = stage === "mapped" ? "sent" : stage;
+  const result = recordDirectProgress({
+    clinicId: event.clinic_id,
+    instagram: event.instagram_handle || "",
+    stage: eventStage,
+    at: event.event_at || new Date().toISOString(),
+    phone: event.payload?.phone || "",
+    source: "chrome_extension",
+    sessionId: event.session_id
+  });
+  if (eventStage === "phone" && result.lead) {
+    result.lead.qualification = { ...(result.lead.qualification || {}), ...(event.payload?.qualification || {}) };
+    result.lead.interest = event.payload?.interest || result.lead.interest || "";
+    result.lead.temperature = event.payload?.temperature || result.lead.temperature || "warm";
+    if (event.payload?.sendToHunter) {
+      result.lead.status = "sent_to_hunter";
+      result.lead.sentToHunterAt ||= event.event_at || new Date().toISOString();
+      result.lead.timeline.push({ at: result.lead.sentToHunterAt, label: "Encaminhado para a Hunter pela extensão" });
+    }
+  }
+  return result.lead;
 }
 
 async function applyExtensionEvents(events, notify = false) {
@@ -339,6 +437,7 @@ async function applyExtensionEvents(events, notify = false) {
   await dataGateway.markExtensionEventsProcessed?.(freshEvents.map(event => event.id));
   renderDashboard();
   renderSessionClinicTracker();
+  renderDirectHistory();
   renderLeads();
   renderReport();
   if (notify) showToast("Ação do Instagram sincronizada");
@@ -351,15 +450,20 @@ async function syncPendingExtensionEvents() {
 }
 
 function expireUnansweredLeads() {
-  const cutoff = Date.now() - 7 * 86400000;
+  const mappedCutoff = Date.now() - 7 * 86400000;
+  const talkingCutoff = Date.now() - 14 * 86400000;
   let changed = false;
   state.leads.forEach(lead => {
     const referenceDate = new Date(lead.lastContactAt || lead.prospectedAt || 0).getTime();
-    if (lead.status === "new" && referenceDate && referenceDate < cutoff) {
+    const mappedExpired = lead.status === "new" && referenceDate && referenceDate < mappedCutoff;
+    const conversationExpired = lead.status === "talking" && referenceDate && referenceDate < talkingCutoff;
+    if (mappedExpired || conversationExpired) {
       const now = new Date().toISOString();
       lead.status = "lost";
       lead.timeline ||= [];
-      lead.timeline.push({ at: now, label: "Encerrado sem resposta após 7 dias" });
+      lead.timeline.push({ at: now, label: mappedExpired ? "Sem resposta após 7 dias" : "Conversa sem evolução após 14 dias" });
+      const direct = findLatestDirect(lead.clinicId, lead.instagram);
+      if (direct && direct.status !== "phone") direct.status = "lost";
       changed = true;
     }
   });
@@ -410,6 +514,7 @@ async function openWorkspace(message = "Bem-vindo") {
   renderLeads();
   renderFollowups();
   renderReport();
+  renderDirectHistory();
   stopWorkspaceRealtime?.();
   try {
     stopWorkspaceRealtime = await dataGateway.subscribeToWorkspace?.(applyRemoteSnapshot);
@@ -454,6 +559,9 @@ function showToast(message) {
 }
 
 function navigate(view) {
+  const currentView = $(".view.active")?.dataset.viewPanel;
+  if (currentView === "session" && view !== "session") pauseSessionTimer();
+  if (view === "session") resumeSessionTimer();
   $$(".view").forEach(panel => panel.classList.toggle("active", panel.dataset.viewPanel === view));
   $$(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
   $("#page-title").textContent = titles[view];
@@ -462,7 +570,10 @@ function navigate(view) {
   if (view === "leads") renderLeads();
   if (view === "followups") renderFollowups();
   if (view === "reports") renderReport();
-  if (view === "session") renderSessionClinicTracker();
+  if (view === "session") {
+    renderSessionClinicTracker();
+    renderDirectHistory();
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -472,7 +583,7 @@ function periodStats(period = state.period || "day") {
   if (state.session && inPeriod(state.session.startedAt, period)) {
     sessions.push({
       ...state.session,
-      durationSeconds: Math.max(1, Math.floor((Date.now() - new Date(state.session.startedAt)) / 1000))
+      durationSeconds: activeSessionElapsed(state.session)
     });
   }
   const counts = sessions.reduce((total, session) => {
@@ -492,6 +603,7 @@ function periodStats(period = state.period || "day") {
 }
 
 function renderDashboard() {
+  expireUnansweredLeads();
   const stats = periodStats(state.period);
   const activeClinics = state.clinics.filter(clinic => clinic.active);
   const pending = state.followups.filter(item => item.status === "pending").length;
@@ -582,7 +694,7 @@ function clinicActivityToday(clinicId) {
   const active = state.session?.clinicId === clinicId ? state.session : null;
   const sessions = active ? [...completed, {
     ...active,
-    durationSeconds: Math.max(1, Math.floor((Date.now() - new Date(active.startedAt)) / 1000))
+    durationSeconds: activeSessionElapsed(active)
   }] : completed;
   return {
     active: Boolean(active),
@@ -650,21 +762,149 @@ function renderSessionClinicTracker() {
   }));
 }
 
-function renderLeads() {
-  const query = $("#lead-search").value.trim().toLowerCase();
-  const filtered = state.leads
-    .filter(lead => state.leadFilter === "all" || lead.status === state.leadFilter)
-    .filter(lead => `${lead.name} ${lead.instagram}`.toLowerCase().includes(query))
-    .sort((a, b) => new Date(b.prospectedAt) - new Date(a.prospectedAt));
-  $("#lead-list").innerHTML = filtered.map(lead => {
-    const clinic = clinicById(lead.clinicId);
-    return `<article class="lead-card clickable" data-lead="${lead.id}">
-      <div class="lead-top"><div class="lead-avatar">${initials(lead.name || lead.instagram)}</div>
-      <div class="lead-info"><strong>${escapeHtml(lead.name || lead.instagram)}</strong><span>${escapeHtml(lead.instagram)}${lead.interest ? ` · ${escapeHtml(lead.interest)}` : ""}</span></div><span class="status ${lead.status}">${statusNames[lead.status] || "Novo"}</span></div>
-      <div class="lead-meta"><span>${clinic?.name || "Clínica removida"}</span><span class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliado"}</span><span>${formatDate(lead.prospectedAt, true)}</span></div>
+function renderDirectHistory() {
+  const list = $("#session-direct-history");
+  if (!list) return;
+  const activeClinicId = state.session?.clinicId;
+  const directs = state.directs
+    .filter(item => activeClinicId ? item.clinicId === activeClinicId : inPeriod(item.sentAt || item.createdAt, "day"))
+    .sort((a, b) => new Date(b.phoneAt || b.respondedAt || b.sentAt || b.createdAt) - new Date(a.phoneAt || a.respondedAt || a.sentAt || a.createdAt))
+    .slice(0, 20);
+  $("#session-directs-total").textContent = directs.length;
+  list.innerHTML = directs.map(direct => {
+    const clinic = clinicById(direct.clinicId);
+    const status = direct.status === "phone" ? "Telefone" : direct.status === "responded" ? "Respondido" : direct.status === "lost" ? "Sem retorno" : "Aguardando";
+    const statusIcon = direct.status === "phone" ? "phone_in_talk" : direct.status === "responded" ? "mark_chat_read" : direct.status === "lost" ? "person_cancel" : "schedule";
+    const canAdvance = state.session?.clinicId === direct.clinicId;
+    return `<article class="direct-history-card direct-${direct.status}">
+      <span class="direct-history-icon"><span class="material-symbols-outlined">${statusIcon}</span></span>
+      <div><strong>${escapeHtml(direct.instagram || "Perfil não informado")}</strong><small>${escapeHtml(clinic?.name || "Clínica")} · ${formatDate(direct.phoneAt || direct.respondedAt || direct.sentAt || direct.createdAt, true)}</small></div>
+      <span class="direct-stage">${status}</span>
+      <div class="direct-history-actions">
+        ${["sent", "lost"].includes(direct.status) ? `<button data-direct-responded="${direct.id}" ${canAdvance ? "" : "disabled"}>Respondeu</button>` : ""}
+        ${direct.status !== "phone" ? `<button class="phone" data-direct-phone="${direct.id}" ${canAdvance ? "" : "disabled"}>Telefone</button>` : ""}
+      </div>
     </article>`;
-  }).join("") || emptyState("Nenhum lead encontrado.");
+  }).join("") || `<div class="empty-inline compact-empty"><span class="material-symbols-outlined">alternate_email</span><p>Os directs com @ aparecerão aqui.</p></div>`;
+  $$("[data-direct-responded]").forEach(button => button.addEventListener("click", () => {
+    const direct = state.directs.find(item => item.id === button.dataset.directResponded);
+    if (!direct || !state.session) return;
+    recordDirectProgress({
+      clinicId: direct.clinicId,
+      instagram: direct.instagram,
+      stage: "responded",
+      at: new Date().toISOString(),
+      source: "manual_web",
+      sessionId: state.session.id
+    });
+    updateAction("responses");
+    persist();
+    renderLeads();
+    renderDirectHistory();
+    showToast(`${direct.instagram} avançou para Conversando`);
+  }));
+  $$("[data-direct-phone]").forEach(button => button.addEventListener("click", () => {
+    const direct = state.directs.find(item => item.id === button.dataset.directPhone);
+    if (direct) openActivityCapture("phone", { directId: direct.id, instagram: direct.instagram });
+  }));
+}
+
+function renderLeads() {
+  expireUnansweredLeads();
+  const query = $("#lead-search").value.trim().toLowerCase();
+  const priorityFilter = state.priorityFilter || "all";
+  const filtered = state.leads
+    .filter(lead => `${lead.name} ${lead.instagram}`.toLowerCase().includes(query))
+    .filter(lead => {
+      if (priorityFilter === "all") return true;
+      return clinicPriority(clinicById(lead.clinicId)).key === priorityFilter;
+    })
+    .sort((a, b) => clinicPriority(clinicById(a.clinicId)).order - clinicPriority(clinicById(b.clinicId)).order
+      || new Date(b.lastContactAt || b.prospectedAt) - new Date(a.lastContactAt || a.prospectedAt));
+  const columns = [
+    { key: "new", title: "Mapeados", subtitle: "Direct enviado", statuses: ["new"], icon: "send" },
+    { key: "talking", title: "Conversando", subtitle: "Responderam", statuses: ["talking"], icon: "forum" },
+    { key: "follow_up", title: "Em follow", subtitle: "Retomar conversa", statuses: ["follow_up"], icon: "schedule" },
+    { key: "lost", title: "Perdidos", subtitle: "Sem evolução", statuses: ["lost"], icon: "person_cancel" },
+    { key: "sent_to_hunter", title: "Com a Hunter", subtitle: "Aguardando retorno", statuses: ["sent_to_hunter"], icon: "forward_to_inbox" },
+    { key: "scheduled", title: "Agendados", subtitle: "Confirmar presença", statuses: ["scheduled"], icon: "event_available" },
+    { key: "outcomes", title: "Desfecho", subtitle: "Compareceu ou faltou", statuses: ["attended", "no_show", "finished"], icon: "verified" }
+  ];
+  $("#lead-kanban").innerHTML = columns.map(column => {
+    const items = filtered.filter(lead => column.statuses.includes(lead.status));
+    return `<section class="kanban-column" data-kanban-column="${column.key}">
+      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><b>${items.length}</b></header>
+      <div class="kanban-cards">${items.map(kanbanLeadCard).join("") || `<div class="kanban-empty">Nenhum lead nesta etapa</div>`}</div>
+    </section>`;
+  }).join("");
   $$("[data-lead]").forEach(card => card.addEventListener("click", () => openLeadDetail(card.dataset.lead)));
+  renderHunterFollowups(filtered);
+}
+
+function leadDeadlineLabel(lead) {
+  const reference = new Date(lead.lastContactAt || lead.prospectedAt || Date.now()).getTime();
+  const ageDays = Math.max(0, Math.floor((Date.now() - reference) / 86400000));
+  if (lead.status === "new") return `${Math.max(0, 7 - ageDays)}d para expirar`;
+  if (lead.status === "talking") return `${Math.max(0, 14 - ageDays)}d para evoluir`;
+  if (lead.status === "follow_up") {
+    const followup = state.followups.find(item => item.leadId === lead.id && item.status === "pending");
+    return followup ? `Follow ${formatDate(followup.scheduledFor, true)}` : "Follow sem data";
+  }
+  if (lead.status === "sent_to_hunter") return `${ageDays}d com a Hunter`;
+  if (lead.status === "scheduled") return lead.scheduledAt ? formatDate(lead.scheduledAt, true) : "Agendado";
+  if (lead.status === "lost") return "Reativar se responder";
+  return statusNames[lead.status] || "Atualizado";
+}
+
+function kanbanLeadCard(lead) {
+  const clinic = clinicById(lead.clinicId);
+  const priority = clinicPriority(clinic);
+  return `<article class="kanban-lead-card clickable" data-lead="${lead.id}">
+    <div class="kanban-card-top"><span class="priority-dot priority-${priority.key.toLowerCase()}">${priority.key}</span><small>${escapeHtml(clinic?.name || "Clínica")}</small><span class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Frio"}</span></div>
+    <strong>${escapeHtml(lead.name || lead.instagram || "Lead sem nome")}</strong>
+    <span>${escapeHtml(lead.instagram || "Instagram não informado")}${lead.interest ? ` · ${escapeHtml(lead.interest)}` : ""}</span>
+    <footer><span class="material-symbols-outlined">hourglass_bottom</span>${leadDeadlineLabel(lead)}<b class="material-symbols-outlined">chevron_right</b></footer>
+  </article>`;
+}
+
+function renderHunterFollowups(filteredLeads = state.leads) {
+  const container = $("#hunter-followup-list");
+  if (!container) return;
+  const items = filteredLeads.filter(lead => ["sent_to_hunter", "scheduled"].includes(lead.status));
+  const groups = new Map();
+  items.forEach(lead => {
+    const clinic = clinicById(lead.clinicId);
+    const key = `${clinic?.hunterPhone || ""}:${clinic?.hunter || "Hunter"}`;
+    if (!groups.has(key)) groups.set(key, { hunter: clinic?.hunter || "Hunter", phone: clinic?.hunterPhone || "", leads: [] });
+    groups.get(key).leads.push(lead);
+  });
+  container.innerHTML = [...groups.values()].map(group => `<section class="hunter-group">
+    <header><span class="material-symbols-outlined">support_agent</span><div><strong>${escapeHtml(group.hunter)}</strong><small>${group.leads.length} ${group.leads.length === 1 ? "retorno pendente" : "retornos pendentes"}</small></div></header>
+    <div>${group.leads.map(lead => {
+      const clinic = clinicById(lead.clinicId);
+      return `<article><div><strong>${escapeHtml(lead.name || lead.instagram)}</strong><small>${escapeHtml(clinic?.name || "")} · ${lead.status === "scheduled" ? `agendado ${formatDate(lead.scheduledAt, true)}` : "aguardando agendamento"}</small></div>
+        <button data-hunter-remind="${lead.id}"><span class="material-symbols-outlined">chat</span>Cobrar</button>
+        <button class="update" data-hunter-update="${lead.id}"><span class="material-symbols-outlined">edit_calendar</span>Atualizar</button>
+      </article>`;
+    }).join("")}</div>
+  </section>`).join("") || `<p class="report-empty">Nenhum retorno pendente com as Hunters.</p>`;
+  $$("[data-hunter-remind]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    openHunterReminder(leadById(button.dataset.hunterRemind));
+  }));
+  $$("[data-hunter-update]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    openHunterUpdate(button.dataset.hunterUpdate);
+  }));
+}
+
+function openHunterReminder(lead) {
+  const clinic = clinicById(lead.clinicId);
+  if (!clinic?.hunterPhone) return showToast("Cadastre o WhatsApp da Hunter.");
+  const message = lead.status === "scheduled"
+    ? `Oi, ${clinic.hunter}! Consegue me confirmar se ${lead.name || lead.instagram} compareceu ao agendamento da ${clinic.name}?`
+    : `Oi, ${clinic.hunter}! Consegue me atualizar se ${lead.name || lead.instagram} avançou para agendamento na ${clinic.name}?`;
+  window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
 
 function renderFollowups() {
@@ -758,15 +998,49 @@ function clinicPicker() {
   });
 }
 
+function activeSessionElapsed(session = state.session) {
+  if (!session) return 0;
+  const stored = Number(session.accumulatedSeconds || 0);
+  if (session.paused || !session.resumedAt) return stored;
+  return stored + Math.max(0, Math.floor((Date.now() - new Date(session.resumedAt)) / 1000));
+}
+
+function pauseSessionTimer() {
+  if (!state.session || state.session.paused) return;
+  state.session.accumulatedSeconds = activeSessionElapsed(state.session);
+  state.session.resumedAt = null;
+  state.session.paused = true;
+  clearInterval(state.timerId);
+  state.timerId = null;
+  updateTimer();
+}
+
+function resumeSessionTimer() {
+  if (!state.session) return;
+  if (state.session.paused || !state.session.resumedAt) {
+    state.session.resumedAt = new Date().toISOString();
+    state.session.paused = false;
+  }
+  clearInterval(state.timerId);
+  state.timerId = setInterval(updateTimer, 1000);
+  updateTimer();
+}
+
 function startSession(clinicId) {
   const clinic = clinicById(clinicId);
   if (!clinic) return showToast("Clínica não encontrada.");
   const priority = clinicPriority(clinic);
+  const spentToday = clinicActivityToday(clinicId).seconds;
+  const remainingBudget = Math.max(0, priority.minutes * 60 - spentToday);
+  const now = new Date().toISOString();
   state.session = {
     id: uid("session"),
     clinicId,
-    startedAt: new Date().toISOString(),
-    limitSeconds: priority.minutes * 60,
+    startedAt: now,
+    resumedAt: now,
+    accumulatedSeconds: 0,
+    paused: false,
+    limitSeconds: remainingBudget,
     limitNotified: false,
     counts: Object.fromEntries(Object.keys(countLabels).map(key => [key, 0]))
   };
@@ -775,30 +1049,34 @@ function startSession(clinicId) {
   $("#session-active").classList.remove("hidden");
   $$("[data-action] strong").forEach(node => node.textContent = "0");
   closeSheet();
-  clearInterval(state.timerId);
-  state.timerId = setInterval(updateTimer, 1000);
-  updateTimer(); renderClinics(); navigate("session");
-  showToast(`Sessão iniciada · prioridade ${priority.key} · ${priority.minutes} min`);
+  renderClinics();
+  navigate("session");
+  renderDirectHistory();
+  showToast(remainingBudget
+    ? `Sessão iniciada · ${compactDuration(remainingBudget)} restantes`
+    : `Meta de tempo concluída · registre apenas o necessário`);
 }
 function updateTimer() {
   if (!state.session) return;
   const clinic = clinicById(state.session.clinicId);
   const priority = clinicPriority(clinic);
-  const elapsed = Math.floor((Date.now() - new Date(state.session.startedAt)) / 1000);
-  const limit = Number(state.session.limitSeconds || priority.minutes * 60);
+  const elapsed = activeSessionElapsed(state.session);
+  const limit = Number(state.session.limitSeconds ?? priority.minutes * 60);
   const remaining = limit - elapsed;
   const absolute = Math.abs(remaining);
   const timer = $("#timer");
   timer.textContent = `${remaining < 0 ? "+" : ""}${[Math.floor(absolute / 60), absolute % 60].map(value => String(value).padStart(2, "0")).join(":")}`;
   timer.classList.toggle("warning", remaining > 0 && remaining <= 300);
   timer.classList.toggle("overtime", remaining <= 0);
-  $("#session-limit-label").textContent = remaining > 0
+  $("#session-limit-label").textContent = state.session.paused
+    ? `pausado · ${compactDuration(Math.max(0, remaining))} restantes`
+    : remaining > 0
     ? `restantes · prioridade ${priority.key}`
     : `tempo extra · hora de seguir`;
-  $("#session-timer-progress").style.width = `${Math.min(100, elapsed / limit * 100)}%`;
+  $("#session-timer-progress").style.width = `${limit > 0 ? Math.min(100, elapsed / limit * 100) : 100}%`;
   $("#session-timer-progress").classList.toggle("warning", remaining > 0 && remaining <= 300);
   $("#session-timer-progress").classList.toggle("overtime", remaining <= 0);
-  if (remaining <= 0 && !state.session.limitNotified) {
+  if (remaining <= 0 && !state.session.limitNotified && !state.session.paused) {
     state.session.limitNotified = true;
     navigator.vibrate?.([120, 70, 120]);
     showToast(`Tempo da ${clinic?.name || "clínica"} concluído. Finalize e siga para a próxima.`);
@@ -815,29 +1093,133 @@ function updateAction(action, delta = 1) {
   requestAnimationFrame(() => countNode.classList.add("count-pop"));
   if (delta > 0) state.lastAction = action;
   renderSessionClinicTracker();
+  renderDirectHistory();
 }
 function handleSessionAction(action) {
   if (!state.session) return;
+  if (action === "directs") {
+    openActivityCapture("sent");
+    return;
+  }
   if (action === "responses") {
-    openLeadForm({ mode: "response", onSaved: () => updateAction("responses") });
+    openActivityCapture("responded");
     return;
   }
   if (action === "phones") {
-    openLeadForm({ mode: "phone", onSaved: () => updateAction("phones") });
+    openActivityCapture("phone");
     return;
   }
   updateAction(action);
 }
+
+function recentInstagramHandles(clinicId) {
+  return [...new Set([
+    ...state.directs.filter(item => item.clinicId === clinicId).map(item => item.instagram),
+    ...state.leads.filter(item => item.clinicId === clinicId).map(item => item.instagram)
+  ].filter(Boolean))].slice(0, 80);
+}
+
+function openActivityCapture(stage, { instagram = "", phone = "", directId = null } = {}) {
+  if (!state.session) return showToast("Inicie uma sessão primeiro.");
+  const clinic = clinicById(state.session.clinicId);
+  const mode = {
+    sent: { title: "Direct enviado", subtitle: "Informe o @ para rastrear. Se estiver no ritmo, pode salvar sem preencher.", action: "directs" },
+    responded: { title: "Lead respondeu", subtitle: "O @ conecta a resposta ao direct anterior, mas continua opcional.", action: "responses" },
+    phone: { title: "Telefone captado", subtitle: "Marque somente o que conseguiu qualificar e entregue à Hunter.", action: "phones" }
+  }[stage];
+  const direct = directId ? state.directs.find(item => item.id === directId) : null;
+  const prefilledInstagram = instagram || direct?.instagram || "";
+  const lead = prefilledInstagram && instagramHandle(prefilledInstagram) !== "@"
+    ? state.leads.find(item => item.clinicId === clinic.id && instagramHandle(item.instagram) === instagramHandle(prefilledInstagram))
+    : null;
+  const handles = recentInstagramHandles(clinic.id);
+  openSheet(`<h2 class="sheet-title">${mode.title}</h2><p class="sheet-subtitle">${mode.subtitle}</p>
+    <form class="sheet-form" id="activity-capture-form">
+      <div class="field"><label for="activity-instagram">Instagram <span class="optional">(opcional)</span></label>
+        <input id="activity-instagram" list="activity-instagram-options" value="${escapeHtml(prefilledInstagram)}" placeholder="@usuario ou link">
+        <datalist id="activity-instagram-options">${handles.map(handle => `<option value="${escapeHtml(handle)}"></option>`).join("")}</datalist>
+      </div>
+      ${stage === "phone" ? `
+        ${field("activity-phone", "WhatsApp", phone || lead?.whatsapp, false, "tel", "(00) 00000-0000")}
+        <div class="qualification-block compact-qualification">
+          <div class="qualification-heading"><span class="material-symbols-outlined">fact_check</span><div><strong>Contexto para a Hunter</strong><small>Opcional. Marque apenas o que já foi conversado.</small></div></div>
+          ${field("lead-interest", "Procedimento de interesse", lead?.interest, false, "text", "Ex.: Botox")}
+          <div class="field"><label for="lead-temperature">Temperatura</label><select id="lead-temperature">
+            <option value="cold" ${lead?.temperature === "cold" ? "selected" : ""}>Frio</option>
+            <option value="warm" ${(!lead?.temperature || lead?.temperature === "warm") ? "selected" : ""}>Morno</option>
+            <option value="hot" ${lead?.temperature === "hot" ? "selected" : ""}>Quente</option>
+          </select></div>
+          ${qualificationChecklist(lead || {})}
+        </div>` : ""}
+      <button class="secondary-button" type="submit" data-send="false">${stage === "phone" ? "Salvar sem enviar" : "Registrar ação"}</button>
+      ${stage === "phone" ? `<button class="primary-button victory-button" type="submit" data-send="true">🎉 Salvar e enviar para ${escapeHtml(clinic.hunter || "Hunter")}</button>` : ""}
+    </form>`, () => {
+    $("#activity-instagram").addEventListener("blur", event => {
+      if (event.target.value.trim()) event.target.value = instagramHandle(event.target.value);
+    });
+    $$("[data-copy-bant]").forEach(button => button.addEventListener("click", async () => {
+      const group = qualificationGroups.find(item => item.key === button.dataset.copyBant);
+      await navigator.clipboard.writeText(group.prompt);
+      showToast(`Pergunta ${group.key} copiada`);
+    }));
+    $$("[id^='qualification-']").forEach(input => input.addEventListener("change", () => {
+      const progress = qualificationProgress(readQualification());
+      $("#bant-progress-label").textContent = `${progress.done} de ${progress.total} pontos alinhados`;
+      $("#bant-progress-bar").style.width = `${progress.percent}%`;
+    }));
+    $("#activity-capture-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const shouldSend = event.submitter?.dataset.send === "true";
+      const rawInstagram = $("#activity-instagram").value.trim();
+      const normalizedInstagram = rawInstagram ? instagramHandle(rawInstagram) : "";
+      const capturedPhone = stage === "phone" ? phoneDigits($("#activity-phone").value) : "";
+      const now = new Date().toISOString();
+      const result = normalizedInstagram
+        ? recordDirectProgress({
+          clinicId: clinic.id,
+          instagram: normalizedInstagram,
+          stage,
+          at: now,
+          phone: capturedPhone,
+          source: "manual_web",
+          sessionId: state.session.id
+        })
+        : { direct: null, lead: null };
+      if (stage === "phone" && result.lead) {
+        result.lead.interest = $("#lead-interest").value.trim();
+        result.lead.temperature = $("#lead-temperature").value;
+        result.lead.qualification = readQualification();
+      }
+      updateAction(mode.action);
+      persist();
+      renderLeads();
+      renderDirectHistory();
+      closeSheet();
+      if (stage === "phone" && shouldSend) {
+        if (!result.lead) return showToast("Salvo. Informe um @ para preparar a entrega à Hunter.");
+        if (!capturedPhone) return showToast("Salvo. Adicione o telefone antes de abrir o WhatsApp da Hunter.");
+        result.lead.status = "sent_to_hunter";
+        result.lead.sentToHunterAt ||= now;
+        result.lead.timeline.push({ at: now, label: `Encaminhado para ${clinic.hunter}` });
+        persist();
+        renderDashboard();
+        openHunterWhatsApp(result.lead);
+        return;
+      }
+      showToast(normalizedInstagram ? `${mode.title} · ${normalizedInstagram}` : `${mode.title} registrado sem perfil`);
+    });
+  });
+}
 async function finishSession() {
   if (!state.session) return;
   const endedAt = new Date();
-  const completed = { ...state.session, endedAt: endedAt.toISOString(), durationSeconds: Math.max(1, Math.floor((endedAt - new Date(state.session.startedAt)) / 1000)) };
+  const completed = { ...state.session, endedAt: endedAt.toISOString(), durationSeconds: Math.max(1, activeSessionElapsed(state.session)), paused: true, resumedAt: null };
   state.sessions.push(completed);
   await dataGateway.saveSession?.(completed);
   persist(); clearInterval(state.timerId); state.session = null; state.lastAction = null;
   $("#session-empty").classList.remove("hidden"); $("#session-active").classList.add("hidden");
   $$("[data-action] strong").forEach(node => node.textContent = "0");
-  renderDashboard(); renderReport(); renderSessionClinicTracker(); showToast("Sessão salva no histórico");
+  renderDashboard(); renderReport(); renderSessionClinicTracker(); renderDirectHistory(); showToast("Sessão salva no histórico");
 }
 
 function openAdjustCounts() {
@@ -906,7 +1288,7 @@ function field(id, label, value = "", required = false, type = "text", placehold
 function qualificationChecklist(lead = {}) {
   const progress = qualificationProgress(lead.qualification);
   return `<div class="bant-progress">
-      <div><strong id="bant-progress-label">${progress.done} de ${progress.total} pontos alinhados</strong><small>BANT completo antes de pedir o telefone</small></div>
+      <div><strong id="bant-progress-label">${progress.done} de ${progress.total} pontos alinhados</strong><small>Preencha somente o que descobriu</small></div>
       <span><i id="bant-progress-bar" style="width:${progress.percent}%"></i></span>
     </div>
     <div class="qualification-checklist">${qualificationGroups.map(group => `
@@ -961,11 +1343,11 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
         </select></div>
         ${qualificationChecklist(lead)}
       </div>
-      ${isPhone ? `<div class="phone-gate ${initialBant.complete ? "complete" : ""}" id="phone-gate"><span class="material-symbols-outlined">${initialBant.complete ? "verified" : "lock"}</span><p><strong>${initialBant.complete ? "Qualificação concluída" : "Telefone protegido pelo BANT"}</strong><small>${initialBant.complete ? "Agora salve o número e comemore a entrega." : "Marque os 8 pontos acima para liberar o telefone."}</small></p></div>` : ""}
-      ${isPhone ? field("lead-phone", "WhatsApp liberado para entrega", lead.whatsapp, true, "tel", "(00) 00000-0000") : ""}
+      ${isPhone ? `<div class="phone-gate ${initialBant.complete ? "complete" : ""}" id="phone-gate"><span class="material-symbols-outlined">${initialBant.complete ? "verified" : "fact_check"}</span><p><strong>${initialBant.complete ? "Contexto completo" : "BANT é um guia, não uma trava"}</strong><small>${initialBant.complete ? "A Hunter receberá toda a pré-qualificação." : "Marque o que conseguiu descobrir e envie mesmo com contexto mínimo."}</small></p></div>` : ""}
+      ${isPhone ? field("lead-phone", "WhatsApp para entrega", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
       ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
       ${isPhone ? "" : `<div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>`}
-      <button class="primary-button ${isPhone ? "victory-button" : ""}" id="lead-submit" type="submit" ${isPhone && !initialBant.complete ? "disabled" : ""}>${submitLabel}</button>
+      <button class="primary-button ${isPhone ? "victory-button" : ""}" id="lead-submit" type="submit">${submitLabel}</button>
     </form>`, () => {
     $("#lead-instagram").addEventListener("blur", event => { event.target.value = instagramHandle(event.target.value); });
     const updateBantGate = () => {
@@ -973,10 +1355,8 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       $("#bant-progress-label").textContent = `${progress.done} de ${progress.total} pontos alinhados`;
       $("#bant-progress-bar").style.width = `${progress.percent}%`;
       if (!isPhone) return;
-      $("#lead-phone").disabled = !progress.complete;
-      $("#lead-submit").disabled = !progress.complete;
       $("#phone-gate").classList.toggle("complete", progress.complete);
-      $("#phone-gate").innerHTML = `<span class="material-symbols-outlined">${progress.complete ? "verified" : "lock"}</span><p><strong>${progress.complete ? "Qualificação concluída" : "Telefone protegido pelo BANT"}</strong><small>${progress.complete ? "Agora salve o número e comemore a entrega." : `Faltam ${progress.total - progress.done} pontos para liberar o telefone.`}</small></p>`;
+      $("#phone-gate").innerHTML = `<span class="material-symbols-outlined">${progress.complete ? "verified" : "fact_check"}</span><p><strong>${progress.complete ? "Contexto completo" : "BANT é um guia, não uma trava"}</strong><small>${progress.complete ? "A Hunter receberá toda a pré-qualificação." : `${progress.done} pontos serão enviados; complete apenas o que souber.`}</small></p>`;
     };
     $$("[id^='qualification-']").forEach(input => input.addEventListener("change", updateBantGate));
     $$("[data-copy-bant]").forEach(button => button.addEventListener("click", async () => {
@@ -987,10 +1367,6 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
     updateBantGate();
     $("#lead-form").addEventListener("submit", event => {
       event.preventDefault();
-      if (isPhone && !qualificationProgress(readQualification()).complete) {
-        showToast("Conclua o BANT antes de pedir o telefone.");
-        return;
-      }
       const clinicId = $("#lead-clinic").value;
       const instagram = instagramHandle($("#lead-instagram").value);
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
@@ -1000,10 +1376,6 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       const now = new Date().toISOString();
       const status = fixedStatus || $("#lead-status").value;
       const shouldSend = isPhone || (status === "sent_to_hunter" && !record.sentToHunterAt);
-      if (shouldSend && !qualificationProgress(readQualification()).complete) {
-        showToast("Conclua o BANT antes de enviar para a closer.");
-        return;
-      }
       record.timeline ||= [];
       Object.assign(record, {
         name: $("#lead-name").value.trim(), instagram,
@@ -1047,7 +1419,7 @@ function openLeadDetail(leadId) {
     const checked = group.items.filter(([key]) => lead.qualification?.[key]);
     return `<section class="bant-summary-group"><span>${group.key}</span><div><strong>${group.title}</strong>${checked.length ? checked.map(([, label]) => `<small>✓ ${escapeHtml(label)}</small>`).join("") : "<small>Ainda não explorado</small>"}</div></section>`;
   }).join("");
-  const canSend = lead.whatsapp && !lead.sentToHunterAt && progress.complete;
+  const canSend = lead.whatsapp && !lead.sentToHunterAt;
   const hunterTracking = lead.sentToHunterAt ? `<div class="hunter-tracking">
       <div><span class="material-symbols-outlined">${lead.status === "attended" ? "verified" : lead.status === "no_show" ? "event_busy" : lead.status === "scheduled" ? "event_available" : "hourglass_top"}</span>
         <p><strong>Retorno da Hunter</strong><small>${lead.status === "attended" ? "Paciente compareceu" : lead.status === "no_show" ? "Paciente não compareceu" : lead.status === "scheduled" ? `Agendado para ${formatDate(lead.scheduledAt, true)}` : "Aguardando confirmação do agendamento"}</small></p>
@@ -1065,10 +1437,9 @@ function openLeadDetail(leadId) {
     ${hunterTracking}
     <div class="detail-actions"><button class="secondary-button" id="edit-lead">Editar</button><button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
     <h3 class="timeline-title">Histórico resumido</h3><div class="timeline">${[...(lead.timeline || [])].reverse().map(item => `<div><i></i><span><strong>${escapeHtml(item.label)}</strong><small>${formatDate(item.at, true)}</small></span></div>`).join("")}</div>
-    ${canSend ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : lead.whatsapp && !lead.sentToHunterAt ? `<button class="secondary-button" id="complete-bant">Concluir BANT para enviar</button>` : ""}`, () => {
+    ${canSend ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}`, () => {
     $("#edit-lead").addEventListener("click", () => openLeadForm({ leadId }));
     $("#contact-lead").addEventListener("click", () => window.open(`https://instagram.com/${lead.instagram.replace("@", "")}`, "_blank", "noopener"));
-    $("#complete-bant")?.addEventListener("click", () => openLeadForm({ leadId }));
     $("#hunter-update")?.addEventListener("click", () => openHunterUpdate(leadId));
     $("#send-hunter")?.addEventListener("click", () => { lead.status = "sent_to_hunter"; lead.sentToHunterAt = new Date().toISOString(); lead.timeline.push({ at: lead.sentToHunterAt, label: `Enviado para ${clinic.hunter}` }); persist(); renderLeads(); renderDashboard(); openHunterWhatsApp(lead); });
   });
@@ -1117,10 +1488,13 @@ function saveAttendanceOutcome(lead, outcome) {
 function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
   if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
-  if (!isBantComplete(lead)) return showToast("Conclua o BANT antes de enviar para a closer.");
   const temperature = { hot: "🔥 Quente", warm: "🌤️ Morno", cold: "❄️ Frio" }[lead.temperature] || "Não avaliada";
-  const aligned = qualificationGroups.map(group => `*${group.key} · ${group.title}*\n${group.items.map(([key, label]) => `${lead.qualification?.[key] ? "✅" : "▫️"} ${label}`).join("\n")}`).join("\n\n");
-  const message = `🎉 *NOVA OPORTUNIDADE QUALIFICADA!*\n\nBoa, ${clinic.hunter}! A pré-qualificação da *${clinic.name}* foi concluída e esse contato está pronto para você assumir. 🚀\n\n👤 *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Não informado"}\n• Temperatura: ${temperature}\n\n🧭 *BANT · o que já foi conversado*\n${aligned}\n\n✨ Pode seguir para o agendamento sem repetir a abordagem inicial.\n\n📅 Captado em ${formatDate(lead.prospectedAt, true)}`;
+  const alignedGroups = qualificationGroups.map(group => {
+    const checked = group.items.filter(([key]) => lead.qualification?.[key]);
+    return checked.length ? `*${group.key} · ${group.title}*\n${checked.map(([, label]) => `✅ ${label}`).join("\n")}` : "";
+  }).filter(Boolean);
+  const aligned = alignedGroups.length ? alignedGroups.join("\n\n") : "▫️ Contexto mínimo — seguir a qualificação na conversa.";
+  const message = `🎉 *NOVA OPORTUNIDADE PARA VOCÊ!*\n\nBoa, ${clinic.hunter}! A *${clinic.name}* recebeu um novo contato para você assumir. 🚀\n\n👤 *Lead*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram || "Não informado"}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n🧭 *O que a social seller conseguiu alinhar*\n${aligned}\n\n✨ Continue a qualificação a partir daqui e avance para o agendamento.\n\n📅 Captado em ${formatDate(lead.prospectedAt, true)}`;
   showToast("🎉 Lead qualificado e mensagem preparada!");
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
@@ -1460,7 +1834,9 @@ $("#open-instagram").addEventListener("click", () => { const clinic = clinicById
 $("#quick-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
 $("#new-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
 $("#lead-search").addEventListener("input", renderLeads);
-$$("[data-status]").forEach(button => button.addEventListener("click", () => { $$("[data-status]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.leadFilter = button.dataset.status; renderLeads(); }));
+$("#lead-priority-filter").addEventListener("change", event => { state.priorityFilter = event.target.value; renderLeads(); });
+$("#kanban-prev").addEventListener("click", () => $("#lead-kanban").scrollBy({ left: -Math.max(280, $("#lead-kanban").clientWidth * .86), behavior: "smooth" }));
+$("#kanban-next").addEventListener("click", () => $("#lead-kanban").scrollBy({ left: Math.max(280, $("#lead-kanban").clientWidth * .86), behavior: "smooth" }));
 $$("[data-followup-filter]").forEach(button => button.addEventListener("click", () => { $$("[data-followup-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.followupFilter = button.dataset.followupFilter; renderFollowups(); }));
 $("#sheet-close").addEventListener("click", closeSheet);
 $("#sheet-backdrop").addEventListener("click", event => { if (event.target === $("#sheet-backdrop")) closeSheet(); });

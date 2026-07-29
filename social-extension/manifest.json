@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Munnius Social Assistant",
   "short_name": "Social",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Acompanha a rotina de social selling no Instagram Web e organiza as ações em um painel lateral.",
   "minimum_chrome_version": "114",
   "permissions": [
