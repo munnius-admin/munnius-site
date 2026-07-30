@@ -1,4 +1,4 @@
-:root{--ink:#172521;--muted:#71807a;--cream:#f7f5f0;--card:#fff;--line:#e8e7e1;--green:#1f6b57;--green-dark:#174e42;--green-soft:#e5f1eb;--plum:#75566f;--coral:#df765f;--amber:#dda94c;--shadow:0 12px 40px rgba(34,51,45,.08);font-family:"DM Sans",sans-serif;color:var(--ink);background:var(--cream)}
+:root{--ink:#2d2a1f;--muted:#756f5c;--cream:#faf6e8;--card:#fffdf6;--line:#e5dcc1;--green:#765f1c;--green-dark:#4b3d14;--green-soft:#f3e6ad;--plum:#836a73;--coral:#c87358;--amber:#c99b2f;--shadow:0 12px 40px rgba(71,61,31,.1);font-family:"DM Sans",sans-serif;color:var(--ink);background:var(--cream)}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream)}button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid rgba(31,107,87,.48);outline-offset:2px}
 .auth-screen{position:relative;isolation:isolate;overflow:hidden;min-height:100dvh;max-width:520px;margin:auto;padding:max(28px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;background:linear-gradient(145deg,#fbf8f1 0%,#edf4ee 58%,#dcebe3 100%)}
@@ -253,4 +253,82 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   .report-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
   .report-actions-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .report-efficiency-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+
+/* Refinamento final — paleta solar, contenção e ações rápidas do CRM */
+:root{
+  --surface:#fffdf6;
+  --surface-soft:#f8efcc;
+  --surface-warm:#f4e8bd;
+  --ink-soft:#4c4633;
+  --shadow-soft:0 8px 30px rgba(71,61,31,.07);
+  --shadow-lift:0 16px 44px rgba(71,61,31,.12);
+}
+body{background:#faf6e8}
+.app-shell{
+  background-color:#faf6e8;
+  background-image:
+    linear-gradient(115deg,rgba(118,95,28,.025) 0,rgba(118,95,28,.025) 1px,transparent 1px,transparent 18px),
+    linear-gradient(25deg,rgba(131,106,115,.018) 0,rgba(131,106,115,.018) 1px,transparent 1px,transparent 24px);
+}
+.app-shell:before{background:radial-gradient(circle,rgba(226,197,104,.19),transparent 70%)}
+.app-shell:after{background:radial-gradient(circle,rgba(131,106,115,.08),transparent 72%)}
+.topbar{background:rgba(250,246,232,.88);border-bottom-color:rgba(216,204,164,.62)}
+.app-mark{border-color:rgba(118,95,28,.14);background:rgba(255,253,246,.82);box-shadow:0 6px 18px rgba(93,75,24,.07)}
+.avatar-button{background:linear-gradient(145deg,#8f7323,#5e4b18);box-shadow:0 8px 20px rgba(118,95,28,.2)}
+.auth-screen{background:linear-gradient(145deg,#fffaf0 0%,#f6eabd 58%,#ead99a 100%)}
+.operation-hero{
+  color:var(--ink);
+  background:linear-gradient(135deg,#faefbf 0%,#eedb8d 63%,#dfc66e 100%);
+  box-shadow:0 18px 42px rgba(118,95,28,.17);
+}
+.operation-hero:before{background:rgba(255,255,255,.22);box-shadow:0 0 0 34px rgba(255,255,255,.08)}
+.operation-hero:after{border-color:rgba(78,63,19,.11)}
+.operation-hero .overline,.operation-hero .card-label{color:#65551c}
+.operation-hero .hero-copy>p:last-child,.hero-value-row>span{color:#6e602e;opacity:1}
+.hero-report-button{border-color:rgba(77,62,18,.16);background:rgba(255,255,255,.3);color:var(--green-dark)}
+.hero-report-button:active{background:rgba(255,255,255,.52)}
+.session-header,.profile-card{background:linear-gradient(135deg,#3d3c2d,#5c5b3d)}
+.hunter-group>header{background:linear-gradient(135deg,#4b3d14,#765f1c)}
+.clinic-card,.lead-card,.followup-card,.report-card,.kanban-lead-card,.menu-list,.clinic-option{background:rgba(255,253,246,.96)}
+.kanban-column{border-color:rgba(221,210,174,.96);background:rgba(248,242,219,.9)}
+.kanban-column-icon{background:#fffdf6;box-shadow:0 3px 10px rgba(71,61,31,.06)}
+.goals-card{border-color:rgba(118,95,28,.16);background:linear-gradient(145deg,rgba(243,230,173,.92),rgba(255,253,246,.98))}
+.goal-progress b{background:linear-gradient(90deg,#765f1c,#c99b2f)}
+.qualification-block,.priority-form-block,.hunter-tracking{border-color:#e2d4a2;background:linear-gradient(145deg,#f8edc5,#fffdf6)}
+.message-preview{border-color:#e1d29b;background:#f8edc5}
+
+.kanban-column,.kanban-cards,.kanban-lead-card,.kanban-card-top,.kanban-lead-card footer{min-width:0;max-width:100%}
+.kanban-column,.kanban-lead-card{overflow:hidden}
+.kanban-lead-card{width:100%;box-sizing:border-box}
+.kanban-card-top>.priority-dot,.kanban-card-top>.lead-temperature{flex:0 0 auto}
+.kanban-card-top>small{flex:1 1 auto}
+.kanban-lead-card footer>b{flex:0 0 auto}
+.kanban-deadline{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kanban-card-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(94px,1fr));gap:6px;margin-top:8px}
+.kanban-card-actions button{
+  min-width:0;min-height:34px;display:flex;align-items:center;justify-content:center;gap:4px;
+  overflow:hidden;border:1px solid rgba(118,95,28,.14);border-radius:10px;padding:7px 8px;
+  background:#fbf5dd;color:var(--green-dark);font-size:.52rem;font-weight:800;line-height:1.15;text-align:center;
+}
+.kanban-card-actions button.primary{background:var(--green);color:#fff}
+.kanban-card-actions .material-symbols-outlined{flex:0 0 auto;font-size:.78rem}
+
+.report-card,.report-card *{min-width:0;box-sizing:border-box}
+.report-heading>div{min-width:0}
+.report-heading h2,.report-heading p,.report-metrics span,.report-actions-grid small,.report-efficiency-grid small,.report-clinic-breakdown p small,.report-clinic-breakdown b{overflow-wrap:anywhere}
+.report-metrics>div,.report-actions-grid>div,.report-efficiency-grid>div{overflow:hidden}
+.report-actions-grid small{min-height:2.5em;overflow:visible;text-overflow:clip;white-space:normal;line-height:1.25}
+.report-clinic-breakdown>div{min-width:0;flex-wrap:wrap;gap:8px}
+.report-clinic-breakdown p{min-width:min(170px,100%);flex:1 1 170px}
+.report-clinic-breakdown b{max-width:100%;margin-left:auto;text-align:right;white-space:normal}
+.report-footer{flex-wrap:wrap;align-items:flex-start}
+.report-footer>*{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.report-actions-grid .material-symbols-outlined{color:var(--green)}
+.report-efficiency-grid>div{border-color:rgba(118,95,28,.14);background:#f8edc5}
+
+@media(max-width:359px){
+  .kanban-column{min-width:calc(100vw - 34px);width:calc(100vw - 34px)}
+  .report-heading{flex-wrap:wrap}
+  .report-metrics{grid-template-columns:1fr}
 }

@@ -5,3 +5,9 @@ window.MUNNIUS_SOCIAL_CONFIG = {
   appUrl: "https://social.munnius.com.br/",
   googleEnabled: false,
 };
+
+// Mantém a prévia local independente do projeto remoto e dos dados reais.
+if (["127.0.0.1", "localhost"].includes(location.hostname)) {
+  window.MUNNIUS_SOCIAL_CONFIG.supabaseUrl = "";
+  window.MUNNIUS_SOCIAL_CONFIG.supabaseAnonKey = "";
+}

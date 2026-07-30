@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=20";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=21";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -73,9 +73,9 @@ const seed = {
   version: 3,
   profile: { name: "Usuário", initials: "US", role: "social_seller" },
   clinics: [
-    { id: "bella", name: "Clínica Bella", doctor: "Dra. Beatriz", instagram: "@clinicabella", hunter: "Ana", hunterPhone: "5541999990001", protocol: "Glow", location: "Curitiba, PR", evaluationPrice: 300, trafficInvestment: 6000, priority: "A", target: 8, color: "#75566f", active: true },
-    { id: "aura", name: "Instituto Aura", doctor: "Dra. Camila", instagram: "@institutoaura", hunter: "Marina", hunterPhone: "5541999990002", protocol: "Aura Natural", location: "São Paulo, SP", evaluationPrice: 250, trafficInvestment: 4000, priority: "B", target: 6, color: "#df765f", active: true },
-    { id: "leve", name: "Clínica Leve", doctor: "Dra. Renata", instagram: "@clinicaleve", hunter: "Clara", hunterPhone: "5541999990003", protocol: "Leve Face", location: "Belo Horizonte, MG", evaluationPrice: 280, trafficInvestment: 2500, priority: "C", target: 5, color: "#1f6b57", active: true }
+    { id: "bella", name: "Clínica Bella", doctor: "Dra. Beatriz", instagram: "@clinicabella", hunter: "Ana", hunterPhone: "5541999990001", protocol: "Glow", location: "Curitiba, PR", evaluationPrice: 300, trafficInvestment: 6000, priority: "A", target: 8, color: "#836a73", active: true },
+    { id: "aura", name: "Instituto Aura", doctor: "Dra. Camila", instagram: "@institutoaura", hunter: "Marina", hunterPhone: "5541999990002", protocol: "Aura Natural", location: "São Paulo, SP", evaluationPrice: 250, trafficInvestment: 4000, priority: "B", target: 6, color: "#c87358", active: true },
+    { id: "leve", name: "Clínica Leve", doctor: "Dra. Renata", instagram: "@clinicaleve", hunter: "Clara", hunterPhone: "5541999990003", protocol: "Leve Face", location: "Belo Horizonte, MG", evaluationPrice: 280, trafficInvestment: 2500, priority: "C", target: 5, color: "#765f1c", active: true }
   ],
   leads: [
     { id: "lead-1", name: "Mariana Costa", instagram: "@maricosta", whatsapp: "", clinicId: "bella", status: "talking", interest: "Harmonização facial", location: "Curitiba", temperature: "warm", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: null, timeline: [{ at: new Date().toISOString(), label: "Primeiro contato realizado" }] },
@@ -963,6 +963,22 @@ function renderLeads() {
     </section>`;
   }).join("");
   $$("[data-lead]").forEach(card => card.addEventListener("click", () => openLeadDetail(card.dataset.lead)));
+  $$("[data-quick-responded]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    markLeadResponded(button.dataset.quickResponded);
+  }));
+  $$("[data-quick-phone]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    openLeadForm({ leadId: button.dataset.quickPhone, mode: "phone" });
+  }));
+  $$("[data-quick-hunter]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    sendLeadToHunter(button.dataset.quickHunter);
+  }));
+  $$("[data-quick-hunter-update]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    openHunterUpdate(button.dataset.quickHunterUpdate);
+  }));
   renderHunterFollowups(filtered);
 }
 
@@ -984,12 +1000,65 @@ function leadDeadlineLabel(lead) {
 function kanbanLeadCard(lead) {
   const clinic = clinicById(lead.clinicId);
   const priority = clinicPriority(clinic);
+  const canCapturePhone = ["new", "talking", "follow_up", "lost"].includes(lead.status);
+  const quickActions = [
+    ["new", "lost"].includes(lead.status)
+      ? `<button type="button" data-quick-responded="${lead.id}"><span class="material-symbols-outlined">mark_chat_read</span>Respondeu</button>`
+      : "",
+    canCapturePhone && !lead.whatsapp
+      ? `<button type="button" class="primary" data-quick-phone="${lead.id}"><span class="material-symbols-outlined">phone_in_talk</span>Adicionar telefone</button>`
+      : "",
+    canCapturePhone && lead.whatsapp
+      ? `<button type="button" class="primary" data-quick-hunter="${lead.id}"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar à Hunter</button>`
+      : "",
+    lead.status === "sent_to_hunter"
+      ? `<button type="button" class="primary" data-quick-hunter-update="${lead.id}"><span class="material-symbols-outlined">event_available</span>Adicionar agendamento</button>`
+      : "",
+    lead.status === "scheduled"
+      ? `<button type="button" class="primary" data-quick-hunter-update="${lead.id}"><span class="material-symbols-outlined">how_to_reg</span>Registrar presença</button>`
+      : ""
+  ].filter(Boolean).join("");
   return `<article class="kanban-lead-card clickable" data-lead="${lead.id}">
     <div class="kanban-card-top"><span class="priority-dot priority-${priority.key.toLowerCase()}">${priority.key}</span><small>${escapeHtml(clinic?.name || "Clínica")}</small><span class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Frio"}</span></div>
     <strong>${escapeHtml(lead.name || lead.instagram || "Lead sem nome")}</strong>
     <span>${escapeHtml(lead.instagram || "Instagram não informado")}${lead.interest ? ` · ${escapeHtml(lead.interest)}` : ""}</span>
-    <footer><span class="material-symbols-outlined">hourglass_bottom</span>${leadDeadlineLabel(lead)}<b class="material-symbols-outlined">chevron_right</b></footer>
+    <footer><span class="material-symbols-outlined">hourglass_bottom</span><span class="kanban-deadline">${leadDeadlineLabel(lead)}</span><b class="material-symbols-outlined">chevron_right</b></footer>
+    ${quickActions ? `<div class="kanban-card-actions">${quickActions}</div>` : ""}
   </article>`;
+}
+
+function markLeadResponded(leadId) {
+  const lead = leadById(leadId);
+  if (!lead) return;
+  const now = new Date().toISOString();
+  lead.status = "talking";
+  lead.respondedAt ||= now;
+  lead.lastContactAt = now;
+  lead.timeline ||= [];
+  lead.timeline.push({ at: now, label: "Lead respondeu ao direct" });
+  persist();
+  renderDashboard();
+  renderLeads();
+  renderReport();
+  showToast(`${lead.instagram || lead.name} avançou para Conversando`);
+}
+
+function sendLeadToHunter(leadId) {
+  const lead = leadById(leadId);
+  if (!lead) return;
+  if (!lead.whatsapp) return openLeadForm({ leadId, mode: "phone" });
+  const clinic = clinicById(lead.clinicId);
+  const now = new Date().toISOString();
+  lead.status = "sent_to_hunter";
+  lead.sentToHunterAt ||= now;
+  lead.lastContactAt = now;
+  lead.timeline ||= [];
+  lead.timeline.push({ at: now, label: `Encaminhado para ${clinic?.hunter || "Hunter"}` });
+  persist();
+  renderDashboard();
+  renderLeads();
+  renderReport();
+  openHunterWhatsApp(lead);
 }
 
 function renderHunterFollowups(filteredLeads = state.leads) {
@@ -1402,7 +1471,7 @@ function openClinicForm(clinicId = null) {
         hunterPhone: phoneDigits($("#clinic-hunter-phone").value), protocol: $("#clinic-protocol").value.trim(),
         location: $("#clinic-location").value.trim(), evaluationPrice: Number($("#clinic-price").value || 0),
         trafficInvestment, priority: priorityFromInvestment(trafficInvestment),
-        color: clinic.color || ["#75566f", "#df765f", "#1f6b57", "#dda94c"][state.clinics.length % 4], active: true
+        color: clinic.color || ["#836a73", "#c87358", "#765f1c", "#c99b2f"][state.clinics.length % 4], active: true
       };
       if (edit) Object.assign(clinic, record); else state.clinics.push(record);
       persist(); renderClinics(); closeSheet(); showToast(edit ? "Clínica atualizada" : "Clínica cadastrada");
@@ -1459,7 +1528,7 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
   const isPhone = mode === "phone";
   const isResponse = mode === "response";
   const fixedStatus = isPhone ? "sent_to_hunter" : isResponse ? "talking" : null;
-  const title = edit ? "Editar lead" : isPhone ? "Telefone captado" : isResponse ? "Lead respondeu" : "Lead mapeado";
+  const title = isPhone ? "Telefone captado" : isResponse ? "Lead respondeu" : edit ? "Editar lead" : "Lead mapeado";
   const submitLabel = isPhone ? "🎉 Salvar e enviar para closer" : edit ? "Salvar alterações" : isResponse ? "Salvar em Conversando" : "Salvar lead";
   const initialBant = qualificationProgress(lead.qualification);
   openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Conclua a pré-qualificação e entregue a oportunidade sem a closer repetir perguntas." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
@@ -1707,18 +1776,102 @@ function canvasImage(src) {
   });
 }
 
-function canvasMetric(ctx, x, y, value, label, tone = "#1f6b57", width = 282) {
-  canvasRoundedRect(ctx, x, y, width, 106, 20, "#f7f8f5", "#e2e7e1");
+function canvasFitText(ctx, text, x, y, maxWidth, { size = 16, minSize = 11, weight = 500, color = null, align = "left" } = {}) {
+  let currentSize = size;
+  ctx.textAlign = align;
+  ctx.font = `${weight} ${currentSize}px Arial`;
+  while (currentSize > minSize && ctx.measureText(String(text)).width > maxWidth) {
+    currentSize -= 1;
+    ctx.font = `${weight} ${currentSize}px Arial`;
+  }
+  let fitted = String(text);
+  if (ctx.measureText(fitted).width > maxWidth) {
+    while (fitted.length > 1 && ctx.measureText(`${fitted}…`).width > maxWidth) fitted = fitted.slice(0, -1);
+    fitted = `${fitted}…`;
+  }
+  if (color) ctx.fillStyle = color;
+  ctx.fillText(fitted, x, y);
+  ctx.textAlign = "left";
+}
+
+function canvasActivityIcon(ctx, type, x, y, tone) {
+  ctx.save();
+  ctx.strokeStyle = tone;
   ctx.fillStyle = tone;
-  ctx.beginPath();
-  ctx.arc(x + 24, y + 27, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#172521";
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (type === "heart") {
+    ctx.beginPath();
+    ctx.moveTo(x + 9, y + 17);
+    ctx.bezierCurveTo(x - 2, y + 9, x + 2, y, x + 9, y + 5);
+    ctx.bezierCurveTo(x + 16, y, x + 20, y + 9, x + 9, y + 17);
+    ctx.stroke();
+  } else if (type === "chat") {
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + 3);
+    ctx.lineTo(x + 16, y + 3);
+    ctx.quadraticCurveTo(x + 19, y + 3, x + 19, y + 6);
+    ctx.lineTo(x + 19, y + 13);
+    ctx.quadraticCurveTo(x + 19, y + 16, x + 16, y + 16);
+    ctx.lineTo(x + 8, y + 16);
+    ctx.lineTo(x + 4, y + 20);
+    ctx.lineTo(x + 4, y + 16);
+    ctx.lineTo(x + 2, y + 16);
+    ctx.quadraticCurveTo(x - 1, y + 16, x - 1, y + 13);
+    ctx.lineTo(x - 1, y + 6);
+    ctx.quadraticCurveTo(x - 1, y + 3, x + 2, y + 3);
+    ctx.stroke();
+  } else if (type === "send") {
+    ctx.beginPath();
+    ctx.moveTo(x, y + 4);
+    ctx.lineTo(x + 20, y);
+    ctx.lineTo(x + 13, y + 20);
+    ctx.lineTo(x + 9, y + 11);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 9, y + 11);
+    ctx.lineTo(x + 20, y);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + 4);
+    ctx.lineTo(x + 15, y + 4);
+    ctx.quadraticCurveTo(x + 18, y + 4, x + 18, y + 7);
+    ctx.lineTo(x + 18, y + 13);
+    ctx.quadraticCurveTo(x + 18, y + 16, x + 15, y + 16);
+    ctx.lineTo(x + 8, y + 16);
+    ctx.lineTo(x + 4, y + 20);
+    ctx.lineTo(x + 4, y + 16);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 6, y + 10);
+    ctx.lineTo(x + 9, y + 13);
+    ctx.lineTo(x + 14, y + 8);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function canvasMetric(ctx, x, y, value, label, tone = "#765f1c", width = 282, icon = null) {
+  canvasRoundedRect(ctx, x, y, width, 106, 20, "#fffaf0", "#eadfb9");
+  if (icon) canvasActivityIcon(ctx, icon, x + 16, y + 16, tone);
+  else {
+    ctx.fillStyle = tone;
+    ctx.beginPath();
+    ctx.arc(x + 24, y + 27, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#2d2a1f";
   ctx.font = "700 40px Arial";
   ctx.fillText(String(value), x + 24, y + 70);
-  ctx.fillStyle = "#708079";
-  ctx.font = width < 250 ? "500 16px Arial" : "500 20px Arial";
-  ctx.fillText(label, x + 82, y + 64);
+  canvasFitText(ctx, label, x + 82, y + 64, width - 98, {
+    size: width < 250 ? 16 : 20,
+    minSize: 11,
+    weight: 500,
+    color: "#756f5c"
+  });
 }
 
 async function exportReport(share = false) {
@@ -1740,21 +1893,21 @@ async function exportReport(share = false) {
   const ctx = canvas.getContext("2d");
 
   const background = ctx.createLinearGradient(0, 0, 1080, canvas.height);
-  background.addColorStop(0, "#eef3ef");
-  background.addColorStop(.48, "#f6f3ed");
-  background.addColorStop(1, "#e9efeb");
+  background.addColorStop(0, "#f4e7b5");
+  background.addColorStop(.48, "#fbf7ec");
+  background.addColorStop(1, "#eee2bd");
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "rgba(31,107,87,.07)";
+  ctx.fillStyle = "rgba(118,95,28,.08)";
   ctx.beginPath(); ctx.arc(1030, 90, 245, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "rgba(117,86,111,.045)";
+  ctx.fillStyle = "rgba(131,106,115,.05)";
   ctx.beginPath(); ctx.arc(40, canvas.height - 60, 225, 0, Math.PI * 2); ctx.fill();
 
   ctx.save();
   ctx.shadowColor = "rgba(27,55,46,.12)";
   ctx.shadowBlur = 42;
   ctx.shadowOffsetY = 18;
-  canvasRoundedRect(ctx, 44, 38, 992, canvas.height - 76, 42, "#fffefa");
+  canvasRoundedRect(ctx, 44, 38, 992, canvas.height - 76, 42, "#fffdf6");
   ctx.restore();
 
   try {
@@ -1764,30 +1917,30 @@ async function exportReport(share = false) {
     ctx.drawImage(mark, 84, 82, 28, 28);
     ctx.restore();
   } catch {
-    canvasRoundedRect(ctx, 85, 83, 26, 26, 8, null, "#88a198");
+    canvasRoundedRect(ctx, 85, 83, 26, 26, 8, null, "#a6904b");
   }
-  ctx.fillStyle = "#688078";
+  ctx.fillStyle = "#8a762f";
   ctx.font = "700 15px Arial";
   ctx.letterSpacing = "2px";
   ctx.fillText("RELATÓRIO DE OPERAÇÃO", 132, 101);
   ctx.letterSpacing = "0px";
-  ctx.fillStyle = "#172521";
+  ctx.fillStyle = "#2d2a1f";
   ctx.font = "700 62px Arial";
   ctx.fillText($("#report-label").textContent, 82, 190);
-  ctx.fillStyle = "#71807a";
+  ctx.fillStyle = "#756f5c";
   ctx.font = "400 22px Arial";
   ctx.fillText($("#report-date").textContent, 84, 234);
-  canvasRoundedRect(ctx, 820, 82, 160, 42, 21, "#e8f2ed");
-  ctx.fillStyle = "#1f6b57";
+  canvasRoundedRect(ctx, 820, 82, 160, 42, 21, "#f2e6b8");
+  ctx.fillStyle = "#765f1c";
   ctx.font = "700 17px Arial";
   ctx.textAlign = "center";
   ctx.fillText("SOCIAL SELLING", 900, 109);
   ctx.textAlign = "left";
 
   const heroGradient = ctx.createLinearGradient(74, 270, 1000, 480);
-  heroGradient.addColorStop(0, "#173e35");
-  heroGradient.addColorStop(.62, "#1f6b57");
-  heroGradient.addColorStop(1, "#3b8d73");
+  heroGradient.addColorStop(0, "#4b3d14");
+  heroGradient.addColorStop(.62, "#765f1c");
+  heroGradient.addColorStop(1, "#a4812a");
   canvasRoundedRect(ctx, 74, 270, 932, 210, 32, heroGradient);
   ctx.fillStyle = "rgba(255,255,255,.08)";
   ctx.beginPath(); ctx.arc(965, 282, 125, 0, Math.PI * 2); ctx.fill();
@@ -1808,36 +1961,36 @@ async function exportReport(share = false) {
     ctx.fillText(String(value), x, 390);
     ctx.fillStyle = "rgba(255,255,255,.68)";
     ctx.font = "500 14px Arial";
-    ctx.fillText(label, x, 425);
+    canvasFitText(ctx, label, x, 425, 152, { size: 14, minSize: 11, weight: 500, color: "rgba(255,255,255,.72)" });
   });
 
-  ctx.fillStyle = "#172521";
+  ctx.fillStyle = "#2d2a1f";
   ctx.font = "700 24px Arial";
   ctx.fillText("Atividade da operação", 82, 535);
-  ctx.fillStyle = "#829089";
+  ctx.fillStyle = "#8a836e";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
   ctx.fillText("Esforço registrado", 998, 535);
   ctx.textAlign = "left";
   const activityMetrics = [
-    [stats.likes, "Curtidas", "#d9686f"],
-    [stats.comments, "Comentários", "#4b75a9"],
-    [stats.directs, "Directs", "#6b61b3"],
-    [stats.responses, "Directs respondidos", "#c08732"]
+    [stats.likes, "Curtidas", "#c36e5d", "heart"],
+    [stats.comments, "Comentários", "#806273", "chat"],
+    [stats.directs, "Directs", "#826f2c", "send"],
+    [stats.responses, "Directs respondidos", "#5c755e", "reply"]
   ];
-  activityMetrics.forEach(([value, label, tone], index) => {
+  activityMetrics.forEach(([value, label, tone, icon], index) => {
     const x = 82 + index * 229;
-    canvasMetric(ctx, x, 560, value, label, tone, 214);
+    canvasMetric(ctx, x, 560, value, label, tone, 214, icon);
   });
 
-  ctx.fillStyle = "#172521";
+  ctx.fillStyle = "#2d2a1f";
   ctx.font = "700 24px Arial";
   ctx.fillText("Eficiência do funil", 82, 720);
-  canvasRoundedRect(ctx, 82, 744, 916, 142, 24, "#eff5f1");
-  ctx.fillStyle = "#71807a";
+  canvasRoundedRect(ctx, 82, 744, 916, 142, 24, "#f8edc5");
+  ctx.fillStyle = "#756f5c";
   ctx.font = "500 15px Arial";
   ctx.fillText("Percentuais de avanço entre as etapas", 112, 778);
-  ctx.strokeStyle = "#d7e3dc";
+  ctx.strokeStyle = "#e5d7a6";
   ctx.beginPath(); ctx.moveTo(112, 796); ctx.lineTo(968, 796); ctx.stroke();
   const efficiency = [
     [`${responseRate}%`, "Resposta / directs"],
@@ -1848,18 +2001,18 @@ async function exportReport(share = false) {
   ];
   efficiency.forEach(([value, label], index) => {
     const x = 112 + index * 174;
-    ctx.fillStyle = "#1f6b57";
+    ctx.fillStyle = "#765f1c";
     ctx.font = "700 23px Arial";
     ctx.fillText(value, x, 836);
-    ctx.fillStyle = "#71807a";
+    ctx.fillStyle = "#756f5c";
     ctx.font = "500 12px Arial";
     ctx.fillText(label, x, 861);
   });
 
-  ctx.fillStyle = "#172521";
+  ctx.fillStyle = "#2d2a1f";
   ctx.font = "700 24px Arial";
   ctx.fillText("Resultado por clínica", 82, 940);
-  ctx.fillStyle = "#829089";
+  ctx.fillStyle = "#8a836e";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
   ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 940);
@@ -1868,28 +2021,19 @@ async function exportReport(share = false) {
   if (clinicRows.length) {
     clinicRows.forEach(({ clinic, actions: clinicActions, leads, phones, qualified, scheduled, attended }, index) => {
       const y = 965 + index * 82;
-      if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fafbf8");
-      ctx.fillStyle = clinic.color || "#1f6b57";
+      if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fffaf0");
+      ctx.fillStyle = clinic.color || "#765f1c";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.font = "700 15px Arial";
       ctx.textAlign = "center";
       ctx.fillText(initials(clinic.name).slice(0, 1), 101, y + 30);
       ctx.textAlign = "left";
-      ctx.fillStyle = "#253832";
-      ctx.font = "700 19px Arial";
-      const clinicName = clinic.name.length > 30 ? `${clinic.name.slice(0, 29)}…` : clinic.name;
-      ctx.fillText(clinicName, 134, y + 21);
-      ctx.fillStyle = "#7a8782";
-      ctx.font = "400 16px Arial";
-      ctx.fillText(`${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${phones} ${phones === 1 ? "telefone" : "telefones"} · ${leads} ${leads === 1 ? "lead" : "leads"}`, 134, y + 45);
-      ctx.fillStyle = "#1f6b57";
-      ctx.font = "700 16px Arial";
-      ctx.textAlign = "right";
-      ctx.fillText(`${qualified} encaminh. · ${scheduled} agend. · ${attended} comp.`, 982, y + 32);
-      ctx.textAlign = "left";
+      canvasFitText(ctx, clinic.name, 134, y + 21, 390, { size: 19, minSize: 14, weight: 700, color: "#393424" });
+      canvasFitText(ctx, `${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${phones} ${phones === 1 ? "telefone" : "telefones"} · ${leads} ${leads === 1 ? "lead" : "leads"}`, 134, y + 45, 500, { size: 16, minSize: 12, weight: 400, color: "#7c7563" });
+      canvasFitText(ctx, `${qualified} encaminh. · ${scheduled} agend. · ${attended} comp.`, 982, y + 32, 315, { size: 16, minSize: 12, weight: 700, color: "#765f1c", align: "right" });
       if (index < clinicRows.length - 1) {
-        ctx.strokeStyle = "#e6e9e4";
+        ctx.strokeStyle = "#ebe3c8";
         ctx.beginPath(); ctx.moveTo(134, y + 74); ctx.lineTo(982, y + 74); ctx.stroke();
       }
     });
