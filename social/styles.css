@@ -234,3 +234,23 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .bant-note{display:grid;gap:5px;margin-top:8px}.bant-note span{color:var(--green);font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.bant-note textarea{min-height:62px;resize:vertical;border:1px solid var(--line);border-radius:11px;padding:9px 10px;background:#fbfbf8;color:var(--ink);font:inherit;font-size:.65rem;line-height:1.4;outline:0}.bant-note textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft)}.bant-summary-note{margin-top:6px!important;padding:7px 9px;border-radius:9px;background:#f3f4f0;color:#53635c!important;line-height:1.4;white-space:normal!important}
 @media(min-width:1100px){.view[data-view-panel="home"] .clinic-list,.view[data-view-panel="clinics"] .clinic-list{grid-template-columns:repeat(auto-fit,minmax(420px,1fr));width:100%}.session-day-overview{width:100%;padding:22px}.priority-group-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}.hunter-followup-list{grid-template-columns:repeat(3,minmax(0,1fr))}.report-card{padding:30px}.report-actions-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.report-clinic-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.pipeline-strip button{min-height:88px}.kanban-navigation{grid-template-columns:46px minmax(0,1fr) 46px;padding:10px 14px}.kanban-navigation button{width:46px;height:42px}.home-goals-card{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.3fr);align-items:center;gap:20px}.home-goals-card .goals-card-heading{align-items:center}.home-goals-card .goals-grid{margin-top:0}}
 @media(max-width:420px){.goals-grid{grid-template-columns:1fr}.session-clinic-row{grid-template-columns:36px minmax(0,1fr)}.session-round-button{grid-column:2;width:100%;justify-content:center}.session-clinic-copy small{white-space:normal}}
+
+/* Relatório: funil comercial limpo, sem minutagem */
+.report-brand{height:18px;margin-bottom:34px}
+.report-brand img{width:17px;height:17px;opacity:.58}
+.report-heading{margin-bottom:5px}
+.report-heading h2{margin:0 0 8px;line-height:1.08;letter-spacing:-.04em}
+.report-heading p{margin:0}
+.report-metrics{grid-template-columns:repeat(2,minmax(0,1fr));margin:22px 0}
+.report-metrics span{line-height:1.3}
+.report-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.report-efficiency-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.report-efficiency-grid>div{padding:11px;border:1px solid rgba(31,107,87,.12);border-radius:13px;background:var(--green-soft)}
+.report-efficiency-grid strong,.report-efficiency-grid small{display:block}
+.report-efficiency-grid strong{color:var(--green);font-size:1rem}
+.report-efficiency-grid small{margin-top:3px;color:var(--muted);font-size:.57rem;line-height:1.25}
+@media(min-width:760px){
+  .report-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .report-actions-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .report-efficiency-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+}

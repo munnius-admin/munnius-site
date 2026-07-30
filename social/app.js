@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=19";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=20";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -607,14 +607,80 @@ function periodStats(period = state.period || "day") {
     total.seconds += Number(session.durationSeconds || 0);
     return total;
   }, { profiles: 0, likes: 0, comments: 0, directs: 0, responses: 0, phones: 0, seconds: 0 });
+  const trackedDirects = state.directs.filter(direct => direct.sentAt && inPeriod(direct.sentAt, period)).length;
+  const trackedResponses = state.directs.filter(direct => direct.respondedAt && inPeriod(direct.respondedAt, period)).length;
+  const leadResponses = state.leads.filter(lead => lead.respondedAt && inPeriod(lead.respondedAt, period)).length;
+  const mappedPhones = state.leads.filter(lead => {
+    const mappedAt = leadPhoneMappedAt(lead);
+    return mappedAt && inPeriod(mappedAt, period);
+  }).length;
+  const qualified = state.leads.filter(lead => {
+    const qualifiedAt = leadQualifiedAt(lead);
+    return qualifiedAt && inPeriod(qualifiedAt, period);
+  }).length;
   return {
     leads: leads.length,
-    hunters: state.leads.filter(lead => lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, period)).length,
+    hunters: qualified,
     scheduled: state.leads.filter(lead => lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length,
     attended: state.leads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length,
     noShows: state.leads.filter(lead => lead.noShowAt && inPeriod(lead.noShowAt, period)).length,
     sessions,
-    ...counts
+    ...counts,
+    directs: Math.max(counts.directs, trackedDirects),
+    responses: Math.max(counts.responses, trackedResponses, leadResponses),
+    phones: Math.max(counts.phones, mappedPhones)
+  };
+}
+
+function leadPhoneMappedAt(lead) {
+  if (!phoneDigits(lead.whatsapp || "") && !lead.phoneCapturedAt) return null;
+  return lead.phoneCapturedAt || lead.sentToHunterAt || lead.respondedAt || lead.lastContactAt || lead.prospectedAt || null;
+}
+
+function leadQualifiedAt(lead) {
+  const qualifiedStatuses = ["sent_to_hunter", "scheduled", "attended", "no_show"];
+  if (!lead.sentToHunterAt && !qualifiedStatuses.includes(lead.status)) return null;
+  return lead.sentToHunterAt || lead.phoneCapturedAt || lead.scheduledAt || lead.attendedAt || lead.lastContactAt || lead.prospectedAt || null;
+}
+
+function reportActionCount(stats) {
+  return ["likes", "comments", "directs", "responses"].reduce((total, key) => total + Number(stats[key] || 0), 0);
+}
+
+function rate(part, total) {
+  return total ? Math.round(Number(part || 0) / total * 100) : 0;
+}
+
+function clinicReportStats(clinicId, period, periodSummary) {
+  const sessions = periodSummary.sessions.filter(session => session.clinicId === clinicId);
+  const sessionCounts = sessions.reduce((total, session) => {
+    Object.keys(countLabels).forEach(key => total[key] += Number(session.counts?.[key] || 0));
+    return total;
+  }, { profiles: 0, likes: 0, comments: 0, directs: 0, responses: 0, phones: 0 });
+  const clinicLeads = state.leads.filter(lead => lead.clinicId === clinicId);
+  const trackedDirects = state.directs.filter(direct => direct.clinicId === clinicId && direct.sentAt && inPeriod(direct.sentAt, period)).length;
+  const trackedResponses = state.directs.filter(direct => direct.clinicId === clinicId && direct.respondedAt && inPeriod(direct.respondedAt, period)).length;
+  const leadResponses = clinicLeads.filter(lead => lead.respondedAt && inPeriod(lead.respondedAt, period)).length;
+  const directs = Math.max(sessionCounts.directs, trackedDirects);
+  const responses = Math.max(sessionCounts.responses, trackedResponses, leadResponses);
+  const phones = Math.max(
+    sessionCounts.phones,
+    clinicLeads.filter(lead => {
+      const mappedAt = leadPhoneMappedAt(lead);
+      return mappedAt && inPeriod(mappedAt, period);
+    }).length
+  );
+  const qualified = clinicLeads.filter(lead => {
+    const qualifiedAt = leadQualifiedAt(lead);
+    return qualifiedAt && inPeriod(qualifiedAt, period);
+  }).length;
+  return {
+    actions: Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses,
+    leads: clinicLeads.filter(lead => inPeriod(lead.prospectedAt, period)).length,
+    phones,
+    qualified,
+    scheduled: clinicLeads.filter(lead => lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length,
+    attended: clinicLeads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length
   };
 }
 
@@ -999,24 +1065,25 @@ function renderFollowups() {
 
 function renderReport() {
   const stats = periodStats(state.reportPeriod);
-  const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
+  const actions = reportActionCount(stats);
   const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Últimos 30 dias" };
   $("#report-label").textContent = labels[state.reportPeriod];
   $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
+  $("#report-actions-value").textContent = actions;
+  $("#report-phones").textContent = stats.phones;
   $("#report-hunters").textContent = stats.hunters;
   $("#report-scheduled").textContent = stats.scheduled;
   $("#report-attended").textContent = stats.attended;
-  $("#report-hours").textContent = compactDuration(stats.seconds);
-  $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação" : "ações"}`;
-  $("#report-profiles").textContent = stats.profiles;
+  $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação realizada" : "ações realizadas"}`;
   $("#report-likes").textContent = stats.likes;
   $("#report-comments").textContent = stats.comments;
   $("#report-directs-detail").textContent = stats.directs;
   $("#report-responses").textContent = stats.responses;
-  $("#report-phones").textContent = stats.phones;
-  $("#report-efficiency").textContent = stats.directs && stats.phones
-    ? `1 telefone a cada ${(stats.directs / stats.phones).toFixed(1).replace(".", ",")} directs`
-    : stats.responses && stats.directs ? `${Math.round(stats.responses / stats.directs * 100)}% de respostas` : "Comece uma sessão";
+  $("#report-response-rate").textContent = `${rate(stats.responses, stats.directs)}%`;
+  $("#report-phone-rate").textContent = `${rate(stats.phones, stats.responses)}%`;
+  $("#report-qualification-rate").textContent = `${rate(stats.hunters, stats.phones)}%`;
+  $("#report-appointment-rate").textContent = `${rate(stats.scheduled, stats.hunters)}%`;
+  $("#report-attendance-rate").textContent = `${rate(stats.attended, stats.scheduled)}%`;
   const days = state.reportPeriod === "day" ? 1 : state.reportPeriod === "week" ? 7 : 10;
   const values = Array.from({ length: days }, (_, index) => {
     const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (days - 1 - index));
@@ -1024,19 +1091,15 @@ function renderReport() {
   });
   const max = Math.max(1, ...values);
   $("#report-chart").innerHTML = values.map((value, index) => `<div><span style="height:${Math.max(8, value / max * 88)}%"></span><small>${state.reportPeriod === "day" ? "Hoje" : index === values.length - 1 ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { weekday: "narrow" }).format(new Date(Date.now() - (values.length - 1 - index) * 86400000))}</small></div>`).join("");
-  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
-    const clinicSessions = stats.sessions.filter(session => session.clinicId === clinic.id);
-    const clinicActions = clinicSessions.reduce((total, session) => total + Object.keys(countLabels).reduce((sum, key) => sum + Number(session.counts?.[key] || 0), 0), 0);
-    const clinicLeads = state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length;
-    const qualified = state.leads.filter(lead => lead.clinicId === clinic.id && lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, state.reportPeriod)).length;
-    const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, state.reportPeriod)).length;
-    const attended = state.leads.filter(lead => lead.clinicId === clinic.id && lead.attendedAt && inPeriod(lead.attendedAt, state.reportPeriod)).length;
-    return { clinic, clinicActions, clinicLeads, qualified, scheduled, attended };
-  }).filter(row => row.clinicActions || row.clinicLeads || row.qualified || row.scheduled || row.attended).sort((a, b) => (b.qualified - a.qualified) || (b.clinicLeads - a.clinicLeads) || (b.clinicActions - a.clinicActions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, clinicActions, clinicLeads, qualified, scheduled, attended }) => `
+  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
+    clinic,
+    ...clinicReportStats(clinic.id, state.reportPeriod, stats)
+  })).filter(row => row.actions || row.leads || row.phones || row.qualified || row.scheduled || row.attended)
+    .sort((a, b) => (b.qualified - a.qualified) || (b.phones - a.phones) || (b.leads - a.leads) || (b.actions - a.actions));
+  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, leads: clinicLeads, phones, qualified, scheduled, attended }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
-      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${clinicLeads} ${clinicLeads === 1 ? "lead" : "leads"}</small></p>
-      <b>${qualified} qualif. · ${scheduled} agend. · ${attended} comp.</b>
+      <p><strong>${escapeHtml(clinic.name)}</strong><small>${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${phones} ${phones === 1 ? "telefone" : "telefones"} · ${clinicLeads} ${clinicLeads === 1 ? "lead" : "leads"}</small></p>
+      <b>${qualified} encaminh. · ${scheduled} agend. · ${attended} comp.</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
@@ -1644,8 +1707,8 @@ function canvasImage(src) {
   });
 }
 
-function canvasMetric(ctx, x, y, value, label, tone = "#1f6b57") {
-  canvasRoundedRect(ctx, x, y, 282, 106, 20, "#f7f8f5", "#e2e7e1");
+function canvasMetric(ctx, x, y, value, label, tone = "#1f6b57", width = 282) {
+  canvasRoundedRect(ctx, x, y, width, 106, 20, "#f7f8f5", "#e2e7e1");
   ctx.fillStyle = tone;
   ctx.beginPath();
   ctx.arc(x + 24, y + 27, 6, 0, Math.PI * 2);
@@ -1654,33 +1717,26 @@ function canvasMetric(ctx, x, y, value, label, tone = "#1f6b57") {
   ctx.font = "700 40px Arial";
   ctx.fillText(String(value), x + 24, y + 70);
   ctx.fillStyle = "#708079";
-  ctx.font = "500 20px Arial";
-  ctx.fillText(label, x + 88, y + 64);
+  ctx.font = width < 250 ? "500 16px Arial" : "500 20px Arial";
+  ctx.fillText(label, x + 82, y + 64);
 }
 
 async function exportReport(share = false) {
   const stats = periodStats(state.reportPeriod);
-  const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
-  const responseRate = stats.directs ? Math.round(stats.responses / stats.directs * 100) : 0;
-  const appointmentRate = stats.hunters ? Math.round(stats.scheduled / stats.hunters * 100) : 0;
-  const attendanceRate = stats.scheduled ? Math.round(stats.attended / stats.scheduled * 100) : 0;
-  const directsPerPhone = stats.phones ? (stats.directs / stats.phones).toFixed(1).replace(".", ",") : null;
-  const reportClinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => {
-    const sessions = stats.sessions.filter(session => session.clinicId === clinic.id);
-    return {
-      clinic,
-      actions: sessions.reduce((total, session) => total + sessionActionCount(session), 0),
-      seconds: sessions.reduce((total, session) => total + Number(session.durationSeconds || 0), 0),
-      leads: state.leads.filter(lead => lead.clinicId === clinic.id && inPeriod(lead.prospectedAt, state.reportPeriod)).length,
-      qualified: state.leads.filter(lead => lead.clinicId === clinic.id && lead.sentToHunterAt && inPeriod(lead.sentToHunterAt, state.reportPeriod)).length,
-      scheduled: state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, state.reportPeriod)).length,
-      attended: state.leads.filter(lead => lead.clinicId === clinic.id && lead.attendedAt && inPeriod(lead.attendedAt, state.reportPeriod)).length
-    };
-  }).filter(row => row.actions || row.leads || row.qualified || row.scheduled || row.attended)
-    .sort((a, b) => (b.qualified - a.qualified) || (b.leads - a.leads) || (b.actions - a.actions));
+  const actions = reportActionCount(stats);
+  const responseRate = rate(stats.responses, stats.directs);
+  const phoneRate = rate(stats.phones, stats.responses);
+  const qualificationRate = rate(stats.hunters, stats.phones);
+  const appointmentRate = rate(stats.scheduled, stats.hunters);
+  const attendanceRate = rate(stats.attended, stats.scheduled);
+  const reportClinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
+    clinic,
+    ...clinicReportStats(clinic.id, state.reportPeriod, stats)
+  })).filter(row => row.actions || row.leads || row.phones || row.qualified || row.scheduled || row.attended)
+    .sort((a, b) => (b.qualified - a.qualified) || (b.phones - a.phones) || (b.leads - a.leads) || (b.actions - a.actions));
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = Math.max(1350, 1130 + reportClinicRows.length * 82 + 150);
+  canvas.height = Math.max(1270, 960 + reportClinicRows.length * 82 + 150);
   const ctx = canvas.getContext("2d");
 
   const background = ctx.createLinearGradient(0, 0, 1080, canvas.height);
@@ -1703,21 +1759,24 @@ async function exportReport(share = false) {
 
   try {
     const mark = await canvasImage("assets/munnius-mark.png");
-    ctx.drawImage(mark, 82, 78, 42, 42);
+    ctx.save();
+    ctx.globalAlpha = .55;
+    ctx.drawImage(mark, 84, 82, 28, 28);
+    ctx.restore();
   } catch {
-    canvasRoundedRect(ctx, 84, 80, 38, 38, 10, null, "#1f6b57");
+    canvasRoundedRect(ctx, 85, 83, 26, 26, 8, null, "#88a198");
   }
   ctx.fillStyle = "#688078";
-  ctx.font = "700 17px Arial";
+  ctx.font = "700 15px Arial";
   ctx.letterSpacing = "2px";
-  ctx.fillText("RELATÓRIO DE OPERAÇÃO", 146, 97);
+  ctx.fillText("RELATÓRIO DE OPERAÇÃO", 132, 101);
   ctx.letterSpacing = "0px";
   ctx.fillStyle = "#172521";
   ctx.font = "700 62px Arial";
-  ctx.fillText($("#report-label").textContent, 82, 184);
+  ctx.fillText($("#report-label").textContent, 82, 190);
   ctx.fillStyle = "#71807a";
   ctx.font = "400 22px Arial";
-  ctx.fillText($("#report-date").textContent, 84, 220);
+  ctx.fillText($("#report-date").textContent, 84, 234);
   canvasRoundedRect(ctx, 820, 82, 160, 42, 21, "#e8f2ed");
   ctx.fillStyle = "#1f6b57";
   ctx.font = "700 17px Arial";
@@ -1725,34 +1784,32 @@ async function exportReport(share = false) {
   ctx.fillText("SOCIAL SELLING", 900, 109);
   ctx.textAlign = "left";
 
-  const heroGradient = ctx.createLinearGradient(74, 255, 1000, 490);
+  const heroGradient = ctx.createLinearGradient(74, 270, 1000, 480);
   heroGradient.addColorStop(0, "#173e35");
   heroGradient.addColorStop(.62, "#1f6b57");
   heroGradient.addColorStop(1, "#3b8d73");
-  canvasRoundedRect(ctx, 74, 254, 932, 226, 32, heroGradient);
+  canvasRoundedRect(ctx, 74, 270, 932, 210, 32, heroGradient);
   ctx.fillStyle = "rgba(255,255,255,.08)";
-  ctx.beginPath(); ctx.arc(965, 270, 125, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(965, 282, 125, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,.72)";
   ctx.font = "700 16px Arial";
-  ctx.fillText("DESEMPENHO DO PERÍODO", 104, 294);
+  ctx.fillText("FUNIL DO PERÍODO", 104, 310);
   const heroMetrics = [
-    [actions, "Ações"],
-    [stats.hunters, "Qualificados"],
+    [actions, "Ações realizadas"],
+    [stats.phones, "Telefones mapeados"],
+    [stats.hunters, "Qualif. e encaminhados"],
     [stats.scheduled, "Agendados"],
-    [stats.attended, "Compareceram"]
+    [stats.attended, "Comparecidos"]
   ];
   heroMetrics.forEach(([value, label], index) => {
-    const x = 104 + index * 220;
+    const x = 104 + index * 176;
     ctx.fillStyle = "#ffffff";
-    ctx.font = `${String(value).length > 6 ? "700 34px" : "700 47px"} Arial`;
-    ctx.fillText(String(value), x, 384);
+    ctx.font = `${String(value).length > 6 ? "700 32px" : "700 44px"} Arial`;
+    ctx.fillText(String(value), x, 390);
     ctx.fillStyle = "rgba(255,255,255,.68)";
-    ctx.font = "500 19px Arial";
-    ctx.fillText(label, x, 419);
+    ctx.font = "500 14px Arial";
+    ctx.fillText(label, x, 425);
   });
-  ctx.fillStyle = "rgba(255,255,255,.82)";
-  ctx.font = "600 17px Arial";
-  ctx.fillText(`${compactDuration(stats.seconds)} trabalhadas  ·  ${stats.phones} ${stats.phones === 1 ? "telefone captado" : "telefones captados"}`, 104, 455);
 
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
@@ -1763,58 +1820,54 @@ async function exportReport(share = false) {
   ctx.fillText("Esforço registrado", 998, 535);
   ctx.textAlign = "left";
   const activityMetrics = [
-    [stats.profiles, "Novos follows", "#75566f"],
     [stats.likes, "Curtidas", "#d9686f"],
     [stats.comments, "Comentários", "#4b75a9"],
     [stats.directs, "Directs", "#6b61b3"],
-    [stats.responses, "Responderam", "#c08732"],
-    [stats.phones, "Telefones", "#1f6b57"]
+    [stats.responses, "Directs respondidos", "#c08732"]
   ];
   activityMetrics.forEach(([value, label, tone], index) => {
-    const x = 82 + (index % 3) * 306;
-    const y = 560 + Math.floor(index / 3) * 122;
-    canvasMetric(ctx, x, y, value, label, tone);
+    const x = 82 + index * 229;
+    canvasMetric(ctx, x, 560, value, label, tone, 214);
   });
 
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Eficiência do funil", 82, 837);
-  canvasRoundedRect(ctx, 82, 860, 916, 154, 24, "#eff5f1");
-  ctx.fillStyle = "#1f6b57";
-  ctx.font = directsPerPhone ? "700 31px Arial" : "700 25px Arial";
-  ctx.fillText(directsPerPhone ? `1 telefone a cada ${directsPerPhone} directs` : "Ainda sem telefone captado", 112, 910);
+  ctx.fillText("Eficiência do funil", 82, 720);
+  canvasRoundedRect(ctx, 82, 744, 916, 142, 24, "#eff5f1");
   ctx.fillStyle = "#71807a";
-  ctx.font = "500 17px Arial";
-  ctx.fillText("Relação entre abordagem e oportunidade entregue", 112, 940);
+  ctx.font = "500 15px Arial";
+  ctx.fillText("Percentuais de avanço entre as etapas", 112, 778);
   ctx.strokeStyle = "#d7e3dc";
-  ctx.beginPath(); ctx.moveTo(112, 963); ctx.lineTo(968, 963); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(112, 796); ctx.lineTo(968, 796); ctx.stroke();
   const efficiency = [
-    [`${responseRate}%`, "Taxa de resposta"],
-    [`${appointmentRate}%`, "Agendamento por qualificado"],
+    [`${responseRate}%`, "Resposta / directs"],
+    [`${phoneRate}%`, "Telefone / respostas"],
+    [`${qualificationRate}%`, "Qualif. / telefones"],
+    [`${appointmentRate}%`, "Agend. / qualif."],
     [`${attendanceRate}%`, "Comparecimento"]
   ];
   efficiency.forEach(([value, label], index) => {
-    const x = 112 + index * 294;
+    const x = 112 + index * 174;
     ctx.fillStyle = "#1f6b57";
-    ctx.font = "700 20px Arial";
-    ctx.fillText(value, x, 991);
+    ctx.font = "700 23px Arial";
+    ctx.fillText(value, x, 836);
     ctx.fillStyle = "#71807a";
-    ctx.font = "500 14px Arial";
-    ctx.fillText(label, x + 58, 991);
+    ctx.font = "500 12px Arial";
+    ctx.fillText(label, x, 861);
   });
 
   ctx.fillStyle = "#172521";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Resultado por clínica", 82, 1065);
+  ctx.fillText("Resultado por clínica", 82, 940);
   ctx.fillStyle = "#829089";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 1065);
+  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 940);
   ctx.textAlign = "left";
   const clinicRows = reportClinicRows;
   if (clinicRows.length) {
-    clinicRows.forEach(({ clinic, actions: clinicActions, seconds, leads, qualified, scheduled, attended }, index) => {
-      const y = 1090 + index * 82;
+    clinicRows.forEach(({ clinic, actions: clinicActions, leads, phones, qualified, scheduled, attended }, index) => {
+      const y = 965 + index * 82;
       if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fafbf8");
       ctx.fillStyle = clinic.color || "#1f6b57";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
@@ -1829,11 +1882,11 @@ async function exportReport(share = false) {
       ctx.fillText(clinicName, 134, y + 21);
       ctx.fillStyle = "#7a8782";
       ctx.font = "400 16px Arial";
-      ctx.fillText(`${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${compactDuration(seconds)} · ${leads} ${leads === 1 ? "lead" : "leads"}`, 134, y + 45);
+      ctx.fillText(`${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} · ${phones} ${phones === 1 ? "telefone" : "telefones"} · ${leads} ${leads === 1 ? "lead" : "leads"}`, 134, y + 45);
       ctx.fillStyle = "#1f6b57";
       ctx.font = "700 16px Arial";
       ctx.textAlign = "right";
-      ctx.fillText(`${qualified} qualif. · ${scheduled} agend. · ${attended} comp.`, 982, y + 32);
+      ctx.fillText(`${qualified} encaminh. · ${scheduled} agend. · ${attended} comp.`, 982, y + 32);
       ctx.textAlign = "left";
       if (index < clinicRows.length - 1) {
         ctx.strokeStyle = "#e6e9e4";
@@ -1843,7 +1896,7 @@ async function exportReport(share = false) {
   } else {
     ctx.fillStyle = "#7a8782";
     ctx.font = "400 18px Arial";
-    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1112);
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 990);
   }
 
   const footerY = canvas.height - 100;
