@@ -5,8 +5,8 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f7f5f0",
-  "theme_color": "#f7f5f0",
+  "background_color": "#fffdf3",
+  "theme_color": "#f4cf4f",
   "icons": [
     {
       "src": "assets/munnius-app-icon.png",
