@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=18";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=19";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -183,6 +183,18 @@ function mergeById(localItems = [], remoteItems = []) {
 function mergeOperationalState(localState, remoteState, profile) {
   const local = normalizeState(localState);
   const remote = normalizeState(remoteState);
+  if (remote.resetAt && local.resetAt !== remote.resetAt) {
+    return normalizeState({
+      ...remote,
+      profile,
+      session: null,
+      timerId: null,
+      lastAction: null,
+      leadFilter: "all",
+      followupFilter: "today",
+      reportPeriod: "day"
+    });
+  }
   return normalizeState({
     ...local,
     ...remote,

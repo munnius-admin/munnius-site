@@ -193,7 +193,7 @@ export const dataGateway = {
     if (!isSupabaseConfigured) return;
     const client = await getClient();
     await getContext(client);
-    const { error } = await client.rpc("save_organization_snapshot", { incoming_payload: payload });
+    const { error } = await client.rpc("save_organization_snapshot_v2", { incoming_payload: payload });
     if (error) throw error;
   },
   async subscribeToWorkspace(callback) {
