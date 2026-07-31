@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=25";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=26";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -1714,11 +1714,20 @@ function openDeleteLeadConfirmation(leadId) {
   </div>`, () => {
     $("#cancel-delete-lead").addEventListener("click", () => openLeadDetail(leadId));
     $("#confirm-delete-lead").addEventListener("click", async () => {
-      const directIds = new Set(state.directs.filter(direct => direct.leadId === leadId).map(direct => direct.id));
+      const linkedDirects = state.directs.filter(direct => direct.leadId === leadId);
+      linkedDirects.forEach(direct => {
+        const session = state.session?.id === direct.sessionId
+          ? state.session
+          : state.sessions.find(item => item.id === direct.sessionId);
+        if (!session?.counts) return;
+        if (direct.sentAt) session.counts.directs = Math.max(0, Number(session.counts.directs || 0) - 1);
+        if (direct.respondedAt) session.counts.responses = Math.max(0, Number(session.counts.responses || 0) - 1);
+        if (direct.phoneAt) session.counts.phones = Math.max(0, Number(session.counts.phones || 0) - 1);
+      });
       state.deletedLeadIds = [...new Set([...(state.deletedLeadIds || []), leadId])];
       state.leads = state.leads.filter(item => item.id !== leadId);
       state.followups = state.followups.filter(item => item.leadId !== leadId);
-      state.directs = state.directs.filter(item => item.leadId !== leadId && !directIds.has(item.id));
+      state.directs = state.directs.filter(item => item.leadId !== leadId);
       try {
         await persistImmediately();
       } catch (error) {
