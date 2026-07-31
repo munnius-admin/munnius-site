@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=35">
+  <link rel="stylesheet" href="styles.css?v=36">
 </head>
 <body>
   <main id="app">
@@ -98,7 +98,7 @@
             </div>
           </div>
           <div class="metrics-grid dashboard-metrics">
-            <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">phone_in_talk</span></span><strong id="leads-total">0</strong><p>Telefones captados</p></article>
+            <button class="metric-card metric-card-action phone-report-entry" type="button" data-open-report="phones"><span class="ui-icon"><span class="material-symbols-outlined">phone_in_talk</span></span><strong id="leads-total">0</strong><p>Telefones captados</p><small>Ver auditoria</small></button>
             <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">event_available</span></span><strong id="hunters-total">0</strong><p>Agendamentos</p></article>
             <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">domain</span></span><strong id="clinics-total">0</strong><p>Clínicas ativas</p></article>
             <article class="metric-card metric-card-action" data-view="leads"><span class="ui-icon"><span class="material-symbols-outlined">forum</span></span><strong id="followups-total">0</strong><p>Conversas ativas</p></article>
@@ -175,6 +175,7 @@
               <option value="B">Prioridade B</option>
               <option value="C">Prioridade C</option>
             </select></label>
+            <button class="crm-phone-filter" id="lead-phone-filter" type="button" aria-pressed="false"><span class="material-symbols-outlined">phone_in_talk</span><span>Com telefone</span></button>
           </div>
           <div class="kanban-navigation">
             <button id="kanban-prev" aria-label="Etapa anterior"><span class="material-symbols-outlined">arrow_back</span></button>
@@ -189,7 +190,8 @@
         </section>
 
         <section class="view" data-view-panel="more">
-          <div class="profile-card"><div class="avatar-large" id="profile-avatar-large">••</div><div><h2 id="profile-name">Perfil</h2><p id="profile-role">Social seller</p></div></div>
+          <div class="profile-card"><button class="avatar-large avatar-edit" id="profile-avatar-large" type="button" aria-label="Alterar foto do perfil">••<span class="material-symbols-outlined">add_a_photo</span></button><div><h2 id="profile-name">Perfil</h2><p id="profile-role">Social seller</p><small>Toque na foto para alterar</small></div></div>
+          <input class="hidden" id="profile-image-input" type="file" accept="image/png,image/jpeg,image/webp">
           <div class="menu-list">
             <button data-view="clinics"><span class="material-symbols-outlined">domain</span><div><strong>Clínicas e metas</strong><small>Carteira, prioridades e metas globais</small></div><b>›</b></button>
             <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><div><strong>Relatórios</strong><small>Exporte para WhatsApp ou Discord</small></div><b>›</b></button>
@@ -220,14 +222,19 @@
         </section>
 
         <section class="view" data-view-panel="reports">
+          <div class="report-kind-control" role="group" aria-label="Tipo de relatório">
+            <button class="active" data-report-kind="operation"><span class="material-symbols-outlined">monitoring</span><span>Operação</span></button>
+            <button data-report-kind="phones"><span class="material-symbols-outlined">phone_in_talk</span><span>Telefones</span></button>
+            <button data-report-kind="executive"><span class="material-symbols-outlined">summarize</span><span>Executivo</span></button>
+          </div>
           <div class="period-control" id="report-period" role="group" aria-label="Período do relatório">
             <button class="active" data-report-period="day">Hoje</button>
             <button data-report-period="week">Semana</button>
             <button data-report-period="month">Mês</button>
           </div>
           <div class="report-date-filter"><span class="material-symbols-outlined">calendar_month</span><label for="report-reference-date">Consultar outra data</label><input id="report-reference-date" type="date"><button class="hidden" id="clear-report-date" type="button">Voltar para hoje</button></div>
-          <article class="report-card" id="report-card">
-            <div class="report-brand"><span class="report-brand-mark"><img src="assets/munnius-mark.png" alt="Munnius"></span><span>Relatório de <strong id="report-user">Social seller</strong></span></div>
+          <article class="report-card" id="report-card" data-report-card="operation">
+            <div class="report-brand"><span class="report-brand-mark"><img src="assets/munnius-mark-light.png" alt="Munnius"></span><span>Relatório de <strong id="report-user">Social seller</strong></span></div>
             <p class="overline">Resumo da operação</p>
             <div class="report-heading"><div><h2 id="report-label">Hoje</h2><p id="report-date"></p></div><span class="report-badge">Social selling</span></div>
             <div class="report-section-title report-first-section"><span>Ações realizadas</span><small id="report-actions-total">0 ações no período</small></div>
@@ -250,6 +257,8 @@
             <div class="report-clinic-breakdown" id="report-clinic-breakdown"></div>
             <div class="report-footer"><span>Relatório de social selling</span><strong>Pré-qualificação e encaminhamento</strong></div>
           </article>
+          <article class="report-card hidden" id="phone-report-card" data-report-card="phones"></article>
+          <article class="report-card executive-report-card hidden" id="executive-report-card" data-report-card="executive"></article>
           <div class="report-actions">
             <button class="primary-button" id="export-report">Baixar imagem</button>
             <button class="secondary-button" id="share-report">Compartilhar</button>
@@ -258,7 +267,7 @@
       </div>
 
       <nav class="bottom-nav" aria-label="Navegação principal">
-        <span class="sidebar-brand" aria-label="Munnius"><span><img src="assets/munnius-mark.png" alt=""></span></span>
+        <span class="sidebar-brand" aria-label="Munnius"><span><img src="assets/munnius-mark-light.png" alt=""></span></span>
         <button class="active" data-view="home"><span class="material-symbols-outlined">home</span><small>Início</small></button>
         <button data-view="session"><span class="material-symbols-outlined">timer</span><small>Sessão</small></button>
         <button data-view="leads"><span class="material-symbols-outlined">group</span><small>Leads</small></button>
@@ -275,8 +284,8 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="vendor/html2canvas.min.js?v=35"></script>
-  <script src="config.js?v=35"></script>
-  <script type="module" src="app.js?v=35"></script>
+  <script src="vendor/html2canvas.min.js?v=36"></script>
+  <script src="config.js?v=36"></script>
+  <script type="module" src="app.js?v=36"></script>
 </body>
 </html>

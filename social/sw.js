@@ -1,5 +1,5 @@
-const CACHE = "munnius-social-v35";
-const ASSETS = ["./", "./index.html", "./styles.css?v=35", "./app.js?v=35", "./supabase-client.js?v=35", "./config.js?v=35", "./vendor/html2canvas.min.js?v=35", "./manifest.webmanifest", "./assets/munnius-mark.png", "./assets/munnius-app-icon.png", "./assets/instagram.svg?v=9", "./assets/whatsapp-brand.svg", "./assets/google.svg?v=9"];
+const CACHE = "munnius-social-v36";
+const ASSETS = ["./", "./index.html", "./styles.css?v=36", "./app.js?v=36", "./supabase-client.js?v=36", "./config.js?v=36", "./vendor/html2canvas.min.js?v=36", "./manifest.webmanifest", "./assets/munnius-mark.png", "./assets/munnius-mark-light.png", "./assets/munnius-app-icon.png", "./assets/instagram.svg?v=9", "./assets/whatsapp-brand.svg", "./assets/google.svg?v=9"];
 self.addEventListener("install", event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS))));
 self.addEventListener("activate", event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))));
 self.addEventListener("fetch", event => {

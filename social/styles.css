@@ -255,6 +255,59 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   .report-efficiency-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 
+/* Relatórios especializados, auditoria de telefones e acabamentos v36 */
+.phone-report-entry{width:100%;font:inherit;color:inherit;text-align:left}
+.phone-report-entry>small{display:block;margin-top:5px;color:#8a6800;font-size:.52rem;font-weight:800}
+.crm-phone-filter{min-height:46px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);border-radius:14px;padding:0 12px;background:#fffef9;color:var(--muted);font-size:.64rem;font-weight:800}
+.crm-phone-filter .material-symbols-outlined{font-size:1rem;color:#8a6800}
+.crm-phone-filter.active{border-color:#e2b61b;background:#fff0a8;color:#6f5700;box-shadow:0 5px 16px rgba(211,169,13,.12)}
+.report-kind-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:4px 0 12px;padding:5px;border:1px solid rgba(226,211,139,.75);border-radius:16px;background:rgba(255,253,246,.9)}
+.report-kind-control button{min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;border:0;border-radius:11px;padding:9px 6px;background:transparent;color:var(--muted);font-size:.6rem;font-weight:800}
+.report-kind-control button .material-symbols-outlined{font-size:.95rem}
+.report-kind-control button.active{background:#123b4a;color:#fff;box-shadow:0 7px 18px rgba(11,45,58,.16)}
+.report-brand-mark{background:#123b4a;border-color:#123b4a}
+.report-brand-mark img{filter:none!important;object-fit:contain}
+.phone-funnel-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:22px 0 8px}
+.phone-funnel-summary>div{min-width:0;display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:2px 8px;padding:11px;border:1px solid #eadf9f;border-radius:14px;background:#fff9dc}
+.phone-funnel-summary .material-symbols-outlined{grid-row:1/3;display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#fff0a8;color:#8a6800;font-size:1rem}
+.phone-funnel-summary strong{font-size:1rem;line-height:1}.phone-funnel-summary small{color:var(--muted);font-size:.52rem;line-height:1.2}
+.phone-funnel-note{margin:0 1px 20px;color:var(--muted);font-size:.53rem;line-height:1.4}
+.phone-audit-list{display:grid;gap:7px}
+.phone-audit-row{min-width:0;display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:7px 9px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.phone-audit-row.highlighted{border-color:#e0c44d;background:linear-gradient(135deg,#fff8cf,#fffef9);box-shadow:0 6px 17px rgba(211,169,13,.08)}
+.phone-audit-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#fff0a8;color:#8a6800;font-size:1rem}
+.phone-audit-row.highlighted .phone-audit-icon{background:#123b4a;color:#fff}
+.phone-audit-row p{min-width:0;margin:0}.phone-audit-row p strong,.phone-audit-row p small,.phone-audit-context strong,.phone-audit-context small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.phone-audit-row p strong{font-size:.65rem}.phone-audit-row p small{margin-top:2px;color:var(--muted);font-size:.51rem}
+.phone-audit-row>b{max-width:120px;padding:5px 7px;border-radius:999px;background:#fff0a8;color:#6f5700;font-size:.47rem;text-align:center;white-space:normal}
+.phone-audit-context{grid-column:2/4;min-width:0;padding-top:7px;border-top:1px solid rgba(226,211,139,.55)}
+.phone-audit-context strong{font-size:.55rem}.phone-audit-context small{margin-top:2px;color:var(--muted);font-size:.49rem}
+.executive-report-card{background:linear-gradient(155deg,#fffef9 0%,#fff8cf 100%)}
+.executive-hero{display:flex;align-items:center;gap:12px;margin:22px 0 10px;padding:16px;border-radius:17px;background:#123b4a;color:#fff}
+.executive-hero>.material-symbols-outlined{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:13px;background:rgba(255,255,255,.12);color:#f4cf4f}
+.executive-hero p{min-width:0;margin:0}.executive-hero strong,.executive-hero small{display:block}.executive-hero strong{font-size:1rem}.executive-hero small{margin-top:4px;color:rgba(255,255,255,.72);font-size:.55rem;line-height:1.35}
+.executive-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.executive-metrics>div{min-width:0;padding:12px;border:1px solid #eadf9f;border-radius:14px;background:rgba(255,255,255,.82)}
+.executive-metrics strong,.executive-metrics small{display:block}.executive-metrics strong{font-size:1.2rem}.executive-metrics small{margin-top:3px;color:var(--muted);font-size:.53rem;line-height:1.25}
+.executive-efficiency{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;gap:12px;margin:10px 0 20px;padding:13px;border-radius:14px;background:#fff0a8;text-align:center}
+.executive-efficiency span strong,.executive-efficiency span small{display:block}.executive-efficiency span strong{font-size:.9rem;color:#6f5700}.executive-efficiency span small{margin-top:2px;color:#766842;font-size:.5rem}.executive-efficiency>i{width:1px;height:28px;background:rgba(111,87,0,.16)}
+.avatar-button.has-image,.avatar-large.has-image{background-position:center;background-size:cover;background-repeat:no-repeat;color:transparent}
+.avatar-edit{position:relative;border:0;color:#fff}.avatar-edit>.material-symbols-outlined{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:23px;height:23px;border:2px solid #202631;border-radius:9px;background:#f4cf4f;color:#202631;font-size:.72rem}
+.avatar-edit.uploading{opacity:.55;pointer-events:none}.profile-card>div>small{display:block;margin-top:5px;color:rgba(255,255,255,.55);font-size:.53rem}
+.admin-organization-actions{display:flex;align-items:center;gap:5px}.admin-organization-card header .admin-organization-actions>button:first-child{min-width:32px;justify-content:center;padding:8px;background:rgba(255,255,255,.12);color:#fff}.admin-organization-card header .admin-organization-actions>button:first-child .material-symbols-outlined{font-size:.8rem}
+@media(min-width:760px){
+  .crm-toolbar{grid-template-columns:minmax(300px,1fr) 240px auto}
+  .bottom-nav{background:linear-gradient(180deg,#123f50 0%,#082b39 100%);box-shadow:10px 0 34px rgba(8,43,57,.18)}
+  .bottom-nav button.active{background:rgba(244,207,79,.2);box-shadow:inset 0 0 0 1px rgba(244,207,79,.25),0 8px 20px rgba(4,24,32,.16)}
+  .sidebar-brand>span{background:rgba(255,255,255,.09);box-shadow:0 8px 20px rgba(4,24,32,.2)}
+  .sidebar-brand img{filter:none!important}
+  .phone-funnel-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .phone-audit-row{grid-template-columns:36px minmax(190px,1fr) minmax(210px,1.15fr) auto}
+  .phone-audit-context{grid-column:3;padding:0 0 0 12px;border-top:0;border-left:1px solid rgba(226,211,139,.55)}
+  .phone-audit-row>b{grid-column:4;grid-row:1}
+  .executive-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
 /* Refinamento final — paleta solar, contenção e ações rápidas do CRM */
 :root{
   --surface:#fffdf6;
@@ -572,4 +625,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   .report-pipeline-stage+.report-pipeline-stage{border-top:0;border-left:1px solid #efe3aa}
   .report-pipeline-stage>.material-symbols-outlined,.report-pipeline-stage>strong,.report-pipeline-stage>small,.report-pipeline-stage>mark,.report-pipeline-stage>em{grid-column:1;grid-row:auto}
   .report-pipeline-stage>em{max-width:110px}
+}
+
+/* Overrides finais da identidade Munnius */
+.report-brand-mark{background:#123b4a!important;border-color:#123b4a!important}
+.report-brand-mark img{filter:none!important}
+@media(min-width:760px){
+  .bottom-nav{background:linear-gradient(180deg,#123f50 0%,#082b39 100%)!important;box-shadow:10px 0 34px rgba(8,43,57,.18)!important}
+  .bottom-nav button.active{background:rgba(244,207,79,.2)!important;box-shadow:inset 0 0 0 1px rgba(244,207,79,.25),0 8px 20px rgba(4,24,32,.16)!important}
+  .sidebar-brand>span{background:rgba(255,255,255,.09)!important;box-shadow:0 8px 20px rgba(4,24,32,.2)!important}
+  .sidebar-brand img{filter:none!important}
 }

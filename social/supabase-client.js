@@ -151,6 +151,25 @@ export const authGateway = {
 };
 
 export const dataGateway = {
+  async uploadProfileImage(file) {
+    if (!isSupabaseConfigured || !file) return null;
+    const client = await getClient();
+    const { user, organizationId } = await getContext(client);
+    const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const path = `${organizationId}/profiles/${user.id}-${Date.now()}.${extension}`;
+    const { error } = await client.storage.from("clinic-images").upload(path, file, {
+      cacheControl: "31536000",
+      contentType: file.type || "image/jpeg",
+      upsert: false
+    });
+    if (error) throw error;
+    const avatarUrl = client.storage.from("clinic-images").getPublicUrl(path).data.publicUrl;
+    const { error: profileError } = await client.from("profiles")
+      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (profileError) throw profileError;
+    return avatarUrl;
+  },
   async uploadClinicImage(file, clinicId) {
     if (!isSupabaseConfigured || !file || !clinicId) return null;
     const client = await getClient();
@@ -198,7 +217,7 @@ export const dataGateway = {
         .select("payload")
         .eq("organization_id", organizationId)
         .maybeSingle(),
-      client.from("profiles").select("full_name, email").eq("id", user.id).single(),
+      client.from("profiles").select("full_name, email, avatar_url").eq("id", user.id).single(),
       isPlatformAdmin(client)
     ]);
     if (error) throw error;
@@ -221,6 +240,7 @@ export const dataGateway = {
         id: user.id,
         name,
         email: profile.email || user.email,
+        avatarUrl: profile.avatar_url || "",
         initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
         role,
         platformAdmin
@@ -239,6 +259,15 @@ export const dataGateway = {
     const { data, error } = await client.rpc("admin_create_organization", {
       organization_name: name,
       organization_slug: slug
+    });
+    if (error) throw error;
+    return data;
+  },
+  async updateOrganization(organizationId, name) {
+    const client = await getClient();
+    const { data, error } = await client.rpc("admin_update_organization", {
+      target_organization_id: organizationId,
+      organization_name: name
     });
     if (error) throw error;
     return data;

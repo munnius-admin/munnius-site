@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=35";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=36";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -941,14 +941,42 @@ function renderProfile() {
   const name = state.profile?.name || "Usuário";
   const firstName = name.split(/\s+/)[0];
   const initials = state.profile?.initials || firstName.slice(0, 2).toUpperCase();
+  const avatarUrl = state.profile?.avatarUrl || "";
   $("#greeting").textContent = `Olá, ${firstName}`;
-  $("#profile-avatar-button").textContent = initials;
-  $("#profile-avatar-large").textContent = initials;
+  const headerAvatar = $("#profile-avatar-button");
+  const profileAvatar = $("#profile-avatar-large");
+  [headerAvatar, profileAvatar].forEach(avatar => {
+    avatar.classList.toggle("has-image", Boolean(avatarUrl));
+    avatar.style.backgroundImage = avatarUrl ? `url("${avatarUrl}")` : "";
+  });
+  headerAvatar.textContent = avatarUrl ? "" : initials;
+  profileAvatar.innerHTML = `${avatarUrl ? "" : escapeHtml(initials)}<span class="material-symbols-outlined">add_a_photo</span>`;
   $("#profile-name").textContent = name;
   $("#profile-role").textContent = state.profile?.platformAdmin
     ? "Administrador da plataforma"
     : state.profile?.role === "admin" ? "Admin · Social seller" : "Social seller";
   $("#admin-access-menu").classList.toggle("hidden", !state.profile?.platformAdmin);
+}
+
+async function saveProfileImage(file) {
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return showToast("Use uma imagem PNG, JPG ou WebP.");
+  if (file.size > 2 * 1024 * 1024) return showToast("Escolha uma foto de até 2 MB.");
+  const avatar = $("#profile-avatar-large");
+  avatar.classList.add("uploading");
+  try {
+    const avatarUrl = await dataGateway.uploadProfileImage(file);
+    if (!avatarUrl) throw new Error("Upload indisponível");
+    state.profile.avatarUrl = avatarUrl;
+    renderProfile();
+    showToast("Foto de perfil atualizada");
+  } catch (error) {
+    console.warn("Falha ao atualizar a foto do perfil.", error);
+    showToast("Não foi possível salvar a foto agora.");
+  } finally {
+    avatar.classList.remove("uploading");
+    $("#profile-image-input").value = "";
+  }
 }
 
 function showRecoveryForm() {
@@ -1352,7 +1380,7 @@ async function renderAdminAccess() {
       }))
     ];
     return `<section class="admin-organization-card">
-      <header><span class="material-symbols-outlined">domain</span><div><strong>${escapeHtml(organization.name)}</strong><small>${escapeHtml(organization.slug)} · ${accessRows.filter(item => item.active).length} acessos</small></div><button data-admin-add-access="${organization.id}"><span class="material-symbols-outlined">person_add</span>Adicionar</button></header>
+      <header><span class="material-symbols-outlined">domain</span><div><strong>${escapeHtml(organization.name)}</strong><small>${escapeHtml(organization.slug)} · ${accessRows.filter(item => item.active).length} acessos</small></div><span class="admin-organization-actions"><button data-admin-edit-organization="${organization.id}" aria-label="Editar nome"><span class="material-symbols-outlined">edit</span></button><button data-admin-add-access="${organization.id}"><span class="material-symbols-outlined">person_add</span>Adicionar</button></span></header>
       <div class="admin-access-list">${accessRows.map(access => `<article>
         <span class="admin-access-avatar">${initials(access.fullName || access.email)}</span>
         <div><strong>${escapeHtml(access.fullName || access.email)}</strong><small>${escapeHtml(access.email)} · ${access.role === "admin" ? "Admin da organização" : "Social seller"}</small></div>
@@ -1361,6 +1389,7 @@ async function renderAdminAccess() {
       </article>`).join("") || `<div class="admin-empty-access">Nenhum acesso nesta organização.</div>`}</div>
     </section>`;
   }).join("") || emptyState("Crie a primeira organização para começar.");
+  $$("[data-admin-edit-organization]").forEach(button => button.addEventListener("click", () => openAdminOrganizationEditForm(button.dataset.adminEditOrganization)));
   $$("[data-admin-add-access]").forEach(button => button.addEventListener("click", () => openAdminAccessForm(button.dataset.adminAddAccess)));
   $$("[data-admin-toggle-access]").forEach(button => button.addEventListener("click", async () => {
     button.disabled = true;
@@ -1374,6 +1403,32 @@ async function renderAdminAccess() {
       showToast("Não foi possível atualizar o acesso.");
     }
   }));
+}
+
+function openAdminOrganizationEditForm(organizationId) {
+  const organization = adminDirectoryCache.organizations.find(item => item.id === organizationId);
+  if (!organization) return showToast("Organização não encontrada.");
+  openSheet(`<h2 class="sheet-title">Editar organização</h2><p class="sheet-subtitle">O identificador técnico permanece igual; somente o nome visível será alterado.</p>
+    <form class="sheet-form" id="admin-organization-edit-form">
+      ${field("admin-organization-edit-name", "Nome da organização", organization.name, true, "text", "Nome da organização")}
+      <button class="primary-button" type="submit">Salvar nome</button>
+    </form>`, () => {
+    $("#admin-organization-edit-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      try {
+        await dataGateway.updateOrganization(organizationId, $("#admin-organization-edit-name").value);
+        closeSheet();
+        showToast("Nome da organização atualizado");
+        await renderAdminAccess();
+      } catch (error) {
+        console.warn("Falha ao renomear organização.", error);
+        button.disabled = false;
+        showToast("Não foi possível atualizar o nome.");
+      }
+    });
+  });
 }
 
 function openAdminOrganizationForm() {
@@ -1641,8 +1696,12 @@ function renderLeads() {
   expireUnansweredLeads();
   const query = $("#lead-search").value.trim().toLowerCase();
   const priorityFilter = state.priorityFilter || "all";
+  const phoneOnly = Boolean(state.leadPhoneOnly);
+  $("#lead-phone-filter").classList.toggle("active", phoneOnly);
+  $("#lead-phone-filter").setAttribute("aria-pressed", String(phoneOnly));
   const filtered = state.leads
     .filter(lead => `${lead.name} ${lead.instagram}`.toLowerCase().includes(query))
+    .filter(lead => !phoneOnly || Boolean(phoneDigits(lead.whatsapp || "") || lead.phoneCapturedAt))
     .filter(lead => {
       if (priorityFilter === "all") return true;
       return clinicPriority(clinicById(lead.clinicId)).key === priorityFilter;
@@ -1660,7 +1719,7 @@ function renderLeads() {
   $("#lead-kanban").innerHTML = columns.map(column => {
     const items = filtered.filter(column.matcher);
     const anonymousKind = column.key === "new" ? "mapped" : column.key === "talking" ? "talking" : null;
-    const anonymousBatches = anonymousKind ? anonymousPipelineDisplayBatches(anonymousKind, priorityFilter) : [];
+    const anonymousBatches = !phoneOnly && anonymousKind ? anonymousPipelineDisplayBatches(anonymousKind, priorityFilter) : [];
     const anonymousVolume = anonymousBatches.reduce((total, batch) => total + Number(batch.remaining || 0), 0);
     const volumeCard = anonymousBatches.map(batch => {
       const clinic = clinicById(batch.clinicId);
@@ -1862,7 +1921,99 @@ function renderFollowups() {
   $$("[data-followup]").forEach(button => button.addEventListener("click", () => openFollowup(button.dataset.followup)));
 }
 
+function reportPeriodCopy(period, reference, start, end) {
+  const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Este mês" };
+  const label = reference
+    ? period === "day" ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(start)
+      : period === "month" ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(start)
+      : `7 dias até ${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(end)}`
+    : labels[period];
+  const date = period === "day"
+    ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(start)
+    : `${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(start)} a ${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(end)}`;
+  return { label, date };
+}
+
+function reportBrandMarkup(kind) {
+  return `<div class="report-brand"><span class="report-brand-mark"><img src="assets/munnius-mark-light.png" alt="Munnius"></span><span>${escapeHtml(kind)} de <strong>${escapeHtml(state.profile?.name || "Social seller")}</strong></span></div>`;
+}
+
+function leadReachedHunter(lead) {
+  return Boolean(lead.sentToHunterAt || ["sent_to_hunter", "scheduled", "attended", "no_show"].includes(lead.status));
+}
+
+function leadReachedScheduling(lead) {
+  return Boolean(leadScheduledRecordedAt(lead) || ["scheduled", "attended", "no_show"].includes(lead.status));
+}
+
+function leadReachedAttendance(lead) {
+  return Boolean(lead.attendedAt || lead.status === "attended");
+}
+
+function renderPhoneReport(reference, reportStart, displayEnd) {
+  const period = state.reportPeriod;
+  const copy = reportPeriodCopy(period, reference, reportStart, displayEnd);
+  const leads = state.leads
+    .filter(lead => phoneDigits(lead.whatsapp || "") && inPeriod(leadPhoneMappedAt(lead), period, reference))
+    .sort((a, b) => {
+      const highlighted = lead => ["sent_to_hunter", "scheduled", "attended"].includes(lead.status) ? 1 : 0;
+      return highlighted(b) - highlighted(a) || new Date(leadPhoneMappedAt(b) || 0) - new Date(leadPhoneMappedAt(a) || 0);
+    });
+  const reachedHunter = leads.filter(leadReachedHunter).length;
+  const reachedScheduling = leads.filter(leadReachedScheduling).length;
+  const reachedAttendance = leads.filter(leadReachedAttendance).length;
+  $("#phone-report-card").innerHTML = `${reportBrandMarkup("Auditoria de telefones")}
+    <p class="overline">Rastreabilidade dos contatos</p>
+    <div class="report-heading"><div><h2>${escapeHtml(copy.label)}</h2><p>${escapeHtml(copy.date)}</p></div><span class="report-badge">Telefones</span></div>
+    <div class="phone-funnel-summary">
+      <div><span class="material-symbols-outlined">phone_in_talk</span><strong>${leads.length}</strong><small>Captados</small></div>
+      <div><span class="material-symbols-outlined">forward_to_inbox</span><strong>${reachedHunter}</strong><small>Foram à Hunter</small></div>
+      <div><span class="material-symbols-outlined">event_available</span><strong>${reachedScheduling}</strong><small>Foram agendados</small></div>
+      <div><span class="material-symbols-outlined">verified</span><strong>${reachedAttendance}</strong><small>Compareceram</small></div>
+    </div>
+    <p class="phone-funnel-note">As etapas são cumulativas: o mesmo contato aparece em todas as fases que alcançou.</p>
+    <div class="report-section-title"><span>Listagem para auditoria</span><small>${leads.length} ${leads.length === 1 ? "contato" : "contatos"}</small></div>
+    <div class="phone-audit-list">${leads.map(lead => {
+      const clinic = clinicById(lead.clinicId);
+      const highlighted = ["sent_to_hunter", "scheduled", "attended"].includes(lead.status);
+      return `<div class="phone-audit-row ${highlighted ? "highlighted" : ""}">
+        <span class="phone-audit-icon material-symbols-outlined">${lead.status === "attended" ? "verified" : lead.status === "scheduled" ? "event_available" : lead.status === "sent_to_hunter" ? "forward_to_inbox" : "phone_in_talk"}</span>
+        <p><strong>${escapeHtml(lead.name || lead.instagram || "Lead sem nome")}</strong><small>${escapeHtml(lead.instagram || "Instagram não informado")} · ${escapeHtml(phoneDigits(lead.whatsapp))}</small></p>
+        <b>${escapeHtml(statusNames[lead.status] || "Conversando")}</b>
+        <span class="phone-audit-context"><strong>${escapeHtml(clinic?.name || "Clínica")}</strong><small>Hunter ${escapeHtml(clinic?.hunter || "não informada")} · captado ${formatDate(leadPhoneMappedAt(lead))}</small></span>
+      </div>`;
+    }).join("") || `<p class="report-empty">Nenhum telefone foi captado neste período.</p>`}</div>
+    <div class="report-footer"><span>Auditoria de telefones captados</span><strong>Origem, etapa e responsável</strong></div>`;
+}
+
+function renderExecutiveReport(reference, reportStart, displayEnd) {
+  const period = state.reportPeriod;
+  const copy = reportPeriodCopy(period, reference, reportStart, displayEnd);
+  const stats = periodStats(period, reference);
+  const actions = reportActionCount(stats);
+  const phones = phoneActionCount(stats);
+  const responseRate = rate(stats.responses, stats.directs);
+  const directsPerPhone = phones ? (stats.directs / phones).toFixed(1).replace(".", ",") : "—";
+  $("#executive-report-card").innerHTML = `${reportBrandMarkup("Resumo executivo")}
+    <p class="overline">Principais resultados</p>
+    <div class="report-heading"><div><h2>${escapeHtml(copy.label)}</h2><p>${escapeHtml(copy.date)}</p></div><span class="report-badge">Executivo</span></div>
+    <div class="executive-hero"><span class="material-symbols-outlined">auto_graph</span><p><strong>${phones} telefones captados</strong><small>${stats.huntersTotal} encaminhados · ${stats.scheduledTotal} agendados · ${stats.attendedTotal} comparecimentos</small></p></div>
+    <div class="executive-metrics">
+      <div><strong>${actions}</strong><small>Ações realizadas</small></div>
+      <div><strong>${stats.directs}</strong><small>Directs enviados</small></div>
+      <div><strong>${stats.responses}</strong><small>Directs respondidos</small></div>
+      <div><strong>${phones}</strong><small>Telefones captados</small></div>
+      <div><strong>${stats.scheduledTotal}</strong><small>Agendamentos</small></div>
+      <div><strong>${stats.attendedTotal}</strong><small>Comparecimentos</small></div>
+    </div>
+    <div class="executive-efficiency"><span><strong>${responseRate}%</strong><small>taxa de resposta</small></span><i></i><span><strong>${directsPerPhone}</strong><small>directs por telefone</small></span></div>
+    <div class="report-footer"><span>Resumo executivo de social selling</span><strong>Atividade que virou oportunidade</strong></div>`;
+}
+
 function renderReport() {
+  const reportKind = state.reportKind || "operation";
+  $$("[data-report-kind]").forEach(button => button.classList.toggle("active", button.dataset.reportKind === reportKind));
+  $$("[data-report-card]").forEach(card => card.classList.toggle("hidden", card.dataset.reportCard !== reportKind));
   const reference = state.reportReference || null;
   $("#report-reference-date").value = reference || "";
   $("#clear-report-date").classList.toggle("hidden", !reference);
@@ -1915,7 +2066,9 @@ function renderReport() {
       <p><strong>${escapeHtml(clinic.name)}</strong><small>Status atual</small></p>
       <b><i class="clinic-current-line">${current.mapped} mapeados · ${current.talking} conversando · ${current.qualified} Hunter · ${current.scheduled} agend. · ${current.attended} comp.</i></b>
     </div>`;
-  }).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
+  }).join("") || `<p class="report-empty">Nenhuma oportunidade ativa nas clínicas.</p>`;
+  renderPhoneReport(reference, reportStart, displayEnd);
+  renderExecutiveReport(reference, reportStart, displayEnd);
 }
 
 function emptyState(message) { return `<div class="empty-inline"><span class="material-symbols-outlined">inbox</span><p>${message}</p></div>`; }
@@ -3033,7 +3186,7 @@ async function exportReportLegacy(share = false) {
 }
 
 async function exportReport(share = false) {
-  const reportCard = $("#report-card");
+  const reportCard = $(`[data-report-card="${state.reportKind || "operation"}"]`) || $("#report-card");
   if (!reportCard) return showToast("Relatório indisponível para exportação");
   if (!window.html2canvas) return exportReportLegacy(share);
   showToast("Preparando a imagem do relatório...");
@@ -3047,7 +3200,7 @@ async function exportReport(share = false) {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const exportWidth = Math.ceil(reportCard.getBoundingClientRect().width);
     const canvas = await window.html2canvas(reportCard, {
-      backgroundColor: "#fffef9",
+      backgroundColor: null,
       logging: false,
       scale: Math.min(3, Math.max(2, Number(window.devicePixelRatio || 1))),
       useCORS: true,
@@ -3062,7 +3215,7 @@ async function exportReport(share = false) {
         clonedCard.style.margin = "0";
         const clonedLogo = clonedCard.querySelector(".report-brand-mark img");
         if (clonedLogo) {
-          clonedLogo.src = new URL("assets/munnius-mark.png", location.href).href;
+          clonedLogo.src = new URL("assets/munnius-mark-light.png", location.href).href;
           clonedLogo.style.display = "block";
           clonedLogo.style.opacity = "1";
         }
@@ -3071,7 +3224,7 @@ async function exportReport(share = false) {
     reportCard.classList.remove("is-exporting");
     const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png", 1));
     if (!blob) throw new Error("Falha ao montar a imagem");
-    const file = new File([blob], `relatorio-social-selling-${state.reportPeriod}.png`, { type: "image/png" });
+    const file = new File([blob], `relatorio-${state.reportKind || "operacao"}-${state.reportPeriod}.png`, { type: "image/png" });
     if (share && navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: "Relatório de social selling" });
       return;
@@ -3150,8 +3303,17 @@ function selectReportingPeriod(period) {
   $$("[data-period]").forEach(button => button.classList.toggle("active", button.dataset.period === period));
   $$("[data-report-period]").forEach(button => button.classList.toggle("active", button.dataset.reportPeriod === period));
 }
+function selectReportKind(kind) {
+  state.reportKind = ["operation", "phones", "executive"].includes(kind) ? kind : "operation";
+  renderReport();
+}
 $$("[data-period]").forEach(button => button.addEventListener("click", () => { selectReportingPeriod(button.dataset.period); renderDashboard(); }));
 $$("[data-report-period]").forEach(button => button.addEventListener("click", () => { selectReportingPeriod(button.dataset.reportPeriod); renderReport(); }));
+$$("[data-report-kind]").forEach(button => button.addEventListener("click", () => selectReportKind(button.dataset.reportKind)));
+$$("[data-open-report]").forEach(button => button.addEventListener("click", () => {
+  state.reportKind = button.dataset.openReport || "operation";
+  navigate("reports");
+}));
 $("#report-reference-date").addEventListener("change", event => {
   state.reportReference = event.target.value || null;
   renderReport();
@@ -3169,12 +3331,15 @@ $("#open-instagram").addEventListener("click", () => { const clinic = clinicById
 $("#quick-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
 $("#lead-search").addEventListener("input", renderLeads);
 $("#lead-priority-filter").addEventListener("change", event => { state.priorityFilter = event.target.value; renderLeads(); });
+$("#lead-phone-filter").addEventListener("click", () => { state.leadPhoneOnly = !state.leadPhoneOnly; renderLeads(); });
 $("#kanban-prev").addEventListener("click", () => $("#lead-kanban").scrollBy({ left: -Math.max(280, $("#lead-kanban").clientWidth * .86), behavior: "smooth" }));
 $("#kanban-next").addEventListener("click", () => $("#lead-kanban").scrollBy({ left: Math.max(280, $("#lead-kanban").clientWidth * .86), behavior: "smooth" }));
 $$("[data-followup-filter]").forEach(button => button.addEventListener("click", () => { $$("[data-followup-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.followupFilter = button.dataset.followupFilter; renderFollowups(); }));
 $("#sheet-close").addEventListener("click", closeSheet);
 $("#sheet-backdrop").addEventListener("click", event => { if (event.target === $("#sheet-backdrop")) closeSheet(); });
 $("#add-clinic").addEventListener("click", () => openClinicForm());
+$("#profile-avatar-large").addEventListener("click", () => $("#profile-image-input").click());
+$("#profile-image-input").addEventListener("change", event => saveProfileImage(event.target.files?.[0]));
 $("#admin-add-organization").addEventListener("click", openAdminOrganizationForm);
 $("#edit-goals").addEventListener("click", openGoalsForm);
 $("#edit-goals-clinics").addEventListener("click", openGoalsForm);
