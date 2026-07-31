@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=33";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=34";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -251,7 +251,7 @@ function localDayKey(value) {
 }
 
 function reconcileRecentAnonymousResponses(target) {
-  if (Number(target.anonymousResponseHistoryVersion || 0) >= 1) return;
+  if (Number(target.anonymousResponseHistoryVersion || 0) >= 2) return;
   const cutoffDate = new Date();
   cutoffDate.setHours(0, 0, 0, 0);
   cutoffDate.setDate(cutoffDate.getDate() - 6);
@@ -276,14 +276,20 @@ function reconcileRecentAnonymousResponses(target) {
   (target.anonymousConversationBatches || []).forEach(batch => addRepresented(batch.clinicId, batch.respondedAt, batch.quantity));
   const leadIdsWithTrackedResponse = new Set();
   (target.directs || []).forEach(direct => {
+    if (direct.leadId && (direct.respondedAt || direct.anonymousConversationSourceId)) leadIdsWithTrackedResponse.add(direct.leadId);
     if (!direct.respondedAt) return;
-    if (direct.leadId) leadIdsWithTrackedResponse.add(direct.leadId);
     if (direct.anonymousConversationSourceId) return;
     addRepresented(direct.clinicId, direct.respondedAt);
   });
   (target.leads || []).forEach(lead => {
-    if (!lead.respondedAt || leadIdsWithTrackedResponse.has(lead.id)) return;
-    addRepresented(lead.clinicId, lead.respondedAt);
+    if (leadIdsWithTrackedResponse.has(lead.id)) return;
+    const responseReference = lead.respondedAt
+      || lead.sentToHunterAt
+      || lead.scheduledRecordedAt
+      || lead.prospectedAt
+      || lead.createdAt;
+    if (!["talking", "follow_up", "sent_to_hunter", "scheduled", "attended"].includes(lead.status) || !responseReference) return;
+    addRepresented(lead.clinicId, responseReference);
   });
   expectedByClinicDay.forEach(({ clinicId, day, quantity, reference }, key) => {
     let missing = Math.max(0, quantity - Number(represented.get(key) || 0));
@@ -320,7 +326,7 @@ function reconcileRecentAnonymousResponses(target) {
       reconciledFromSessions: true
     });
   });
-  target.anonymousResponseHistoryVersion = 1;
+  target.anonymousResponseHistoryVersion = 2;
 }
 
 function loadState() {
