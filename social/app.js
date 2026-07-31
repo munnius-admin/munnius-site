@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=23";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=25";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -102,6 +102,7 @@ function normalizeState(candidate) {
   normalized.version = 3;
   normalized.clinics ||= [];
   normalized.leads ||= [];
+  normalized.deletedLeadIds ||= [];
   normalized.directs ||= [];
   normalized.followups ||= [];
   normalized.sessions ||= [];
@@ -201,16 +202,19 @@ function mergeOperationalState(localState, remoteState, profile) {
       reportPeriod: "day"
     });
   }
+  const deletedLeadIds = [...new Set([...(local.deletedLeadIds || []), ...(remote.deletedLeadIds || [])])];
+  const deletedLeadSet = new Set(deletedLeadIds);
   return normalizeState({
     ...local,
     ...remote,
     profile,
     clinics: mergeById(local.clinics, remote.clinics),
-    leads: mergeById(local.leads, remote.leads),
-    directs: mergeById(local.directs, remote.directs),
-    followups: mergeById(local.followups, remote.followups),
+    leads: mergeById(local.leads, remote.leads).filter(lead => !deletedLeadSet.has(lead.id)),
+    directs: mergeById(local.directs, remote.directs).filter(direct => !direct.leadId || !deletedLeadSet.has(direct.leadId)),
+    followups: mergeById(local.followups, remote.followups).filter(followup => !deletedLeadSet.has(followup.leadId)),
     sessions: mergeById(local.sessions, remote.sessions),
     templates: mergeById(local.templates, remote.templates),
+    deletedLeadIds,
     session: null,
     timerId: null,
     lastAction: null,
@@ -628,7 +632,7 @@ function periodStats(period = state.period || "day") {
     const mappedAt = leadPhoneMappedAt(lead);
     return mappedAt && inPeriod(mappedAt, period) && isPhoneStage(lead);
   }).length;
-  const phonesTotal = Math.max(counts.phones, mappedPhonesTotal);
+  const phonesTotal = mappedPhonesTotal;
   const scheduledTotal = state.leads.filter(lead => lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length;
   const attendedTotal = state.leads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length;
   return {
@@ -692,16 +696,16 @@ function clinicReportStats(clinicId, period, periodSummary) {
     const mappedAt = leadPhoneMappedAt(lead);
     return mappedAt && inPeriod(mappedAt, period) && isPhoneStage(lead);
   }).length;
-  const phonesTotal = Math.max(sessionCounts.phones, mappedPhonesTotal);
+  const phonesTotal = mappedPhonesTotal;
   const qualifiedTotal = clinicLeads.filter(lead => {
     const qualifiedAt = leadQualifiedAt(lead);
     return qualifiedAt && inPeriod(qualifiedAt, period);
   }).length;
-  const captured = Math.max(sessionCounts.phones, clinicLeads.filter(lead => {
+  const captured = clinicLeads.filter(lead => {
     if (!leadPhoneMappedAt(lead)) return false;
     return [leadPhoneMappedAt(lead), leadQualifiedAt(lead), lead.scheduledAt, lead.attendedAt, lead.noShowAt]
       .some(date => date && inPeriod(date, period));
-  }).length);
+  }).length;
   return {
     actions: Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses,
     leads: clinicLeads.filter(lead => inPeriod(lead.prospectedAt, period)).length,
@@ -721,11 +725,10 @@ function renderDashboard() {
   expireUnansweredLeads();
   const stats = periodStats(state.period);
   const activeClinics = state.clinics.filter(clinic => clinic.active);
-  const conversations = state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status) && !isPhoneStage(lead)).length;
+  const conversations = state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length;
   const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
-  const talking = state.leads.filter(lead => lead.status === "talking" && !isPhoneStage(lead)).length;
-  const followingUp = state.leads.filter(lead => lead.status === "follow_up" && !isPhoneStage(lead)).length;
-  const phonesInQualification = state.leads.filter(isPhoneStage).length;
+  const talking = state.leads.filter(lead => lead.status === "talking").length;
+  const followingUp = state.leads.filter(lead => lead.status === "follow_up").length;
   const lost = state.leads.filter(lead => lead.status === "lost").length;
   const qualified = state.leads.filter(lead => lead.status === "sent_to_hunter").length;
   const scheduled = state.leads.filter(lead => lead.status === "scheduled").length;
@@ -738,7 +741,6 @@ function renderDashboard() {
   $("#pipeline-mapped").textContent = stats.directs;
   $("#pipeline-talking").textContent = talking;
   $("#pipeline-followups").textContent = followingUp;
-  $("#pipeline-phones").textContent = phonesInQualification;
   $("#pipeline-lost").textContent = lost;
   $("#pipeline-qualified").textContent = qualified;
   $("#pipeline-scheduled").textContent = scheduled;
@@ -755,10 +757,10 @@ function clinicMarkup(clinic, detailed = false) {
   const priority = clinicPriority(clinic);
   const activity = clinicActivityToday(clinic.id);
   const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, "month")).length;
-  return `<article class="clinic-card ${detailed ? "clickable" : ""} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
+  return `<article class="clinic-card ${detailed ? "clickable" : "home-clinic-card"} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
     <div class="clinic-avatar" style="background:${clinic.color}">${clinic.name.split(" ").slice(-1)[0][0]}</div>
-    <div class="clinic-main"><strong>${clinic.name} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${clinic.instagram} · Closer ${clinic.hunter} · ${priority.minutes} min</span><div class="progress"><i style="width:${Math.min(100, activity.seconds / (priority.minutes * 60) * 100)}%"></i></div></div>
-    <div class="clinic-card-side"><div class="clinic-score"><strong>${activity.actions}</strong><span>ações hoje · ${scheduled} agend.</span></div>
+    <div class="clinic-main"><strong title="${escapeHtml(clinic.name)}">${escapeHtml(clinic.name)} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${detailed ? `${escapeHtml(clinic.instagram)} · Closer ${escapeHtml(clinic.hunter)} · ${priority.minutes} min` : `${activity.actions} ${activity.actions === 1 ? "ação" : "ações"} hoje · ${priority.label}`}</span><div class="progress"><i style="width:${Math.min(100, activity.seconds / (priority.minutes * 60) * 100)}%"></i></div></div>
+    <div class="clinic-card-side">${detailed ? `<div class="clinic-score"><strong>${activity.actions}</strong><span>ações hoje · ${scheduled} agend.</span></div>` : ""}
       ${detailed ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>`}
     </div>
   </article>`;
@@ -982,10 +984,9 @@ function renderLeads() {
     .sort((a, b) => clinicPriority(clinicById(a.clinicId)).order - clinicPriority(clinicById(b.clinicId)).order
       || new Date(b.lastContactAt || b.prospectedAt) - new Date(a.lastContactAt || a.prospectedAt));
   const columns = [
-    { key: "new", title: "Mapeados", subtitle: "Direct enviado", matcher: lead => lead.status === "new" && !isPhoneStage(lead), icon: "send" },
-    { key: "talking", title: "Conversando", subtitle: "Responderam", matcher: lead => lead.status === "talking" && !isPhoneStage(lead), icon: "forum" },
-    { key: "follow_up", title: "Em follow", subtitle: "Retomar conversa", matcher: lead => lead.status === "follow_up" && !isPhoneStage(lead), icon: "schedule" },
-    { key: "phones", title: "Com telefone", subtitle: "Pré-qualificar e enviar", matcher: isPhoneStage, icon: "phone_in_talk" },
+    { key: "new", title: "Mapeados", subtitle: "Direct enviado", matcher: lead => lead.status === "new", icon: "send" },
+    { key: "talking", title: "Conversando", subtitle: "Responderam", matcher: lead => lead.status === "talking", icon: "forum" },
+    { key: "follow_up", title: "Em follow", subtitle: "Retomar conversa", matcher: lead => lead.status === "follow_up", icon: "schedule" },
     { key: "lost", title: "Perdidos", subtitle: "Sem evolução", matcher: lead => lead.status === "lost", icon: "person_cancel" },
     { key: "sent_to_hunter", title: "Com a Hunter", subtitle: "Aguardando retorno", matcher: lead => lead.status === "sent_to_hunter", icon: "forward_to_inbox" },
     { key: "scheduled", title: "Agendados", subtitle: "Confirmar presença", matcher: lead => lead.status === "scheduled", icon: "event_available" },
@@ -1063,7 +1064,7 @@ function kanbanLeadCard(lead) {
   return `<article class="kanban-lead-card clickable" data-lead="${lead.id}">
     <div class="kanban-card-top"><span class="priority-dot priority-${priority.key.toLowerCase()}">${priority.key}</span><small>${escapeHtml(clinic?.name || "Clínica")}</small><span class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Frio"}</span></div>
     <strong>${escapeHtml(lead.name || lead.instagram || "Lead sem nome")}</strong>
-    <span>${escapeHtml(lead.instagram || "Instagram não informado")}${lead.interest ? ` · ${escapeHtml(lead.interest)}` : ""}</span>
+    <span class="kanban-lead-meta"><span>${escapeHtml(lead.instagram || "Instagram não informado")}${lead.interest ? ` · ${escapeHtml(lead.interest)}` : ""}</span>${leadPhoneMappedAt(lead) ? `<i class="material-symbols-outlined" title="Telefone já captado" aria-label="Telefone já captado">phone_in_talk</i>` : ""}</span>
     <footer><span class="material-symbols-outlined">hourglass_bottom</span><span class="kanban-deadline">${leadDeadlineLabel(lead)}</span><b class="material-symbols-outlined">chevron_right</b></footer>
     ${quickActions ? `<div class="kanban-card-actions">${quickActions}</div>` : ""}
   </article>`;
@@ -1691,12 +1692,47 @@ function openLeadDetail(leadId) {
     ${hunterTracking}
     <div class="detail-actions"><button class="secondary-button" id="edit-lead">Editar</button><button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
     <h3 class="timeline-title">Histórico resumido</h3><div class="timeline">${[...(lead.timeline || [])].reverse().map(item => `<div><i></i><span><strong>${escapeHtml(item.label)}</strong><small>${formatDate(item.at, true)}</small></span></div>`).join("")}</div>
-    ${canSend ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}`, () => {
+    ${canSend ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}
+    <button class="danger-link" id="delete-lead"><span class="material-symbols-outlined">delete</span>Excluir lead</button>`, () => {
     $("#edit-lead").addEventListener("click", () => openLeadForm({ leadId }));
     $("#contact-lead").addEventListener("click", () => window.open(`https://instagram.com/${lead.instagram.replace("@", "")}`, "_blank", "noopener"));
+    $("#delete-lead").addEventListener("click", () => openDeleteLeadConfirmation(leadId));
     $("#resend-hunter")?.addEventListener("click", () => openHunterWhatsApp(lead));
     $("#hunter-update")?.addEventListener("click", () => openHunterUpdate(leadId));
     $("#send-hunter")?.addEventListener("click", () => { lead.status = "sent_to_hunter"; lead.sentToHunterAt = new Date().toISOString(); lead.timeline.push({ at: lead.sentToHunterAt, label: `Enviado para ${clinic.hunter}` }); persist(); renderLeads(); renderDashboard(); openHunterWhatsApp(lead); });
+  });
+}
+
+function openDeleteLeadConfirmation(leadId) {
+  const lead = leadById(leadId);
+  if (!lead) return;
+  openSheet(`<div class="destructive-confirmation">
+    <span class="material-symbols-outlined">delete_forever</span>
+    <h2 class="sheet-title">Excluir este lead?</h2>
+    <p class="sheet-subtitle">${escapeHtml(lead.name || lead.instagram)} será removido do CRM, dos follow-ups e dos indicadores. Essa ação não pode ser desfeita.</p>
+    <div class="detail-actions"><button class="secondary-button" id="cancel-delete-lead">Cancelar</button><button class="danger-button" id="confirm-delete-lead">Excluir definitivamente</button></div>
+  </div>`, () => {
+    $("#cancel-delete-lead").addEventListener("click", () => openLeadDetail(leadId));
+    $("#confirm-delete-lead").addEventListener("click", async () => {
+      const directIds = new Set(state.directs.filter(direct => direct.leadId === leadId).map(direct => direct.id));
+      state.deletedLeadIds = [...new Set([...(state.deletedLeadIds || []), leadId])];
+      state.leads = state.leads.filter(item => item.id !== leadId);
+      state.followups = state.followups.filter(item => item.leadId !== leadId);
+      state.directs = state.directs.filter(item => item.leadId !== leadId && !directIds.has(item.id));
+      try {
+        await persistImmediately();
+      } catch (error) {
+        console.warn("Exclusão salva localmente; sincronização pendente.", error);
+        persist();
+      }
+      renderDashboard();
+      renderLeads();
+      renderFollowups();
+      renderReport();
+      renderDirectHistory();
+      closeSheet();
+      showToast("Lead excluído de todos os indicadores");
+    });
   });
 }
 
@@ -1965,45 +2001,45 @@ async function exportReport(share = false) {
   canvasRoundedRect(ctx, 44, 38, 992, canvas.height - 76, 42, "#fffef9");
   ctx.restore();
 
-  canvasRoundedRect(ctx, 78, 76, 40, 40, 11, "#252b35");
+  canvasRoundedRect(ctx, 74, 70, 932, 148, 28, "#fff9dc", "#eadf9f");
+  canvasRoundedRect(ctx, 94, 92, 42, 42, 12, "#252b35");
   try {
     const mark = await canvasImage("assets/munnius-mark.png");
     ctx.save();
     ctx.filter = "brightness(0) invert(1)";
-    ctx.drawImage(mark, 86, 84, 24, 24);
+    ctx.drawImage(mark, 103, 101, 24, 24);
     ctx.restore();
   } catch {
-    canvasRoundedRect(ctx, 88, 86, 20, 20, 6, null, "#ffffff");
+    canvasRoundedRect(ctx, 105, 103, 20, 20, 6, null, "#ffffff");
   }
   ctx.fillStyle = "#8a6800";
-  ctx.font = "700 15px Arial";
+  ctx.font = "700 13px Arial";
   ctx.letterSpacing = "2px";
-  ctx.fillText("RELATÓRIO DE OPERAÇÃO", 132, 101);
+  ctx.fillText("RELATÓRIO SOCIAL SELLING", 154, 103);
   ctx.letterSpacing = "0px";
-  canvasFitText(ctx, `Responsável: ${state.profile?.name || "Social seller"}`, 132, 127, 610, { size: 16, minSize: 12, weight: 500, color: "#68717d" });
   ctx.fillStyle = "#202631";
-  ctx.font = "700 62px Arial";
-  ctx.fillText($("#report-label").textContent, 82, 190);
-  ctx.fillStyle = "#68717d";
-  ctx.font = "400 22px Arial";
-  ctx.fillText($("#report-date").textContent, 84, 234);
-  canvasRoundedRect(ctx, 820, 82, 160, 42, 21, "#fff0a8");
+  ctx.font = "700 28px Arial";
+  ctx.fillText("Resultado da operação", 154, 139);
+  canvasFitText(ctx, `Responsável · ${state.profile?.name || "Social seller"}`, 154, 172, 500, { size: 16, minSize: 12, weight: 500, color: "#68717d" });
+  canvasRoundedRect(ctx, 746, 91, 230, 106, 22, "#fffef9", "#eadf9f");
   ctx.fillStyle = "#6f5700";
-  ctx.font = "700 17px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("SOCIAL SELLING", 900, 109);
-  ctx.textAlign = "left";
+  ctx.font = "700 11px Arial";
+  ctx.letterSpacing = "1.5px";
+  ctx.fillText("PERÍODO", 770, 119);
+  ctx.letterSpacing = "0px";
+  canvasFitText(ctx, $("#report-label").textContent, 770, 153, 180, { size: 26, minSize: 18, weight: 700, color: "#202631" });
+  canvasFitText(ctx, $("#report-date").textContent, 770, 180, 180, { size: 14, minSize: 11, weight: 400, color: "#68717d" });
 
-  const heroGradient = ctx.createLinearGradient(74, 270, 1000, 480);
+  const heroGradient = ctx.createLinearGradient(74, 244, 1000, 454);
   heroGradient.addColorStop(0, "#202631");
   heroGradient.addColorStop(.62, "#333d4c");
   heroGradient.addColorStop(1, "#525e70");
-  canvasRoundedRect(ctx, 74, 270, 932, 210, 32, heroGradient);
+  canvasRoundedRect(ctx, 74, 244, 932, 210, 32, heroGradient);
   ctx.fillStyle = "rgba(255,255,255,.08)";
-  ctx.beginPath(); ctx.arc(965, 282, 125, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(965, 256, 125, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,.72)";
   ctx.font = "700 16px Arial";
-  ctx.fillText("FUNIL DO PERÍODO", 104, 310);
+  ctx.fillText("FUNIL DO PERÍODO", 104, 284);
   const heroMetrics = [
     [actions, "Ações realizadas"],
     [stats.phones, "Telefones mapeados"],
@@ -2013,21 +2049,24 @@ async function exportReport(share = false) {
   ];
   heroMetrics.forEach(([value, label], index) => {
     const x = 104 + index * 176;
+    const centerX = x + 76;
     ctx.fillStyle = "#ffffff";
     ctx.font = `${String(value).length > 6 ? "700 32px" : "700 44px"} Arial`;
-    ctx.fillText(String(value), x, 390);
+    ctx.textAlign = "center";
+    ctx.fillText(String(value), centerX, 364);
+    ctx.textAlign = "left";
     ctx.fillStyle = "rgba(255,255,255,.68)";
     ctx.font = "500 14px Arial";
-    canvasFitText(ctx, label, x, 425, 152, { size: 14, minSize: 11, weight: 500, color: "rgba(255,255,255,.72)" });
+    canvasFitText(ctx, label, centerX, 400, 152, { size: 14, minSize: 11, weight: 500, color: "rgba(255,255,255,.72)", align: "center" });
   });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Atividade da operação", 82, 535);
+  ctx.fillText("Atividade da operação", 82, 509);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText("Esforço registrado", 998, 535);
+  ctx.fillText("Esforço registrado", 998, 509);
   ctx.textAlign = "left";
   const activityMetrics = [
     [stats.likes, "Curtidas", "#ef7d62", "heart"],
@@ -2037,18 +2076,24 @@ async function exportReport(share = false) {
   ];
   activityMetrics.forEach(([value, label, tone, icon], index) => {
     const x = 82 + index * 229;
-    canvasMetric(ctx, x, 560, value, label, tone, 214, icon);
+    canvasMetric(ctx, x, 534, value, label, tone, 214, icon);
   });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Eficiência do funil", 82, 720);
-  canvasRoundedRect(ctx, 82, 744, 916, 142, 24, "#fff2b8");
+  ctx.fillText("Eficiência do funil", 82, 690);
+  canvasRoundedRect(ctx, 82, 714, 916, 142, 24, "#fff2b8");
   ctx.fillStyle = "#68717d";
   ctx.font = "500 15px Arial";
-  ctx.fillText("Percentuais de avanço entre as etapas", 112, 778);
+  ctx.fillText("Etapa anterior", 112, 748);
+  ctx.fillStyle = "#b58b00";
+  ctx.font = "700 15px Arial";
+  ctx.fillText("/", 215, 748);
+  ctx.fillStyle = "#68717d";
+  ctx.font = "500 15px Arial";
+  ctx.fillText("total de directs", 232, 748);
   ctx.strokeStyle = "#e9d77b";
-  ctx.beginPath(); ctx.moveTo(112, 796); ctx.lineTo(968, 796); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(112, 766); ctx.lineTo(968, 766); ctx.stroke();
   const efficiency = [
     ["Responderam", responseRate, responseTotalRate],
     ["Telefones", phoneRate, phoneTotalRate],
@@ -2058,33 +2103,35 @@ async function exportReport(share = false) {
   ];
   efficiency.forEach(([label, previousValue, totalValue], index) => {
     const x = 112 + index * 174;
-    canvasFitText(ctx, label, x, 821, 154, { size: 12, minSize: 10, weight: 700, color: "#4d5561" });
+    const centerX = x + 68;
+    canvasFitText(ctx, label, centerX, 797, 150, { size: 12, minSize: 10, weight: 700, color: "#4d5561", align: "center" });
     ctx.fillStyle = "#8a6800";
-    ctx.font = "700 21px Arial";
-    ctx.fillText(`${previousValue}%`, x, 849);
+    ctx.font = "700 22px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(`${previousValue}%`, centerX - 8, 833);
     ctx.fillStyle = "#68717d";
-    ctx.font = "500 10px Arial";
-    ctx.fillText("etapa anterior", x + 50, 848);
+    ctx.font = "600 18px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("/", centerX, 833);
     ctx.fillStyle = "#8a6800";
-    ctx.font = "700 17px Arial";
-    ctx.fillText(`${totalValue}%`, x, 873);
-    ctx.fillStyle = "#68717d";
-    ctx.font = "500 10px Arial";
-    ctx.fillText("dos directs", x + 43, 872);
+    ctx.font = "700 22px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(`${totalValue}%`, centerX + 8, 833);
+    ctx.textAlign = "left";
   });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Resultado por clínica", 82, 940);
+  ctx.fillText("Resultado por clínica", 82, 910);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 940);
+  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 910);
   ctx.textAlign = "left";
   const clinicRows = reportClinicRows;
   if (clinicRows.length) {
     clinicRows.forEach(({ clinic, actions: clinicActions, phones, captured, qualified, scheduled, attended }, index) => {
-      const y = 965 + index * 82;
+      const y = 935 + index * 82;
       if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fff9dc");
       ctx.fillStyle = clinic.color || "#d3a900";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
@@ -2104,7 +2151,7 @@ async function exportReport(share = false) {
   } else {
     ctx.fillStyle = "#7a8782";
     ctx.font = "400 18px Arial";
-    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 990);
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 960);
   }
 
   const footerY = canvas.height - 100;

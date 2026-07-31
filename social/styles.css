@@ -447,6 +447,37 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 }
 .hunter-tracking-actions{display:flex;align-items:center;gap:4px}
 .hunter-tracking-actions .small-link{white-space:nowrap}
+.operation-hero{min-height:148px}
+.operation-hero .hero-copy>p:last-child{margin-bottom:0}
+.home-clinic-card{gap:10px;padding:12px}
+.home-clinic-card .clinic-avatar{width:38px;height:38px;border-radius:12px;flex:0 0 auto}
+.home-clinic-card .clinic-main strong,.home-clinic-card .clinic-main span{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.home-clinic-card .clinic-main strong{line-height:1.35}
+.home-clinic-card .clinic-main span{font-size:.64rem}
+.home-clinic-card .progress{margin-top:7px}
+.home-clinic-card .clinic-card-side{flex:0 0 auto}
+.kanban-lead-meta{display:flex!important;align-items:center;gap:4px}
+.kanban-lead-meta>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kanban-lead-meta i{
+  display:inline-grid;place-items:center;flex:0 0 auto;width:19px;height:19px;border-radius:7px;
+  background:#fff0a8;color:#8a6800;font-size:.72rem;font-style:normal
+}
+.danger-link{
+  display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:12px;
+  border:0;background:transparent;color:#b05243;font-size:.66rem;font-weight:800
+}
+.danger-link .material-symbols-outlined{font-size:.9rem}
+.destructive-confirmation{text-align:center}
+.destructive-confirmation>span{
+  display:grid;place-items:center;width:52px;height:52px;margin:0 auto 14px;border-radius:17px;
+  background:#fff0ec;color:#b05243;font-size:1.45rem
+}
+.danger-button{
+  min-height:46px;border:0;border-radius:14px;padding:12px 15px;background:#b05243;color:#fff;
+  font:inherit;font-size:.68rem;font-weight:800
+}
 @media(min-width:760px){
   .app-shell{padding-left:94px}
   .bottom-nav{
