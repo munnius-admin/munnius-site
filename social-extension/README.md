@@ -2,21 +2,28 @@
 
 Extensão Chrome Manifest V3 para acompanhar a operação manual no Instagram Web.
 
-## O que a versão 0.3 faz
+## O que a versão 0.4 faz
 
 - abre um painel lateral persistente no Instagram;
 - autentica com a mesma conta do Munnius Social;
 - carrega as clínicas do espaço compartilhado;
-- inicia e encerra uma sessão por clínica;
+- identifica o `@` da conta conectada em cada guia e associa automaticamente a clínica cadastrada;
+- mantém clínica, automação, sessão e contadores separados por guia, inclusive em várias janelas;
+- inicia e encerra uma sessão por clínica, exigindo uma seleção válida;
+- separa o botão de automação da sessão: todos os lançamentos manuais continuam disponíveis com a automação desligada;
 - detecta visitas a perfis, follows, curtidas por botão ou duplo clique, comentários e Directs enviados em página ou modal;
 - mantém um botão manual independente em cada contador quando o Instagram não oferece contexto confiável;
-- transforma cada Direct detectado em **Lead mapeado**, ligado ao `@` quando disponível;
+- transforma o primeiro Direct detectado em **Lead mapeado**, ligado ao `@` quando disponível;
+- não soma novamente o Direct de uma conversa que já foi mapeada;
+- avança o mesmo `@` para **Conversando** ao reconhecer uma mensagem não lida ou, como contingência, ao detectar o segundo envio naquela conversa;
+- reconstrói o histórico mínimo a partir dos Directs e Leads sincronizados para manter a deduplicação após recarregar a extensão;
 - avança o mesmo `@` para **Conversando** e **Telefone captado**, sem duplicar o lead;
 - permite registrar resposta ou telefone mesmo sem Direct anterior, para cobrir exceções;
 - identifica possíveis telefones com ou sem DDD visíveis no Direct e abre uma revisão;
 - mostra nome, `@` editável, temperatura, procedimento, checklist BANT e resumo das respostas no painel;
 - salva o telefone ou envia a mensagem pronta para a Hunter mesmo com o checklist vazio;
 - mantém contador, saldo diário do cronômetro e uma lista acionável dos leads da sessão;
+- permite avançar os cards da clínica selecionada pelo próprio painel lateral;
 - grava eventos enxutos no Supabase para posterior consolidação pelo app;
 - oferece mensagens rápidas para copiar e personalizar.
 
@@ -43,3 +50,7 @@ inferir o autor de cada mensagem apenas pelo HTML pode gerar falsos positivos.
 
 Nenhum texto completo de conversa é armazenado. A busca de telefone ocorre somente na
 área visível do Direct, e o número só é gravado após confirmação.
+
+Em uso com várias janelas, cada Instagram deve permanecer em sua própria guia e o painel
+lateral deve estar aberto nessa guia. A automação só pode ser ativada quando o `@` conectado
+corresponder ao Instagram cadastrado na clínica; caso contrário, o painel informa a divergência.

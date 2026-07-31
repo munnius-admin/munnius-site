@@ -6,7 +6,10 @@
   let previousUrl = "";
   let lastPhone = "";
   let lastConversationHandle = "";
+  let lastAccountHandle = "";
+  let lastPublishedContext = "";
   let scanTimer;
+  let responseScanTimer;
   const lastEmission = new Map();
 
   function normalizeText(value = "") {
@@ -41,6 +44,21 @@
     return explicit || "";
   }
 
+  function ownAccountHandle() {
+    const links = [...document.querySelectorAll('a[href]')];
+    for (const anchor of links) {
+      const label = normalizeText([
+        anchor.innerText,
+        anchor.getAttribute("aria-label"),
+        anchor.querySelector("img")?.getAttribute("alt")
+      ].filter(Boolean).join(" "));
+      if (!/(^|\s)(perfil|profile)(\s|$)/.test(label)) continue;
+      const handle = handleFromHref(anchor.getAttribute("href") || "");
+      if (handle) return handle;
+    }
+    return lastAccountHandle;
+  }
+
   function directScope(target) {
     return target?.closest?.('[role="dialog"]')
       || target?.closest?.("form")
@@ -60,8 +78,10 @@
   }
 
   function conversationHandle(target = document) {
+    const accountHandle = ownAccountHandle();
+    if (accountHandle) lastAccountHandle = accountHandle;
     const profilePageHandle = singleHandleFromPath(location.pathname);
-    if (profilePageHandle) return profilePageHandle;
+    if (profilePageHandle && normalizeHandle(profilePageHandle) !== normalizeHandle(accountHandle)) return profilePageHandle;
     const scopes = [
       target?.closest?.('[role="dialog"]'),
       target?.closest?.("article"),
@@ -71,15 +91,21 @@
     ].filter(Boolean);
     for (const scope of scopes) {
       const textHandle = handleFromVisibleText(scope);
-      if (textHandle) return textHandle;
-      const handles = handlesFrom(scope);
+      if (textHandle && normalizeHandle(textHandle) !== normalizeHandle(accountHandle)) return textHandle;
+      const handles = handlesFrom(scope).filter(handle => normalizeHandle(handle) !== normalizeHandle(accountHandle));
       if (handles.length === 1) return handles[0];
       if (handles.length > 1 && lastConversationHandle && handles.includes(lastConversationHandle)) return lastConversationHandle;
     }
     return lastConversationHandle;
   }
 
+  function normalizeHandle(value = "") {
+    return String(value || "").trim().replace(/^@/, "").toLowerCase();
+  }
+
   function contextFor(target = document) {
+    const accountHandle = ownAccountHandle();
+    if (accountHandle) lastAccountHandle = accountHandle;
     const profileHandle = conversationHandle(target);
     if (profileHandle) lastConversationHandle = profileHandle;
     const inDirect = location.pathname.startsWith("/direct/") || Boolean(directScope(target));
@@ -89,8 +115,21 @@
         ? `https://www.instagram.com/${profileHandle.replace("@", "")}/`
         : location.href,
       pageUrl: location.href,
-      route: inDirect ? "direct" : profileHandle ? "profile" : "feed"
+      route: inDirect ? "direct" : profileHandle ? "profile" : "feed",
+      accountHandle: accountHandle || lastAccountHandle
     };
+  }
+
+  function publishTabContext(target = document) {
+    const context = contextFor(target);
+    const key = `${context.accountHandle || ""}:${context.profileHandle || ""}:${context.route}`;
+    if (key === lastPublishedContext) return;
+    lastPublishedContext = key;
+    chrome.runtime.sendMessage({
+      type: "UPDATE_TAB_CONTEXT",
+      accountHandle: context.accountHandle || "",
+      context
+    }).catch(() => {});
   }
 
   function emit(type, extra = {}, cooldown = 700) {
@@ -106,6 +145,7 @@
         profileHandle: context.profileHandle,
         instagramUrl: context.instagramUrl,
         context,
+        accountHandle: context.accountHandle,
         phone: extra.phone || null
       }
     }).catch(() => {});
@@ -177,14 +217,37 @@
   }, true);
 
   function inspectRoute() {
-    if (location.href === previousUrl) return;
-    previousUrl = location.href;
-    const handle = singleHandleFromPath(location.pathname);
-    if (handle) {
-      lastConversationHandle = handle;
-      emit("profile_viewed", { target: document }, 0);
+    const routeChanged = location.href !== previousUrl;
+    if (routeChanged) {
+      previousUrl = location.href;
+      const handle = singleHandleFromPath(location.pathname);
+      if (handle && normalizeHandle(handle) !== normalizeHandle(ownAccountHandle())) {
+        lastConversationHandle = handle;
+        emit("profile_viewed", { target: document }, 0);
+      }
+      schedulePhoneScan();
     }
-    schedulePhoneScan();
+    publishTabContext();
+  }
+
+  function scheduleResponseScan() {
+    clearTimeout(responseScanTimer);
+    responseScanTimer = setTimeout(() => {
+      if (!location.pathname.startsWith("/direct/")) return;
+      const rows = [...document.querySelectorAll('[role="row"], [role="listitem"], a[href*="/direct/t/"]')];
+      rows.forEach(row => {
+        const text = normalizeText([
+          row.innerText,
+          row.getAttribute?.("aria-label"),
+          row.querySelector?.('[aria-label*="lida" i], [aria-label*="unread" i]')?.getAttribute?.("aria-label")
+        ].filter(Boolean).join(" "));
+        if (!/(nao lida|unread|nova mensagem|new message)/.test(text)) return;
+        const handle = handleFromVisibleText(row) || handlesFrom(row).find(item => normalizeHandle(item) !== normalizeHandle(ownAccountHandle()));
+        if (!handle) return;
+        lastConversationHandle = handle;
+        emit("response_detected", { target: row }, 5000);
+      });
+    }, 900);
   }
 
   function schedulePhoneScan() {
@@ -209,8 +272,10 @@
   const observer = new MutationObserver(() => {
     inspectRoute();
     schedulePhoneScan();
+    scheduleResponseScan();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   setInterval(inspectRoute, 800);
   inspectRoute();
+  scheduleResponseScan();
 })();

@@ -25,12 +25,21 @@
     </section>
 
     <section class="workspace hidden" id="workspace-view">
+      <section class="tab-match-card checking" id="tab-match-card">
+        <span>✦</span>
+        <div><strong id="welcome-title">Bora trabalhar?</strong><small id="welcome-copy">Identificando a conta desta aba...</small></div>
+      </section>
+
       <section class="session-card">
         <div class="session-top">
           <div><p class="eyebrow">Sessão de trabalho</p><strong id="session-title">Escolha a clínica</strong></div>
           <time id="session-timer">00:00:00</time>
         </div>
         <select id="clinic-select"><option value="">Selecionar clínica</option></select>
+        <div class="automation-row">
+          <div><strong>Automação desta aba</strong><small>Os botões manuais continuam disponíveis.</small></div>
+          <button id="automation-toggle" type="button" aria-pressed="false"><i></i><span>Desativada</span></button>
+        </div>
         <button class="primary" id="session-button">Iniciar acompanhamento</button>
       </section>
 
@@ -84,7 +93,7 @@
       </section>
 
       <section class="outreach">
-        <div class="section-title"><div><p class="eyebrow">Nesta clínica</p><h2>Leads da sessão</h2></div></div>
+        <div class="section-title"><div><p class="eyebrow">Mini CRM da clínica</p><h2>Avançar os cards</h2></div></div>
         <div id="outreach-list"></div>
       </section>
 

@@ -2,9 +2,17 @@ const $ = selector => document.querySelector(selector);
 let state = null;
 let timerId;
 let qualificationDraft = null;
+let activeTabId = null;
 
-function message(type, payload = {}) {
-  return chrome.runtime.sendMessage({ type, ...payload }).then(response => {
+async function resolveActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  activeTabId = tab?.id || null;
+  return activeTabId;
+}
+
+async function message(type, payload = {}) {
+  if (!activeTabId) await resolveActiveTab();
+  return chrome.runtime.sendMessage({ type, tabId: activeTabId, ...payload }).then(response => {
     if (!response?.ok) throw new Error(response?.message || "Não foi possível concluir.");
     return response.state;
   });
@@ -68,8 +76,9 @@ function renderHistory() {
 }
 
 function renderOutreach() {
+  const selectedClinicId = state.activeSession?.clinicId || state.selectedClinicId;
   const items = (state.outreach || [])
-    .filter(item => !state.activeSession?.clinicId || item.clinicId === state.activeSession.clinicId)
+    .filter(item => !selectedClinicId || item.clinicId === selectedClinicId)
     .slice(0, 16);
   $("#outreach-list").innerHTML = items.map(item => {
     const status = item.status === "phone" ? "Telefone" : item.status === "responded" ? "Respondido" : "Aguardando";
@@ -164,8 +173,8 @@ function hunterMessage(candidate, qualification) {
     importantDate: "Tem uma data importante"
   };
   const icons = {
-    party: "\u{1F389}", rocket: "\u{1F680}", person: "\u{1F464}", compass: "\u{1F9ED}",
-    sparkle: "\u{2728}", check: "\u{2705}", dot: "\u{25AB}\u{FE0F}",
+    person: "\u{1F464}", compass: "\u{1F9ED}", calendar: "\u{1F4C5}",
+    check: "\u{2705}", dot: "\u{25AB}\u{FE0F}",
     hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}", message: "\u{1F4AC}"
   };
   const notes = readExtensionQualificationNotes();
@@ -174,7 +183,7 @@ function hunterMessage(candidate, qualification) {
   const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[$("#qualification-temperature").value];
   return {
     clinic,
-    text: `${icons.party} *NOVA OPORTUNIDADE PARA VOCÊ!*\n\nBoa, ${clinic?.hunter || "Hunter"}! Novo contato da *${clinic?.name || "clínica"}* para você assumir. ${icons.rocket}\n\n${icons.person} *Lead*\n• Nome: ${$("#qualification-name").value || "Não informado"}\n• Instagram: ${candidate.profileHandle || "Não informado"}\n• WhatsApp: ${$("#qualification-phone").value || "Não informado"}\n• Interesse: ${$("#qualification-interest").value || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n${icons.compass} *Contexto já alinhado*\n${checked.length || noteLines.length ? [...checked, ...noteLines].join("\n") : `${icons.dot} Contexto mínimo — continue a qualificação por aqui.`}\n\n${icons.sparkle} Avance para o agendamento sem repetir o que já foi conversado.`
+    text: `${icons.person} *NOVO LEAD · ${clinic?.name || "Clínica"}*\n\nOi, ${clinic?.hunter || "Hunter"}! Seguem as informações para continuar o atendimento sem repetir o que já foi alinhado.\n\n*Dados do contato*\n• Nome: ${$("#qualification-name").value || "Não informado"}\n• Instagram: ${candidate.profileHandle || "Não informado"}\n• WhatsApp: ${$("#qualification-phone").value || "Não informado"}\n• Interesse: ${$("#qualification-interest").value || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n${icons.compass} *Contexto já alinhado*\n${checked.length || noteLines.length ? [...checked, ...noteLines].join("\n") : `${icons.dot} Contexto mínimo — continue a qualificação por aqui.`}\n\n${icons.calendar} Captado em ${new Intl.DateTimeFormat("pt-BR").format(new Date())}`
   };
 }
 
@@ -231,14 +240,34 @@ function render(nextState) {
   $("#workspace-view").classList.toggle("hidden", !authenticated);
   if (!authenticated) return;
   const select = $("#clinic-select");
-  const selected = state.activeSession?.clinicId || select.value;
+  const selected = state.activeSession?.clinicId || state.selectedClinicId || "";
   select.innerHTML = `<option value="">Selecionar clínica</option>${(state.clinics || []).map(clinic =>
     `<option value="${clinic.id}" ${clinic.id === selected ? "selected" : ""}>${escapeHtml(clinic.name)} · ${escapeHtml(clinic.instagram)}</option>`
   ).join("")}`;
   select.disabled = Boolean(state.activeSession);
-  $("#session-title").textContent = state.activeSession?.clinicName || "Escolha a clínica";
+  const selectedClinic = state.clinics.find(clinic => clinic.id === selected);
+  const matchedClinic = state.clinics.find(clinic => clinic.id === state.matchedClinicId);
+  $("#session-title").textContent = state.activeSession?.clinicName || selectedClinic?.name || "Escolha a clínica";
   $("#session-button").textContent = state.activeSession ? "Encerrar e sincronizar" : "Iniciar acompanhamento";
   $("#session-button").classList.toggle("finish", Boolean(state.activeSession));
+  $("#session-button").disabled = !state.activeSession && !selected;
+  const matchCard = $("#tab-match-card");
+  matchCard.className = `tab-match-card ${state.matchStatus || "checking"}`;
+  if (matchedClinic) {
+    $("#welcome-title").textContent = "Bora trabalhar?";
+    $("#welcome-copy").textContent = `Bem-vinda, Social Seller da ${matchedClinic.name}.`;
+  } else if (state.matchStatus === "unmatched") {
+    $("#welcome-title").textContent = "Conta não cadastrada";
+    $("#welcome-copy").textContent = "Aba utilizada não corresponde a nenhuma clínica cadastrada.";
+  } else {
+    $("#welcome-title").textContent = "Bora trabalhar?";
+    $("#welcome-copy").textContent = "Identificando a conta do Instagram desta aba...";
+  }
+  const automationButton = $("#automation-toggle");
+  automationButton.classList.toggle("active", Boolean(state.automationEnabled));
+  automationButton.setAttribute("aria-pressed", String(Boolean(state.automationEnabled)));
+  automationButton.querySelector("span").textContent = state.automationEnabled ? "Ativada" : "Desativada";
+  automationButton.disabled = state.matchStatus !== "matched";
   const counts = state.counters || {};
   Object.entries({ profiles: "profiles", likes: "likes", comments: "comments", directs: "directs", responses: "responses", phones: "phones" })
     .forEach(([key, id]) => $(`#count-${id}`).textContent = counts[key] || 0);
@@ -280,6 +309,17 @@ $("#session-button").addEventListener("click", async () => {
       : await message("START_SESSION", { clinicId: $("#clinic-select").value }));
   } catch (error) { toast(error.message); }
 });
+$("#clinic-select").addEventListener("change", async event => {
+  try { render(await message("SELECT_CLINIC", { clinicId: event.target.value })); }
+  catch (error) { toast(error.message); }
+});
+$("#automation-toggle").addEventListener("click", async () => {
+  try {
+    const enabled = !state.automationEnabled;
+    render(await message("SET_AUTOMATION", { enabled }));
+    toast(enabled ? "Automação ativada nesta aba" : "Automação desativada; modo manual disponível");
+  } catch (error) { toast(error.message); }
+});
 $("#confirm-phone").addEventListener("click", async () => {
   if (state.phoneCandidate) openQualification({ ...state.phoneCandidate, stage: "phone" });
 });
@@ -295,7 +335,7 @@ document.querySelectorAll("[data-manual-event]").forEach(button => button.addEve
     openQualification({ ...context, stage: type === "phone_captured" ? "phone" : "response" });
     return;
   }
-  render(await message("TRACKED_EVENT", { event: { type, ...context } }));
+  render(await message("TRACKED_EVENT", { event: { type, manual: true, ...context } }));
   toast("Ação adicionada manualmente");
 }));
 $("#refresh-workspace").addEventListener("click", async () => {
@@ -306,8 +346,14 @@ $("#open-app").addEventListener("click", () => chrome.tabs.create({ url: MUNNIUS
 $("#logout-button").addEventListener("click", async () => render(await message("LOGOUT")));
 
 chrome.runtime.onMessage.addListener(messageEvent => {
-  if (messageEvent.type === "STATE_UPDATED") render(messageEvent.state);
+  if (messageEvent.type === "STATE_UPDATED" && (!messageEvent.tabId || messageEvent.tabId === activeTabId)) render(messageEvent.state);
 });
 
-message("GET_STATE").then(render).catch(error => toast(error.message));
+chrome.tabs.onActivated.addListener(() => {
+  resolveActiveTab().then(() => message("GET_STATE")).then(render).catch(error => toast(error.message));
+});
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (tabId === activeTabId && changeInfo.status === "complete") message("GET_STATE").then(render).catch(() => {});
+});
+resolveActiveTab().then(() => message("GET_STATE")).then(render).catch(error => toast(error.message));
 timerId = setInterval(renderTimer, 1000);

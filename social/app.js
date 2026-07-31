@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=26";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=27";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -736,7 +736,7 @@ function renderDashboard() {
   $("#actions-total").textContent = actions;
   $("#leads-total").textContent = stats.phones;
   $("#clinics-total").textContent = activeClinics.length;
-  $("#hunters-total").textContent = stats.scheduled;
+  $("#hunters-total").textContent = stats.scheduledTotal;
   $("#followups-total").textContent = conversations;
   $("#pipeline-mapped").textContent = stats.directs;
   $("#pipeline-talking").textContent = talking;
