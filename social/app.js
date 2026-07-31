@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=34";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=35";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -144,6 +144,7 @@ function normalizeState(candidate) {
   migrateAnonymousResponsePlaceholders(normalized);
   applyWorkspaceDataCorrections(normalized);
   reconcileRecentAnonymousResponses(normalized);
+  reconcileAdvancedLeadOrigins(normalized);
   return normalized;
 }
 
@@ -327,6 +328,28 @@ function reconcileRecentAnonymousResponses(target) {
     });
   });
   target.anonymousResponseHistoryVersion = 2;
+}
+
+function reconcileAdvancedLeadOrigins(target) {
+  if (Number(target.leadOriginReconciliationVersion || 0) >= 1) return;
+  const advancedStatuses = new Set(["sent_to_hunter", "scheduled", "attended", "no_show"]);
+  (target.leads || []).forEach(lead => {
+    if (!advancedStatuses.has(lead.status)) return;
+    const handle = instagramHandle(lead.instagram || "");
+    const hasOrigin = (target.directs || []).some(direct => direct.leadId === lead.id
+      || (direct.clinicId === lead.clinicId && handle !== "@" && instagramHandle(direct.instagram || "") === handle));
+    if (hasOrigin) return;
+    const at = lead.directSentAt || lead.respondedAt || lead.sentToHunterAt || lead.scheduledRecordedAt
+      || lead.phoneCapturedAt || lead.prospectedAt || lead.lastContactAt || new Date().toISOString();
+    target.directs.push({
+      id: `direct-origin-${lead.id}`, clinicId: lead.clinicId, leadId: lead.id, instagram: handle,
+      sessionId: null, source: "system", sentAt: at, respondedAt: lead.respondedAt || lead.sentToHunterAt || at,
+      phoneAt: lead.phoneCapturedAt || lead.sentToHunterAt || null, phone: lead.whatsapp || "",
+      status: lead.whatsapp ? "phone" : "responded", createdAt: at, updatedAt: at,
+      inferredOrigin: true, timeline: [{ at, label: "Direct de origem reconciliado" }]
+    });
+  });
+  target.leadOriginReconciliationVersion = 1;
 }
 
 function loadState() {
@@ -625,6 +648,18 @@ function addAnonymousConversation(clinicId, sessionId, respondedAt = new Date().
   return batch;
 }
 
+function consumeOrCreateAnonymousDirectOrigin(clinicId, sessionId, at = new Date().toISOString(), source = "manual_web") {
+  const existing = consumeOldestAnonymousDirect(clinicId);
+  if (existing) return existing;
+  const created = addAnonymousDirect(clinicId, sessionId, at, source, 1);
+  if (!created) return null;
+  created.remaining = Math.max(0, Number(created.remaining || 0) - 1);
+  created.consumed = Number(created.consumed || 0) + 1;
+  created.inferredOrigin = true;
+  created.updatedAt = at;
+  return created;
+}
+
 function consumeOldestAnonymousConversation(clinicId) {
   expireAnonymousDirects();
   const batch = (state.anonymousConversationBatches || [])
@@ -650,7 +685,7 @@ function consumeAnonymousConversationBatch(batchId) {
 
 function advanceAnonymousLead(clinicId, stage, at = new Date().toISOString(), sessionId = null, source = "manual_web") {
   if (stage === "responded") {
-    const sourceBatch = consumeOldestAnonymousDirect(clinicId);
+    const sourceBatch = consumeOrCreateAnonymousDirectOrigin(clinicId, sessionId, at, source);
     return addAnonymousConversation(clinicId, sessionId, at, source, sourceBatch);
   }
   if (stage === "phone") return null;
@@ -692,27 +727,26 @@ function anonymousBatchDeadline(batch, kind) {
 
 function anonymousPipelineDisplayBatches(kind, priorityFilter = "all") {
   const batches = anonymousPipelineBatches(kind, priorityFilter);
-  if (kind !== "mapped") return batches;
   const grouped = new Map();
   batches.forEach(batch => {
     const deadline = anonymousBatchDeadline(batch, kind);
-    const key = `${batch.clinicId}:${deadline}`;
+    const key = kind === "mapped" ? `${batch.clinicId}:${deadline}` : batch.clinicId;
     const current = grouped.get(key) || {
       ...batch,
-      id: `anonymous-group-${key}`,
       remaining: 0,
       groupedBatchIds: []
     };
     current.remaining += Number(batch.remaining || 0);
     current.groupedBatchIds.push(batch.id);
-    if (new Date(batch.sentAt || 0) < new Date(current.sentAt || 0)) current.sentAt = batch.sentAt;
+    const dateField = kind === "talking" ? "respondedAt" : "sentAt";
+    if (new Date(batch[dateField] || 0) < new Date(current[dateField] || 0)) current[dateField] = batch[dateField];
     grouped.set(key, current);
   });
   return [...grouped.values()].sort((a, b) => {
     const clinicOrder = clinicPriority(clinicById(a.clinicId)).order - clinicPriority(clinicById(b.clinicId)).order;
     if (clinicOrder) return clinicOrder;
     return String(clinicById(a.clinicId)?.name || "").localeCompare(String(clinicById(b.clinicId)?.name || ""), "pt-BR")
-      || new Date(a.sentAt || 0) - new Date(b.sentAt || 0);
+      || new Date((kind === "talking" ? a.respondedAt : a.sentAt) || 0) - new Date((kind === "talking" ? b.respondedAt : b.sentAt) || 0);
   });
 }
 
@@ -773,6 +807,27 @@ function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = 
   });
   direct.leadId = lead?.id || direct.leadId;
   return { direct, lead };
+}
+
+function ensureNamedDirectOrigin(lead, at = new Date().toISOString(), source = "manual_web", sessionId = null) {
+  if (!lead?.clinicId) return null;
+  const handle = instagramHandle(lead.instagram || "");
+  const existing = state.directs.find(direct => direct.leadId === lead.id
+    || (direct.clinicId === lead.clinicId && handle !== "@" && instagramHandle(direct.instagram || "") === handle));
+  if (existing) {
+    existing.leadId ||= lead.id;
+    return existing;
+  }
+  const progressed = ["talking", "follow_up", "sent_to_hunter", "scheduled", "attended", "no_show"].includes(lead.status);
+  const direct = {
+    id: uid("direct-origin"), clinicId: lead.clinicId, leadId: lead.id, instagram: handle,
+    sessionId, source, sentAt: at, respondedAt: progressed ? at : null,
+    phoneAt: lead.whatsapp ? (lead.phoneCapturedAt || at) : null, phone: lead.whatsapp || "",
+    status: lead.whatsapp ? "phone" : progressed ? "responded" : "sent",
+    createdAt: at, updatedAt: at, inferredOrigin: true, timeline: [{ at, label: "Direct de origem registrado" }]
+  };
+  state.directs.push(direct);
+  return direct;
 }
 
 function upsertLeadFromExtension(event, stage = "mapped") {
@@ -954,14 +1009,26 @@ function formatDate(value, withTime = false) {
   return new Intl.DateTimeFormat("pt-BR", withTime ? { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }).format(new Date(value));
 }
 function isSameDay(a, b = new Date()) { const date = new Date(a); return date.toDateString() === new Date(b).toDateString(); }
-function periodStart(period) {
-  const start = new Date();
+function periodBounds(period, reference = null) {
+  const anchor = reference ? new Date(`${reference}T12:00:00`) : new Date();
+  const start = new Date(anchor);
   start.setHours(0, 0, 0, 0);
   if (period === "week") start.setDate(start.getDate() - 6);
   if (period === "month") start.setDate(1);
-  return start;
+  const end = new Date(period === "week" && reference ? anchor : start);
+  end.setHours(0, 0, 0, 0);
+  if (period === "day") end.setDate(end.getDate() + 1);
+  if (period === "week") end.setDate(end.getDate() + (reference ? 1 : 7));
+  if (period === "month") end.setMonth(end.getMonth() + 1, 1);
+  return { start, end };
 }
-function inPeriod(value, period) { return new Date(value) >= periodStart(period); }
+function periodStart(period, reference = null) { return periodBounds(period, reference).start; }
+function inPeriod(value, period, reference = null) {
+  if (!value) return false;
+  const date = new Date(value);
+  const { start, end } = periodBounds(period, reference);
+  return date >= start && date < end;
+}
 
 function showToast(message) {
   const toast = $("#toast");
@@ -987,10 +1054,11 @@ function navigate(view) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function periodStats(period = state.period || "day") {
-  const leads = state.leads.filter(lead => inPeriod(lead.prospectedAt, period));
-  const sessions = state.sessions.filter(session => inPeriod(session.startedAt, period));
-  if (state.session && inPeriod(state.session.startedAt, period)) {
+function periodStats(period = state.period || "day", reference = null) {
+  const contains = value => inPeriod(value, period, reference);
+  const leads = state.leads.filter(lead => contains(lead.prospectedAt));
+  const sessions = state.sessions.filter(session => contains(session.startedAt));
+  if (state.session && contains(state.session.startedAt)) {
     sessions.push({
       ...state.session,
       durationSeconds: activeSessionElapsed(state.session)
@@ -1001,37 +1069,41 @@ function periodStats(period = state.period || "day") {
     total.seconds += Number(session.durationSeconds || 0);
     return total;
   }, { profiles: 0, likes: 0, comments: 0, directs: 0, responses: 0, phones: 0, seconds: 0 });
-  const trackedDirects = state.directs.filter(direct => direct.sentAt && inPeriod(direct.sentAt, period)).length;
-  const trackedResponses = state.directs.filter(direct => direct.respondedAt && inPeriod(direct.respondedAt, period)).length;
-  const leadResponses = state.leads.filter(lead => lead.respondedAt && inPeriod(lead.respondedAt, period)).length;
+  const identifiedDirects = state.directs.filter(direct => direct.sentAt && !direct.anonymousSourceId && contains(direct.sentAt)).length;
+  const anonymousDirects = (state.anonymousDirectBatches || [])
+    .filter(batch => batch.sentAt && contains(batch.sentAt))
+    .reduce((total, batch) => total + Number(batch.quantity || 0), 0);
+  const trackedDirects = identifiedDirects + anonymousDirects;
+  const trackedResponses = state.directs.filter(direct => direct.respondedAt && contains(direct.respondedAt)).length;
+  const leadResponses = state.leads.filter(lead => lead.respondedAt && contains(lead.respondedAt)).length;
   const mappedPhonesTotal = state.leads.filter(lead => {
     const mappedAt = leadPhoneMappedAt(lead);
-    return mappedAt && inPeriod(mappedAt, period);
+    return mappedAt && contains(mappedAt);
   }).length;
   const qualifiedTotal = state.leads.filter(lead => {
     const qualifiedAt = leadQualifiedAt(lead);
-    return qualifiedAt && inPeriod(qualifiedAt, period);
+    return qualifiedAt && contains(qualifiedAt);
   }).length;
   const mappedPhonesCurrent = state.leads.filter(lead => {
     const mappedAt = leadPhoneMappedAt(lead);
-    return mappedAt && inPeriod(mappedAt, period) && isPhoneStage(lead);
+    return mappedAt && contains(mappedAt) && isPhoneStage(lead);
   }).length;
   const phonesTotal = mappedPhonesTotal;
-  const scheduledTotal = state.leads.filter(lead => leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length;
-  const attendedTotal = state.leads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length;
+  const scheduledTotal = state.leads.filter(lead => leadScheduledRecordedAt(lead) && contains(leadScheduledRecordedAt(lead))).length;
+  const attendedTotal = state.leads.filter(lead => lead.attendedAt && contains(lead.attendedAt)).length;
   return {
     leads: leads.length,
     sessions,
     ...counts,
     phones: mappedPhonesCurrent,
     phonesTotal,
-    hunters: state.leads.filter(lead => lead.status === "sent_to_hunter" && leadQualifiedAt(lead) && inPeriod(leadQualifiedAt(lead), period)).length,
+    hunters: state.leads.filter(lead => lead.status === "sent_to_hunter" && leadQualifiedAt(lead) && contains(leadQualifiedAt(lead))).length,
     huntersTotal: qualifiedTotal,
-    scheduled: state.leads.filter(lead => lead.status === "scheduled" && leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length,
+    scheduled: state.leads.filter(lead => lead.status === "scheduled" && leadScheduledRecordedAt(lead) && contains(leadScheduledRecordedAt(lead))).length,
     scheduledTotal,
-    attended: state.leads.filter(lead => lead.status === "attended" && lead.attendedAt && inPeriod(lead.attendedAt, period)).length,
+    attended: state.leads.filter(lead => lead.status === "attended" && lead.attendedAt && contains(lead.attendedAt)).length,
     attendedTotal,
-    noShows: state.leads.filter(lead => lead.status === "no_show" && lead.noShowAt && inPeriod(lead.noShowAt, period)).length,
+    noShows: state.leads.filter(lead => lead.status === "no_show" && lead.noShowAt && contains(lead.noShowAt)).length,
     directs: Math.max(counts.directs, trackedDirects),
     responses: Math.max(counts.responses, trackedResponses, leadResponses)
   };
@@ -1113,69 +1185,72 @@ function currentPipelineRates(pipeline) {
   };
 }
 
-function timelineMovementCount(period, pattern) {
-  return state.leads.filter(lead => (lead.timeline || []).some(item => item.at && inPeriod(item.at, period) && pattern.test(item.label || ""))).length;
+function timelineMovementCount(period, pattern, reference = null) {
+  return state.leads.filter(lead => (lead.timeline || []).some(item => item.at && inPeriod(item.at, period, reference) && pattern.test(item.label || ""))).length;
 }
 
-function crmMovementStats(period, stats = periodStats(period)) {
+function crmMovementStats(period, stats = periodStats(period), reference = null) {
   const anonymousExpired = [...(state.anonymousDirectBatches || []), ...(state.anonymousConversationBatches || [])]
-    .filter(batch => batch.expiredAt && inPeriod(batch.expiredAt, period))
+    .filter(batch => batch.expiredAt && inPeriod(batch.expiredAt, period, reference))
     .reduce((total, batch) => total + Number(batch.expired || 0), 0);
   return {
     mapped: Number(stats.directs || 0),
-    talking: Math.max(Number(stats.responses || 0), timelineMovementCount(period, /lead respondeu|resposta registrada|etapa alterada para conversando/i)),
-    lost: timelineMovementCount(period, /sem resposta após|sem evolução após|etapa alterada para perdido/i) + anonymousExpired,
+    talking: Math.max(Number(stats.responses || 0), timelineMovementCount(period, /lead respondeu|resposta registrada|etapa alterada para conversando/i, reference)),
+    lost: timelineMovementCount(period, /sem resposta após|sem evolução após|etapa alterada para perdido/i, reference) + anonymousExpired,
     qualified: Number(stats.huntersTotal || 0),
     scheduled: Number(stats.scheduledTotal || 0),
     attended: Number(stats.attendedTotal || 0)
   };
 }
 
-function clinicReportStats(clinicId, period, periodSummary) {
+function clinicReportStats(clinicId, period, periodSummary, reference = null) {
+  const contains = value => inPeriod(value, period, reference);
   const sessions = periodSummary.sessions.filter(session => session.clinicId === clinicId);
   const sessionCounts = sessions.reduce((total, session) => {
     Object.keys(countLabels).forEach(key => total[key] += Number(session.counts?.[key] || 0));
     return total;
   }, { profiles: 0, likes: 0, comments: 0, directs: 0, responses: 0, phones: 0 });
   const clinicLeads = state.leads.filter(lead => lead.clinicId === clinicId);
-  const trackedDirects = state.directs.filter(direct => direct.clinicId === clinicId && direct.sentAt && inPeriod(direct.sentAt, period)).length;
-  const trackedResponses = state.directs.filter(direct => direct.clinicId === clinicId && direct.respondedAt && inPeriod(direct.respondedAt, period)).length;
-  const leadResponses = clinicLeads.filter(lead => lead.respondedAt && inPeriod(lead.respondedAt, period)).length;
-  const directs = Math.max(sessionCounts.directs, trackedDirects);
+  const identifiedDirects = state.directs.filter(direct => direct.clinicId === clinicId && direct.sentAt && !direct.anonymousSourceId && contains(direct.sentAt)).length;
+  const anonymousDirects = (state.anonymousDirectBatches || []).filter(batch => batch.clinicId === clinicId && batch.sentAt && contains(batch.sentAt))
+    .reduce((total, batch) => total + Number(batch.quantity || 0), 0);
+  const trackedResponses = state.directs.filter(direct => direct.clinicId === clinicId && direct.respondedAt && contains(direct.respondedAt)).length;
+  const leadResponses = clinicLeads.filter(lead => lead.respondedAt && contains(lead.respondedAt)).length;
+  const directs = Math.max(sessionCounts.directs, identifiedDirects + anonymousDirects);
   const responses = Math.max(sessionCounts.responses, trackedResponses, leadResponses);
   const mappedPhonesTotal = clinicLeads.filter(lead => {
     const mappedAt = leadPhoneMappedAt(lead);
-    return mappedAt && inPeriod(mappedAt, period);
+    return mappedAt && contains(mappedAt);
   }).length;
   const mappedPhonesCurrent = clinicLeads.filter(lead => {
     const mappedAt = leadPhoneMappedAt(lead);
-    return mappedAt && inPeriod(mappedAt, period) && isPhoneStage(lead);
+    return mappedAt && contains(mappedAt) && isPhoneStage(lead);
   }).length;
   const phonesTotal = mappedPhonesTotal;
   const qualifiedTotal = clinicLeads.filter(lead => {
     const qualifiedAt = leadQualifiedAt(lead);
-    return qualifiedAt && inPeriod(qualifiedAt, period);
+    return qualifiedAt && contains(qualifiedAt);
   }).length;
   const captured = clinicLeads.filter(lead => {
     if (!leadPhoneMappedAt(lead)) return false;
     return [leadPhoneMappedAt(lead), leadQualifiedAt(lead), leadScheduledRecordedAt(lead), lead.attendedAt, lead.noShowAt]
-      .some(date => date && inPeriod(date, period));
+      .some(date => date && contains(date));
   }).length;
   return {
     actions: Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses + Math.max(Number(sessionCounts.phones || 0), phonesTotal),
     directs,
     responses,
-    lost: clinicLeads.filter(lead => (lead.timeline || []).some(item => item.at && inPeriod(item.at, period) && /sem resposta após|sem evolução após|etapa alterada para perdido/i.test(item.label || ""))).length,
-    leads: clinicLeads.filter(lead => inPeriod(lead.prospectedAt, period)).length,
+    lost: clinicLeads.filter(lead => (lead.timeline || []).some(item => item.at && contains(item.at) && /sem resposta após|sem evolução após|etapa alterada para perdido/i.test(item.label || ""))).length,
+    leads: clinicLeads.filter(lead => contains(lead.prospectedAt)).length,
     phones: mappedPhonesCurrent,
     phonesTotal,
     captured,
-    qualified: clinicLeads.filter(lead => lead.status === "sent_to_hunter" && leadQualifiedAt(lead) && inPeriod(leadQualifiedAt(lead), period)).length,
+    qualified: clinicLeads.filter(lead => lead.status === "sent_to_hunter" && leadQualifiedAt(lead) && contains(leadQualifiedAt(lead))).length,
     qualifiedTotal,
-    scheduled: clinicLeads.filter(lead => lead.status === "scheduled" && leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length,
-    scheduledTotal: clinicLeads.filter(lead => leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length,
-    attended: clinicLeads.filter(lead => lead.status === "attended" && lead.attendedAt && inPeriod(lead.attendedAt, period)).length,
-    attendedTotal: clinicLeads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length
+    scheduled: clinicLeads.filter(lead => lead.status === "scheduled" && leadScheduledRecordedAt(lead) && contains(leadScheduledRecordedAt(lead))).length,
+    scheduledTotal: clinicLeads.filter(lead => leadScheduledRecordedAt(lead) && contains(leadScheduledRecordedAt(lead))).length,
+    attended: clinicLeads.filter(lead => lead.status === "attended" && lead.attendedAt && contains(lead.attendedAt)).length,
+    attendedTotal: clinicLeads.filter(lead => lead.attendedAt && contains(lead.attendedAt)).length
   };
 }
 
@@ -1371,14 +1446,17 @@ function openAdminAccessForm(organizationId) {
 }
 
 function renderGoals() {
-  const phoneNode = $("#goal-phones-progress");
-  const scheduledNode = $("#goal-scheduled-progress");
-  if (!phoneNode || !scheduledNode) return;
   const monthly = periodStats("month");
-  phoneNode.textContent = `${monthly.phonesTotal} / ${state.goals.phones}`;
-  scheduledNode.textContent = `${monthly.scheduledTotal} / ${state.goals.scheduled}`;
-  $("#goal-phones-bar").style.width = `${Math.min(100, monthly.phonesTotal / state.goals.phones * 100)}%`;
-  $("#goal-scheduled-bar").style.width = `${Math.min(100, monthly.scheduledTotal / state.goals.scheduled * 100)}%`;
+  [["goal-phones-progress", "goal-phones-bar"], ["clinic-goal-phones-progress", "clinic-goal-phones-bar"]].forEach(([labelId, barId]) => {
+    const label = $(`#${labelId}`); const bar = $(`#${barId}`);
+    if (label) label.textContent = `${monthly.phonesTotal} / ${state.goals.phones}`;
+    if (bar) bar.style.width = `${Math.min(100, monthly.phonesTotal / state.goals.phones * 100)}%`;
+  });
+  [["goal-scheduled-progress", "goal-scheduled-bar"], ["clinic-goal-scheduled-progress", "clinic-goal-scheduled-bar"]].forEach(([labelId, barId]) => {
+    const label = $(`#${labelId}`); const bar = $(`#${barId}`);
+    if (label) label.textContent = `${monthly.scheduledTotal} / ${state.goals.scheduled}`;
+    if (bar) bar.style.width = `${Math.min(100, monthly.scheduledTotal / state.goals.scheduled * 100)}%`;
+  });
 }
 
 function openGoalsForm() {
@@ -1589,11 +1667,11 @@ function renderLeads() {
       return `<article class="kanban-volume-card ${column.key}">
         <span class="material-symbols-outlined">${column.key === "new" ? "alternate_email" : "forum"}</span>
         <div><strong>${batch.remaining} ${batch.remaining === 1 ? "lead anônimo" : "leads anônimos"}</strong><small>${escapeHtml(clinic?.name || "Clínica")} · ${anonymousBatchDeadline(batch, anonymousKind)}</small></div>
-        ${anonymousKind === "talking" ? `<button type="button" data-anonymous-hunter="${batch.id}" aria-label="Identificar lead e enviar à Hunter"><span class="material-symbols-outlined">person_edit</span>Identificar</button>` : ""}
+        ${anonymousKind === "talking" ? `<button type="button" data-anonymous-hunter="${batch.groupedBatchIds?.[0] || batch.id}" aria-label="Identificar lead e enviar à Hunter"><span class="material-symbols-outlined">person_edit</span>Identificar</button>` : ""}
       </article>`;
     }).join("");
     return `<section class="kanban-column" data-kanban-column="${column.key}">
-      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><b>${items.length + anonymousVolume}</b></header>
+      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><span class="kanban-column-tools"><b>${items.length + anonymousVolume}</b><button type="button" data-add-lead-stage="${column.key}" aria-label="Adicionar em ${column.title}"><span class="material-symbols-outlined">add</span></button></span></header>
       <div class="kanban-cards">${volumeCard}${items.map(kanbanLeadCard).join("") || (!volumeCard ? `<div class="kanban-empty">Nenhum lead nesta etapa</div>` : "")}</div>
     </section>`;
   }).join("");
@@ -1622,6 +1700,11 @@ function renderLeads() {
   $$("[data-anonymous-hunter]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     openLeadForm({ mode: "phone", anonymousBatchId: button.dataset.anonymousHunter });
+  }));
+  $$("[data-add-lead-stage]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    if (button.dataset.addLeadStage === "outcomes") return openOutcomeStagePicker();
+    openLeadForm({ initialStatus: button.dataset.addLeadStage });
   }));
   renderHunterFollowups(filtered);
 }
@@ -1780,15 +1863,26 @@ function renderFollowups() {
 }
 
 function renderReport() {
-  const stats = periodStats(state.reportPeriod);
-  const movements = crmMovementStats(state.reportPeriod, stats);
+  const reference = state.reportReference || null;
+  $("#report-reference-date").value = reference || "";
+  $("#clear-report-date").classList.toggle("hidden", !reference);
+  const stats = periodStats(state.reportPeriod, reference);
+  const movements = crmMovementStats(state.reportPeriod, stats, reference);
   const pipeline = currentPipelineStats();
   const pipelineRates = currentPipelineRates(pipeline);
   const monthly = periodStats("month");
   const actions = reportActionCount(stats);
   const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Este mês" };
-  $("#report-label").textContent = labels[state.reportPeriod];
-  $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
+  const { start: reportStart, end: reportEnd } = periodBounds(state.reportPeriod, reference);
+  const displayEnd = new Date(reportEnd); displayEnd.setMilliseconds(-1);
+  $("#report-label").textContent = reference
+    ? state.reportPeriod === "day" ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(reportStart)
+      : state.reportPeriod === "month" ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(reportStart)
+      : `7 dias até ${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(displayEnd)}`
+    : labels[state.reportPeriod];
+  $("#report-date").textContent = state.reportPeriod === "day"
+    ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(reportStart)
+    : `${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(reportStart)} a ${new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(displayEnd)}`;
   $("#report-phones").textContent = phoneActionCount(stats);
   $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação no período" : "ações no período"}`;
   $("#report-likes").textContent = stats.likes;
@@ -1812,18 +1906,14 @@ function renderReport() {
   $("#report-goal-phones-bar").style.width = `${Math.min(100, monthly.phonesTotal / state.goals.phones * 100)}%`;
   $("#report-goal-scheduled-bar").style.width = `${Math.min(100, monthly.scheduledTotal / state.goals.scheduled * 100)}%`;
   $("#report-user").textContent = state.profile?.name || "Social seller";
-  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
-    clinic,
-    ...clinicReportStats(clinic.id, state.reportPeriod, stats)
-  })).filter(row => row.actions || row.captured || row.qualifiedTotal || row.scheduledTotal || row.attendedTotal)
-    .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, phonesTotal, directs, responses, qualifiedTotal, scheduledTotal, attendedTotal, lost }) => {
-    const current = clinicCurrentPipelineStats(clinic.id);
+  const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({ clinic, current: clinicCurrentPipelineStats(clinic.id) }))
+    .filter(row => Object.values(row.current).some(Boolean))
+    .sort((a, b) => (b.current.qualified + b.current.scheduled + b.current.attended) - (a.current.qualified + a.current.scheduled + a.current.attended)
+      || b.current.talking - a.current.talking || b.current.mapped - a.current.mapped);
+  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, current }) => {
     return `<div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
-      <p><strong>${escapeHtml(clinic.name)}</strong><span class="clinic-report-actions"><em>${clinicActions} ${clinicActions === 1 ? "ação realizada" : "ações realizadas"}</em><small>${phonesTotal} ${phonesTotal === 1 ? "telefone captado" : "telefones captados"}</small></span></p>
-      <b><span>Movimentação no período</span>${directs} directs · ${responses} respostas · ${qualifiedTotal} Hunter · ${scheduledTotal} agend. · ${attendedTotal} comp.${lost ? ` · ${lost} expirados` : ""}
-        <span class="clinic-current-label">Status atual</span><i class="clinic-current-line">${current.mapped} mapeados · ${current.talking} conversando · ${current.qualified} Hunter · ${current.scheduled} agend.</i>
-      </b>
+      <p><strong>${escapeHtml(clinic.name)}</strong><small>Status atual</small></p>
+      <b><i class="clinic-current-line">${current.mapped} mapeados · ${current.talking} conversando · ${current.qualified} Hunter · ${current.scheduled} agend. · ${current.attended} comp.</i></b>
     </div>`;
   }).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
@@ -2182,7 +2272,17 @@ function isBantComplete(lead = {}) {
   return qualificationProgress(lead.qualification).complete;
 }
 
-function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymousBatchId = null } = {}) {
+function openOutcomeStagePicker() {
+  openSheet(`<h2 class="sheet-title">Adicionar desfecho</h2><p class="sheet-subtitle">Escolha o resultado confirmado pela Hunter.</p>
+    <div class="clinic-options">
+      <button class="clinic-option" data-outcome-stage="attended"><span><strong>Compareceu</strong><small>Registrar atendimento realizado</small></span><b class="material-symbols-outlined">how_to_reg</b></button>
+      <button class="clinic-option" data-outcome-stage="no_show"><span><strong>Não compareceu</strong><small>Registrar ausência no atendimento</small></span><b class="material-symbols-outlined">person_off</b></button>
+    </div>`, () => {
+    $$("[data-outcome-stage]").forEach(button => button.addEventListener("click", () => openLeadForm({ initialStatus: button.dataset.outcomeStage })));
+  });
+}
+
+function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymousBatchId = null, initialStatus = null } = {}) {
   const originalLead = leadId ? leadById(leadId) : null;
   const selectedAnonymousBatch = anonymousBatchId
     ? (state.anonymousConversationBatches || []).find(batch => batch.id === anonymousBatchId && Number(batch.remaining || 0) > 0)
@@ -2190,17 +2290,20 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymou
   if (anonymousBatchId && !selectedAnonymousBatch) return showToast("Esse grupo já foi atualizado em outro aparelho.");
   const lead = originalLead || {};
   const edit = Boolean(originalLead);
-  const isPhone = mode === "phone";
-  const isResponse = mode === "response";
-  const fixedStatus = isPhone ? "sent_to_hunter" : isResponse ? "talking" : null;
-  const title = isPhone ? "Telefone captado" : isResponse ? "Lead respondeu" : edit ? "Editar lead" : "Lead mapeado";
-  const submitLabel = isPhone ? "🎉 Salvar e enviar para closer" : edit ? "Salvar alterações" : isResponse ? "Salvar em Conversando" : "Salvar lead";
+  const requestedStatus = initialStatus === "outcomes" ? "attended" : initialStatus;
+  const isPhone = mode === "phone" || requestedStatus === "sent_to_hunter";
+  const isResponse = mode === "response" || requestedStatus === "talking";
+  const fixedStatus = requestedStatus || (isPhone ? "sent_to_hunter" : isResponse ? "talking" : null);
+  const requiresIdentity = isPhone || ["lost", "sent_to_hunter", "scheduled", "attended", "no_show", "finished"].includes(fixedStatus);
+  const stageTitle = fixedStatus ? statusNames[fixedStatus] || "Desfecho" : null;
+  const title = initialStatus ? `Adicionar em ${stageTitle}` : isPhone ? "Telefone captado" : isResponse ? "Lead respondeu" : edit ? "Editar lead" : "Lead mapeado";
+  const submitLabel = isPhone ? "🎉 Salvar e enviar para closer" : edit ? "Salvar alterações" : fixedStatus ? `Salvar em ${stageTitle}` : "Salvar lead";
   const initialBant = qualificationProgress(lead.qualification);
   openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Conclua a pré-qualificação e entregue a oportunidade sem a closer repetir perguntas." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
     <form class="sheet-form" id="lead-form">
-      ${field("lead-instagram", "Instagram", lead.instagram, !isResponse || Boolean(selectedAnonymousBatch), "text", "@usuario ou link")}
-      ${field("lead-name", "Nome", lead.name, isPhone, "text", "Nome do lead")}
-      ${edit && !isPhone ? field("lead-phone", "WhatsApp", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
+      ${field("lead-instagram", "Instagram", lead.instagram, requiresIdentity || Boolean(selectedAnonymousBatch), "text", "@usuario ou link")}
+      ${field("lead-name", "Nome", lead.name, requiresIdentity, "text", "Nome do lead")}
+      ${(edit || (fixedStatus && !isPhone && !["new", "talking", "lost"].includes(fixedStatus))) && !isPhone ? field("lead-phone", "WhatsApp", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
       <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic" ${selectedAnonymousBatch ? "disabled" : ""}>${state.clinics.filter(c => c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || selectedAnonymousBatch?.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
       <div class="qualification-block">
         <div class="qualification-heading"><span class="material-symbols-outlined">verified</span><div><strong>Contexto da conversa</strong><small>Evita que a closer repita o que já foi falado.</small></div></div>
@@ -2215,6 +2318,7 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymou
       ${isPhone ? `<div class="phone-gate ${initialBant.complete ? "complete" : ""}" id="phone-gate"><span class="material-symbols-outlined">${initialBant.complete ? "verified" : "fact_check"}</span><p><strong>${initialBant.complete ? "Contexto completo" : "BANT é um guia, não uma trava"}</strong><small>${initialBant.complete ? "A Hunter receberá toda a pré-qualificação." : "Marque o que conseguiu descobrir e envie mesmo com contexto mínimo."}</small></p></div>` : ""}
       ${isPhone ? field("lead-phone", "WhatsApp para entrega", lead.whatsapp, true, "tel", "(00) 00000-0000") : ""}
       ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).filter(([key]) => key !== "follow_up").map(([key, label]) => `<option value="${key}" ${(lead.status === "follow_up" ? "talking" : lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
+      ${["scheduled", "attended", "no_show"].includes(fixedStatus) ? `<div class="field"><label for="lead-stage-date">Data do ${fixedStatus === "scheduled" ? "agendamento" : "atendimento"}</label><input id="lead-stage-date" type="datetime-local"></div>` : ""}
       ${isPhone ? "" : `<div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>`}
       <button class="primary-button ${isPhone ? "victory-button" : ""}" id="lead-submit" type="submit">${submitLabel}</button>
     </form>`, () => {
@@ -2239,13 +2343,28 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymou
       const clinicId = $("#lead-clinic").value;
       const rawInstagram = $("#lead-instagram").value.trim();
       const now = new Date().toISOString();
-      if (isPhone && (!String($("#lead-name").value || "").trim() || !isUsableLeadHandle(clinicId, rawInstagram))) {
-        showToast("Para enviar à Hunter, informe o nome e o @ do lead.");
+      const status = fixedStatus || $("#lead-status").value;
+      if (requiresIdentity && (!String($("#lead-name").value || "").trim() || !isUsableLeadHandle(clinicId, rawInstagram))) {
+        showToast("Para esta etapa, informe o nome e o @ do lead.");
+        return;
+      }
+      if (!rawInstagram && status === "new" && !originalLead) {
+        addAnonymousDirect(clinicId, state.session?.id || null, now, "manual_web", 1);
+        if (state.session?.clinicId === clinicId) updateAction("directs");
+        persist();
+        renderDashboard();
+        renderLeads();
+        closeSheet();
+        showToast("Lead anônimo adicionado em Mapeados");
         return;
       }
       if (!rawInstagram && isResponse && !originalLead) {
-        advanceAnonymousLead(clinicId, "responded", now, state.session?.id || null, "manual_web");
-        if (state.session?.clinicId === clinicId) updateAction("responses");
+        const conversation = advanceAnonymousLead(clinicId, "responded", now, state.session?.id || null, "manual_web");
+        if (state.session?.clinicId === clinicId) {
+          updateAction("responses");
+          const sourceBatch = (state.anonymousDirectBatches || []).find(batch => batch.id === conversation?.sourceBatchId);
+          if (sourceBatch?.inferredOrigin) updateAction("directs");
+        }
         persist();
         renderDashboard();
         renderLeads();
@@ -2257,16 +2376,15 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymou
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
       const anonymousConversationMatch = selectedAnonymousBatch
         ? consumeAnonymousConversationBatch(selectedAnonymousBatch.id)
-        : !originalLead && !existing && (isResponse || isPhone)
+        : !originalLead && !existing && ["sent_to_hunter", "scheduled", "attended", "no_show"].includes(status)
           ? consumeOldestAnonymousConversation(clinicId)
         : null;
-      const anonymousMatch = !originalLead && !existing && (isResponse || isPhone) && !anonymousConversationMatch
+      const anonymousMatch = !originalLead && !existing && status !== "new" && !anonymousConversationMatch
         ? consumeOldestAnonymousDirect(clinicId)
         : null;
       const record = originalLead || existing || {
         id: uid("lead"), prospectedAt: anonymousMatch?.sentAt || anonymousConversationMatch?.respondedAt || new Date().toISOString(), timeline: [], sentToHunterAt: null
       };
-      const status = fixedStatus || $("#lead-status").value;
       const shouldSend = isPhone || (status === "sent_to_hunter" && !record.sentToHunterAt);
       record.timeline ||= [];
       Object.assign(record, {
@@ -2278,6 +2396,7 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymou
         qualification: readQualification(),
         qualificationNotes: readQualificationNotes()
       });
+      if (record.whatsapp) record.phoneCapturedAt ||= now;
       if (!originalLead && !existing) state.leads.unshift(record);
       if (isResponse) {
         record.respondedAt ||= now;
@@ -2291,18 +2410,39 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymou
         state.directs.push({
           id: uid("direct"), clinicId, leadId: record.id, instagram,
           sessionId: anonymousMatch?.sessionId || anonymousConversationMatch?.sessionId || null, source: anonymousMatch?.source || anonymousConversationMatch?.source || "manual_web",
-          sentAt: anonymousMatch?.sentAt || null, respondedAt: anonymousConversationMatch?.respondedAt || now,
-          phoneAt: isPhone ? now : null, status: isPhone ? "phone" : "responded",
+          sentAt: anonymousMatch?.sentAt || null,
+          respondedAt: anonymousConversationMatch?.respondedAt || (status === "lost" ? null : now),
+          phoneAt: record.whatsapp ? (record.phoneCapturedAt || now) : null,
+          status: record.whatsapp ? "phone" : status === "lost" ? "lost" : "responded",
           anonymousSourceId: anonymousMatch?.id || anonymousConversationMatch?.sourceBatchId || null,
           anonymousConversationSourceId: anonymousConversationMatch?.id || null,
           createdAt: anonymousMatch?.sentAt || anonymousConversationMatch?.respondedAt || now, updatedAt: now
         });
+      }
+      if (!anonymousMatch && !anonymousConversationMatch && !originalLead && !existing) {
+        const directsBefore = state.directs.length;
+        ensureNamedDirectOrigin(record, record.prospectedAt || now, "manual_web", state.session?.id || null);
+        if (state.directs.length > directsBefore && state.session?.clinicId === clinicId) updateAction("directs");
       }
       const followupAt = $("#lead-followup")?.value;
       if (followupAt) {
         state.followups.push({ id: uid("fu"), leadId: record.id, scheduledFor: new Date(followupAt).toISOString(), step: "Follow-up", status: "pending" });
         record.status = "follow_up";
         record.timeline.push({ at: now, label: `Follow-up agendado para ${formatDate(followupAt, true)}` });
+      }
+      const stageDate = $("#lead-stage-date")?.value ? new Date($("#lead-stage-date").value).toISOString() : now;
+      if (status === "scheduled") {
+        record.scheduledAt = stageDate;
+        record.scheduledRecordedAt ||= now;
+        record.timeline.push({ at: now, label: `Hunter confirmou agendamento para ${formatDate(stageDate, true)}` });
+      }
+      if (status === "attended") {
+        record.attendedAt = stageDate;
+        record.timeline.push({ at: now, label: "Comparecimento confirmado" });
+      }
+      if (status === "no_show") {
+        record.noShowAt = stageDate;
+        record.timeline.push({ at: now, label: "Ausência registrada" });
       }
       if (shouldSend) {
         record.status = "sent_to_hunter";
@@ -2900,22 +3040,32 @@ async function exportReport(share = false) {
   reportCard.classList.add("is-exporting");
   try {
     await document.fonts?.ready;
+    await Promise.all([...reportCard.querySelectorAll("img")].map(image => image.complete ? image.decode?.().catch(() => {}) : new Promise(resolve => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    })));
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const exportWidth = Math.ceil(reportCard.getBoundingClientRect().width);
     const canvas = await window.html2canvas(reportCard, {
       backgroundColor: "#fffef9",
       logging: false,
       scale: Math.min(3, Math.max(2, Number(window.devicePixelRatio || 1))),
       useCORS: true,
-      width: reportCard.scrollWidth,
-      height: reportCard.scrollHeight,
-      windowWidth: document.documentElement.clientWidth,
-      windowHeight: document.documentElement.clientHeight,
       onclone: clonedDocument => {
         const clonedCard = clonedDocument.getElementById("report-card");
         if (!clonedCard) return;
         clonedCard.style.animation = "none";
         clonedCard.style.opacity = "1";
         clonedCard.style.transform = "none";
+        clonedCard.style.width = `${exportWidth}px`;
+        clonedCard.style.maxWidth = "none";
+        clonedCard.style.margin = "0";
+        const clonedLogo = clonedCard.querySelector(".report-brand-mark img");
+        if (clonedLogo) {
+          clonedLogo.src = new URL("assets/munnius-mark.png", location.href).href;
+          clonedLogo.style.display = "block";
+          clonedLogo.style.opacity = "1";
+        }
       }
     });
     reportCard.classList.remove("is-exporting");
@@ -3002,6 +3152,14 @@ function selectReportingPeriod(period) {
 }
 $$("[data-period]").forEach(button => button.addEventListener("click", () => { selectReportingPeriod(button.dataset.period); renderDashboard(); }));
 $$("[data-report-period]").forEach(button => button.addEventListener("click", () => { selectReportingPeriod(button.dataset.reportPeriod); renderReport(); }));
+$("#report-reference-date").addEventListener("change", event => {
+  state.reportReference = event.target.value || null;
+  renderReport();
+});
+$("#clear-report-date").addEventListener("click", () => {
+  state.reportReference = null;
+  renderReport();
+});
 $("#choose-clinic").addEventListener("click", clinicPicker);
 $$("[data-action]").forEach(button => button.addEventListener("click", () => handleSessionAction(button.dataset.action)));
 $("#undo-action").addEventListener("click", () => state.lastAction ? (updateAction(state.lastAction, -1), state.lastAction = null, showToast("Última ação desfeita")) : showToast("Nenhuma ação para desfazer"));
@@ -3009,7 +3167,6 @@ $("#adjust-counts").addEventListener("click", openAdjustCounts);
 $("#finish-session").addEventListener("click", finishSession);
 $("#open-instagram").addEventListener("click", () => { const clinic = clinicById(state.session?.clinicId); if (clinic) window.open(`https://instagram.com/${clinic.instagram.replace("@", "")}`, "_blank", "noopener"); });
 $("#quick-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
-$("#new-lead").addEventListener("click", () => openLeadForm({ mode: "response" }));
 $("#lead-search").addEventListener("input", renderLeads);
 $("#lead-priority-filter").addEventListener("change", event => { state.priorityFilter = event.target.value; renderLeads(); });
 $("#kanban-prev").addEventListener("click", () => $("#lead-kanban").scrollBy({ left: -Math.max(280, $("#lead-kanban").clientWidth * .86), behavior: "smooth" }));
@@ -3017,10 +3174,10 @@ $("#kanban-next").addEventListener("click", () => $("#lead-kanban").scrollBy({ l
 $$("[data-followup-filter]").forEach(button => button.addEventListener("click", () => { $$("[data-followup-filter]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.followupFilter = button.dataset.followupFilter; renderFollowups(); }));
 $("#sheet-close").addEventListener("click", closeSheet);
 $("#sheet-backdrop").addEventListener("click", event => { if (event.target === $("#sheet-backdrop")) closeSheet(); });
-$$("[data-sheet]").forEach(button => button.addEventListener("click", openMessages));
 $("#add-clinic").addEventListener("click", () => openClinicForm());
 $("#admin-add-organization").addEventListener("click", openAdminOrganizationForm);
 $("#edit-goals").addEventListener("click", openGoalsForm);
+$("#edit-goals-clinics").addEventListener("click", openGoalsForm);
 $("#export-report").addEventListener("click", () => exportReport(false));
 $("#share-report").addEventListener("click", () => exportReport(true));
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });

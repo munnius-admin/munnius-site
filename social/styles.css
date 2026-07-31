@@ -383,6 +383,7 @@ body{background:#fffdf3}
 .report-brand strong{color:var(--ink);font-weight:800}
 .report-brand-mark{flex:0 0 auto;width:28px;height:28px;border-radius:9px}
 .report-brand-mark img{width:15px;height:15px;opacity:1}
+.report-date-filter{display:flex;align-items:center;gap:7px;margin:-8px 2px 14px;color:var(--muted);font-size:.56rem}.report-date-filter>.material-symbols-outlined{font-size:.9rem;color:#8a6800}.report-date-filter label{white-space:nowrap}.report-date-filter input{min-width:0;border:1px solid rgba(226,211,139,.9);border-radius:9px;padding:6px 7px;background:rgba(255,253,246,.92);color:var(--ink);font:inherit}.report-date-filter button{margin-left:auto;border:0;background:transparent;color:#8a6800;font-size:.53rem;font-weight:800}.clinics-goals-card{margin-bottom:18px}.report-clinic-breakdown b{margin-left:auto}.report-clinic-breakdown .clinic-current-line{display:block;text-align:right}
 .avatar-button{background:linear-gradient(145deg,#333b49,#202631);color:#fff;box-shadow:0 8px 20px rgba(32,38,49,.2)}
 .operation-hero{
   background:linear-gradient(135deg,#fff4aa 0%,#f4cf4f 63%,#e5b91e 100%);
@@ -466,6 +467,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   display:inline-grid;place-items:center;flex:0 0 auto;width:19px;height:19px;border-radius:7px;
   background:#fff0a8;color:#8a6800;font-size:.72rem;font-style:normal
 }
+.kanban-column-tools{display:flex;align-items:center;gap:5px}.kanban-column-tools>b{display:grid;place-items:center;min-width:27px;height:27px;padding:0 7px;border-radius:10px;background:#e2b61b;color:#202631;font-size:.65rem}.kanban-column-tools>button{display:grid;place-items:center;width:27px;height:27px;border:1px solid rgba(138,104,0,.18);border-radius:9px;background:#fffdf6;color:#8a6800}.kanban-column-tools>button .material-symbols-outlined{font-size:.9rem}.kanban-column>header{grid-template-columns:34px minmax(0,1fr) auto}
 .danger-link{
   display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:12px;
   border:0;background:transparent;color:#b05243;font-size:.66rem;font-weight:800
