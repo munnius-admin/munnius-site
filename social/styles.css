@@ -519,3 +519,18 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .kanban-volume-card>span{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:#fff0a8;color:#8a6800;font-size:1rem}
 .kanban-volume-card strong,.kanban-volume-card small{display:block}.kanban-volume-card strong{font-size:.67rem}.kanban-volume-card small{margin-top:3px;color:var(--muted);font-size:.54rem;line-height:1.35}.kanban-volume-card.lost{border-color:#e1bbb1;background:#fff5f1}.kanban-volume-card.lost>span{background:#ffe6dd;color:#a65340}
 @media(min-width:760px){.sidebar-brand{display:grid}.report-monthly-goal{grid-template-columns:1fr 1fr}}
+
+/* Relatório v29 — atividade, movimentação e estoque sem misturar conceitos */
+.report-first-section{margin-top:24px}
+.report-crm-movements{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.report-crm-movements>div{min-width:0;display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:2px 9px;padding:11px;border:1px solid #eadf9f;border-radius:14px;background:#fffdf5}
+.report-crm-movements .material-symbols-outlined{grid-row:1/3;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#fff0a8;color:#8a6800;font-size:1rem}
+.report-crm-movements strong{font-size:.82rem;line-height:1;color:#8a6800}.report-crm-movements small{overflow-wrap:anywhere;color:var(--muted);font-size:.55rem;line-height:1.25}
+.report-current-pipeline{display:grid;grid-template-columns:repeat(7,minmax(96px,1fr));gap:0;overflow-x:auto;padding:8px;border:1px solid #eadf9f;border-radius:18px;background:#fffdf5;scrollbar-width:none}
+.report-current-pipeline::-webkit-scrollbar{display:none}
+.report-pipeline-stage{min-width:96px;display:grid;justify-items:center;align-content:start;gap:3px;padding:8px 6px;text-align:center}
+.report-pipeline-stage+.report-pipeline-stage{border-left:1px solid #efe3aa}
+.report-pipeline-stage>.material-symbols-outlined{color:#b58b00;font-size:1.05rem}.report-pipeline-stage>strong{font-size:1.05rem}.report-pipeline-stage>small{color:var(--ink);font-size:.56rem;font-weight:800}.report-pipeline-stage>em{max-width:88px;color:var(--muted);font-size:.49rem;font-style:normal;line-height:1.2}
+.report-pipeline-stage.lost>.material-symbols-outlined,.report-pipeline-stage.lost>em{color:#a65340}
+.report-pipeline-note{margin:8px 0 20px;color:var(--muted);font-size:.55rem;line-height:1.4}
+@media(min-width:760px){.report-crm-movements{grid-template-columns:repeat(4,minmax(0,1fr))}.report-current-pipeline{overflow:visible}.report-pipeline-stage{min-width:0}}

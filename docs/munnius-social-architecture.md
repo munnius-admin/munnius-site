@@ -43,10 +43,11 @@ do limite diário, em vez de começar novamente do zero. Cada linha consolida te
 seis contadores de todas as sessões do dia. As metas de telefones e agendamentos são
 globais, configuráveis por período e nunca vinculadas individualmente a uma clínica.
 A Home separa o estoque atual do CRM dos acontecimentos do período. Os relatórios usam
-três leituras: atividade executada no período; eventos comerciais registrados no período
-(telefone, encaminhamento, confirmação de agendamento e comparecimento); e conversão da
-safra de leads mapeados naquele período, acompanhada até o estágio atual. A data real do
-agendamento não substitui a data em que a confirmação foi registrada.
+três leituras: ações executadas no período (incluindo telefone captado); movimentações
+registradas no CRM no período; e o estoque atual completo da Fila de oportunidades.
+Os percentuais da fila mostram o avanço acumulado do estoque entre etapas, e Perdidos é
+tratado como taxa de saída. A data real do agendamento não substitui a data em que a
+confirmação foi registrada.
 
 A imagem compartilhável do relatório é gerada sob demanda, com altura adaptável para
 incluir todas as clínicas, identidade discreta, ações, qualificados, agendamentos e comparecimentos;

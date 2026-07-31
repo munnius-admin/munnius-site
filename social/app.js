@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=28";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=29";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -763,42 +763,59 @@ function isPhoneStage(lead) {
 }
 
 function reportActionCount(stats) {
-  return ["likes", "comments", "directs", "responses"].reduce((total, key) => total + Number(stats[key] || 0), 0);
+  return ["profiles", "likes", "comments", "directs", "responses"].reduce((total, key) => total + Number(stats[key] || 0), 0)
+    + phoneActionCount(stats);
+}
+
+function phoneActionCount(stats) {
+  return Math.max(Number(stats.phones || 0), Number(stats.phonesTotal || 0));
 }
 
 function rate(part, total) {
   return total ? Math.round(Number(part || 0) / total * 100) : 0;
 }
 
-function cohortStats(period) {
-  const cohortDirects = state.directs.filter(direct => direct.sentAt && inPeriod(direct.sentAt, period));
-  const directLeadIds = new Set(cohortDirects.map(direct => direct.leadId).filter(Boolean));
-  const directKeys = new Set(cohortDirects.map(direct => `${direct.clinicId}:${instagramHandle(direct.instagram || "")}`));
-  const orphanLeads = state.leads.filter(lead => inPeriod(lead.prospectedAt, period)
-    && !directLeadIds.has(lead.id)
-    && !directKeys.has(`${lead.clinicId}:${instagramHandle(lead.instagram || "")}`));
-  const cohortLeadIds = new Set([...directLeadIds, ...orphanLeads.map(lead => lead.id)]);
-  const cohortLeads = state.leads.filter(lead => cohortLeadIds.has(lead.id));
-  const namedMapped = new Set(cohortDirects
-    .filter(direct => !direct.anonymousSourceId)
-    .map(direct => `${direct.clinicId}:${instagramHandle(direct.instagram || "")}`)).size;
-  const anonymousMapped = (state.anonymousDirectBatches || [])
-    .filter(batch => inPeriod(batch.sentAt, period))
-    .reduce((total, batch) => total + Number(batch.quantity || 0), 0);
-  const mapped = namedMapped + anonymousMapped + orphanLeads.length;
+function currentPipelineStats() {
   return {
-    mapped,
-    responses: cohortLeads.filter(lead => lead.respondedAt || leadPhoneMappedAt(lead)).length,
-    phones: cohortLeads.filter(lead => leadPhoneMappedAt(lead)).length,
-    hunters: cohortLeads.filter(lead => leadQualifiedAt(lead)).length,
-    scheduled: cohortLeads.filter(lead => leadScheduledRecordedAt(lead)).length,
-    attended: cohortLeads.filter(lead => lead.attendedAt).length
+    mapped: state.leads.filter(lead => lead.status === "new").length + anonymousPipelineCount("mapped"),
+    talking: state.leads.filter(lead => lead.status === "talking").length,
+    followups: state.leads.filter(lead => lead.status === "follow_up").length,
+    lost: state.leads.filter(lead => lead.status === "lost").length + anonymousPipelineCount("lost"),
+    qualified: state.leads.filter(lead => lead.status === "sent_to_hunter").length,
+    scheduled: state.leads.filter(lead => lead.status === "scheduled").length,
+    attended: state.leads.filter(lead => lead.status === "attended").length
   };
 }
 
-function reportCohortLabel(cohort) {
-  const mapped = Number(cohort?.mapped || 0);
-  return `${mapped} ${mapped === 1 ? "lead mapeado" : "leads mapeados"} no período, acompanhados até o estágio atual`;
+function currentPipelineRates(pipeline) {
+  const advanced = pipeline.qualified + pipeline.scheduled + pipeline.attended;
+  const conversations = pipeline.talking + pipeline.followups + advanced;
+  const total = pipeline.mapped + conversations + pipeline.lost;
+  return {
+    mapped: 100,
+    talking: rate(conversations, total),
+    followups: rate(pipeline.followups + advanced, conversations),
+    lost: rate(pipeline.lost, total),
+    qualified: rate(advanced, conversations),
+    scheduled: rate(pipeline.scheduled + pipeline.attended, advanced),
+    attended: rate(pipeline.attended, pipeline.scheduled + pipeline.attended)
+  };
+}
+
+function timelineMovementCount(period, pattern) {
+  return state.leads.filter(lead => (lead.timeline || []).some(item => item.at && inPeriod(item.at, period) && pattern.test(item.label || ""))).length;
+}
+
+function crmMovementStats(period, stats = periodStats(period)) {
+  return {
+    mapped: Number(stats.directs || 0),
+    talking: Math.max(Number(stats.responses || 0), timelineMovementCount(period, /lead respondeu|resposta registrada|etapa alterada para conversando/i)),
+    followups: timelineMovementCount(period, /follow-up agendado|etapa alterada para em follow-up/i),
+    lost: timelineMovementCount(period, /sem resposta após|sem evolução após|etapa alterada para perdido/i),
+    qualified: Number(stats.huntersTotal || 0),
+    scheduled: Number(stats.scheduledTotal || 0),
+    attended: Number(stats.attendedTotal || 0)
+  };
 }
 
 function clinicReportStats(clinicId, period, periodSummary) {
@@ -832,7 +849,7 @@ function clinicReportStats(clinicId, period, periodSummary) {
       .some(date => date && inPeriod(date, period));
   }).length;
   return {
-    actions: Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses,
+    actions: Number(sessionCounts.profiles || 0) + Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses + Math.max(Number(sessionCounts.phones || 0), phonesTotal),
     leads: clinicLeads.filter(lead => inPeriod(lead.prospectedAt, period)).length,
     phones: mappedPhonesCurrent,
     phonesTotal,
@@ -851,28 +868,22 @@ function renderDashboard() {
   const stats = periodStats(state.period);
   const activeClinics = state.clinics.filter(clinic => clinic.active);
   const conversations = state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length;
-  const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
-  const talking = state.leads.filter(lead => lead.status === "talking").length;
-  const mapped = state.leads.filter(lead => lead.status === "new").length + anonymousPipelineCount("mapped");
-  const followingUp = state.leads.filter(lead => lead.status === "follow_up").length;
-  const lost = state.leads.filter(lead => lead.status === "lost").length + anonymousPipelineCount("lost");
-  const qualified = state.leads.filter(lead => lead.status === "sent_to_hunter").length;
-  const scheduled = state.leads.filter(lead => lead.status === "scheduled").length;
-  const attended = state.leads.filter(lead => lead.status === "attended").length;
+  const actions = reportActionCount(stats);
+  const pipeline = currentPipelineStats();
   $("#actions-total").textContent = actions;
   $("#leads-total").textContent = stats.phonesTotal;
   $("#clinics-total").textContent = activeClinics.length;
   $("#hunters-total").textContent = stats.scheduledTotal;
   $("#followups-total").textContent = conversations;
-  $("#pipeline-mapped").textContent = mapped;
-  $("#pipeline-talking").textContent = talking;
-  $("#pipeline-followups").textContent = followingUp;
-  $("#pipeline-lost").textContent = lost;
-  $("#pipeline-qualified").textContent = qualified;
-  $("#pipeline-scheduled").textContent = scheduled;
-  $("#pipeline-attended").textContent = attended;
+  $("#pipeline-mapped").textContent = pipeline.mapped;
+  $("#pipeline-talking").textContent = pipeline.talking;
+  $("#pipeline-followups").textContent = pipeline.followups;
+  $("#pipeline-lost").textContent = pipeline.lost;
+  $("#pipeline-qualified").textContent = pipeline.qualified;
+  $("#pipeline-scheduled").textContent = pipeline.scheduled;
+  $("#pipeline-attended").textContent = pipeline.attended;
   $("#hero-summary").textContent = actions
-    ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phonesTotal} telefones`
+    ? `${stats.directs} directs · ${stats.responses} respostas · ${phoneActionCount(stats)} telefones`
     : activeClinics.length ? "Escolha uma clínica abaixo e comece a sessão." : "Cadastre sua primeira clínica para começar.";
   renderClinics();
 }
@@ -1315,46 +1326,41 @@ function renderFollowups() {
 
 function renderReport() {
   const stats = periodStats(state.reportPeriod);
-  const cohort = cohortStats(state.reportPeriod);
+  const movements = crmMovementStats(state.reportPeriod, stats);
+  const pipeline = currentPipelineStats();
+  const pipelineRates = currentPipelineRates(pipeline);
   const monthly = periodStats("month");
   const actions = reportActionCount(stats);
   const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Este mês" };
   $("#report-label").textContent = labels[state.reportPeriod];
   $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
-  $("#report-actions-value").textContent = actions;
-  $("#report-phones").textContent = stats.phonesTotal;
-  $("#report-hunters").textContent = stats.huntersTotal;
-  $("#report-scheduled").textContent = stats.scheduledTotal;
-  $("#report-attended").textContent = stats.attendedTotal;
-  $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação realizada" : "ações realizadas"}`;
+  $("#report-phones").textContent = phoneActionCount(stats);
+  $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação no período" : "ações no período"}`;
+  $("#report-profiles").textContent = stats.profiles;
   $("#report-likes").textContent = stats.likes;
   $("#report-comments").textContent = stats.comments;
   $("#report-directs-detail").textContent = stats.directs;
   $("#report-responses").textContent = stats.responses;
-  $("#report-response-rate").textContent = `${rate(cohort.responses, cohort.mapped)}%`;
-  $("#report-phone-rate").textContent = `${rate(cohort.phones, cohort.responses)}%`;
-  $("#report-qualification-rate").textContent = `${rate(cohort.hunters, cohort.phones)}%`;
-  $("#report-appointment-rate").textContent = `${rate(cohort.scheduled, cohort.hunters)}%`;
-  $("#report-attendance-rate").textContent = `${rate(cohort.attended, cohort.scheduled)}%`;
-  $("#report-response-total-rate").textContent = `${rate(cohort.responses, cohort.mapped)}%`;
-  $("#report-phone-total-rate").textContent = `${rate(cohort.phones, cohort.mapped)}%`;
-  $("#report-qualification-total-rate").textContent = `${rate(cohort.hunters, cohort.mapped)}%`;
-  $("#report-appointment-total-rate").textContent = `${rate(cohort.scheduled, cohort.mapped)}%`;
-  $("#report-attendance-total-rate").textContent = `${rate(cohort.attended, cohort.mapped)}%`;
-  $("#report-cohort-label").textContent = reportCohortLabel(cohort);
+  Object.entries(movements).forEach(([key, value]) => {
+    $(`#report-movement-${key}`).textContent = `+${value}`;
+  });
+  const pipelineItems = [
+    ["mapped", "person_search", "Leads mapeados", "base atual"],
+    ["talking", "forum", "Conversando", `${pipelineRates.talking}% avançaram do total`],
+    ["followups", "schedule", "Em follow-up", `${pipelineRates.followups}% das conversas`],
+    ["lost", "person_cancel", "Perdidos", `${pipelineRates.lost}% de saída`],
+    ["qualified", "forward_to_inbox", "Encaminhados", `${pipelineRates.qualified}% das conversas`],
+    ["scheduled", "event_available", "Agendados", `${pipelineRates.scheduled}% dos encaminhados`],
+    ["attended", "verified", "Compareceram", `${pipelineRates.attended}% dos agendados`]
+  ];
+  $("#report-current-pipeline").innerHTML = pipelineItems.map(([key, icon, label, helper]) => `
+    <div class="report-pipeline-stage ${key === "lost" ? "lost" : ""}"><span class="material-symbols-outlined">${icon}</span><strong>${pipeline[key]}</strong><small>${label}</small><em>${helper}</em></div>`).join("");
   $("#report-goal-month").textContent = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date());
   $("#report-goal-phones").textContent = `${monthly.phonesTotal} / ${state.goals.phones}`;
   $("#report-goal-scheduled").textContent = `${monthly.scheduledTotal} / ${state.goals.scheduled}`;
   $("#report-goal-phones-bar").style.width = `${Math.min(100, monthly.phonesTotal / state.goals.phones * 100)}%`;
   $("#report-goal-scheduled-bar").style.width = `${Math.min(100, monthly.scheduledTotal / state.goals.scheduled * 100)}%`;
   $("#report-user").textContent = state.profile?.name || "Social seller";
-  const days = state.reportPeriod === "day" ? 1 : state.reportPeriod === "week" ? 7 : 10;
-  const values = Array.from({ length: days }, (_, index) => {
-    const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (days - 1 - index));
-    return state.leads.filter(lead => isSameDay(lead.prospectedAt, date)).length;
-  });
-  const max = Math.max(1, ...values);
-  $("#report-chart").innerHTML = values.map((value, index) => `<div><span style="height:${Math.max(8, value / max * 88)}%"></span><small>${state.reportPeriod === "day" ? "Hoje" : index === values.length - 1 ? "Hoje" : new Intl.DateTimeFormat("pt-BR", { weekday: "narrow" }).format(new Date(Date.now() - (values.length - 1 - index) * 86400000))}</small></div>`).join("");
   const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
     clinic,
     ...clinicReportStats(clinic.id, state.reportPeriod, stats)
@@ -1362,8 +1368,8 @@ function renderReport() {
     .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
   $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, captured, phonesTotal, qualifiedTotal, scheduledTotal, attendedTotal }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
-      <p><strong>${escapeHtml(clinic.name)}</strong><em>${captured} ${captured === 1 ? "lead captado" : "leads captados"}</em><small>${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} realizadas</small></p>
-      <b>${phonesTotal} telef. captados · ${qualifiedTotal} encaminhados · ${scheduledTotal} agend. confirmados · ${attendedTotal} comp. registrados</b>
+      <p><strong>${escapeHtml(clinic.name)}</strong><em>${captured} ${captured === 1 ? "lead movimentado" : "leads movimentados"}</em><small>${clinicActions} ${clinicActions === 1 ? "ação realizada" : "ações realizadas"}</small></p>
+      <b>${phonesTotal} ${phonesTotal === 1 ? "telefone captado" : "telefones captados"} · ${qualifiedTotal} encaminhados · ${scheduledTotal} agend. confirmados · ${attendedTotal} comp. registrados</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
@@ -2095,6 +2101,29 @@ function canvasActivityIcon(ctx, type, x, y, tone) {
     ctx.lineTo(x - 1, y + 6);
     ctx.quadraticCurveTo(x - 1, y + 3, x + 2, y + 3);
     ctx.stroke();
+  } else if (type === "person") {
+    ctx.beginPath();
+    ctx.arc(x + 9, y + 6, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + 9, y + 19, 8, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 18, y + 7); ctx.lineTo(x + 18, y + 15);
+    ctx.moveTo(x + 14, y + 11); ctx.lineTo(x + 22, y + 11);
+    ctx.stroke();
+  } else if (type === "phone") {
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + 2);
+    ctx.quadraticCurveTo(x + 1, y + 4, x + 3, y + 9);
+    ctx.quadraticCurveTo(x + 7, y + 18, x + 16, y + 20);
+    ctx.quadraticCurveTo(x + 20, y + 20, x + 21, y + 16);
+    ctx.lineTo(x + 16, y + 13);
+    ctx.lineTo(x + 12, y + 16);
+    ctx.quadraticCurveTo(x + 7, y + 13, x + 6, y + 8);
+    ctx.lineTo(x + 9, y + 5);
+    ctx.closePath();
+    ctx.stroke();
   } else if (type === "send") {
     ctx.beginPath();
     ctx.moveTo(x, y + 4);
@@ -2150,19 +2179,11 @@ function canvasMetric(ctx, x, y, value, label, tone = "#b58b00", width = 282, ic
 
 async function exportReport(share = false) {
   const stats = periodStats(state.reportPeriod);
-  const cohort = cohortStats(state.reportPeriod);
+  const movements = crmMovementStats(state.reportPeriod, stats);
+  const pipeline = currentPipelineStats();
+  const pipelineRates = currentPipelineRates(pipeline);
   const monthly = periodStats("month");
   const actions = reportActionCount(stats);
-  const responseRate = rate(cohort.responses, cohort.mapped);
-  const phoneRate = rate(cohort.phones, cohort.responses);
-  const qualificationRate = rate(cohort.hunters, cohort.phones);
-  const appointmentRate = rate(cohort.scheduled, cohort.hunters);
-  const attendanceRate = rate(cohort.attended, cohort.scheduled);
-  const responseTotalRate = rate(cohort.responses, cohort.mapped);
-  const phoneTotalRate = rate(cohort.phones, cohort.mapped);
-  const qualificationTotalRate = rate(cohort.hunters, cohort.mapped);
-  const appointmentTotalRate = rate(cohort.scheduled, cohort.mapped);
-  const attendanceTotalRate = rate(cohort.attended, cohort.mapped);
   const reportClinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
     clinic,
     ...clinicReportStats(clinic.id, state.reportPeriod, stats)
@@ -2170,7 +2191,7 @@ async function exportReport(share = false) {
     .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = Math.max(1510, 1215 + reportClinicRows.length * 82 + 150);
+  canvas.height = Math.max(1840, 1510 + reportClinicRows.length * 82 + 150);
   const ctx = canvas.getContext("2d");
 
   const background = ctx.createLinearGradient(0, 0, 1080, canvas.height);
@@ -2220,111 +2241,107 @@ async function exportReport(share = false) {
   canvasFitText(ctx, $("#report-label").textContent, 770, 153, 180, { size: 26, minSize: 18, weight: 700, color: "#202631" });
   canvasFitText(ctx, $("#report-date").textContent, 770, 180, 180, { size: 14, minSize: 11, weight: 400, color: "#68717d" });
 
-  const heroGradient = ctx.createLinearGradient(74, 244, 1000, 454);
-  heroGradient.addColorStop(0, "#202631");
-  heroGradient.addColorStop(.62, "#333d4c");
-  heroGradient.addColorStop(1, "#525e70");
-  canvasRoundedRect(ctx, 74, 244, 932, 210, 32, heroGradient);
-  ctx.fillStyle = "rgba(255,255,255,.08)";
-  ctx.beginPath(); ctx.arc(965, 256, 125, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,.72)";
-  ctx.font = "700 16px Arial";
-  ctx.fillText("MOVIMENTAÇÕES DO PERÍODO", 104, 284);
-  const heroMetrics = [
-    [actions, "Ações realizadas"],
-    [stats.phonesTotal, "Telefones captados"],
-    [stats.huntersTotal, "Encaminhados"],
-    [stats.scheduledTotal, "Agend. confirmados"],
-    [stats.attendedTotal, "Comparec. registrados"]
-  ];
-  heroMetrics.forEach(([value, label], index) => {
-    const x = 104 + index * 176;
-    const centerX = x + 76;
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `${String(value).length > 6 ? "700 32px" : "700 44px"} Arial`;
-    ctx.textAlign = "center";
-    ctx.fillText(String(value), centerX, 364);
-    ctx.textAlign = "left";
-    ctx.fillStyle = "rgba(255,255,255,.68)";
-    ctx.font = "500 14px Arial";
-    canvasFitText(ctx, label, centerX, 400, 152, { size: 14, minSize: 11, weight: 500, color: "rgba(255,255,255,.72)", align: "center" });
-  });
-
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Atividade da operação", 82, 509);
+  ctx.fillText("Ações realizadas", 82, 270);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText("Esforço registrado", 998, 509);
+  ctx.fillText(`${actions} ${actions === 1 ? "ação" : "ações"} no período`, 998, 270);
   ctx.textAlign = "left";
   const activityMetrics = [
+    [stats.profiles, "Novos follows", "#8a6800", "person"],
     [stats.likes, "Curtidas", "#ef7d62", "heart"],
     [stats.comments, "Comentários", "#7c6f91", "chat"],
-    [stats.directs, "Directs", "#b58b00", "send"],
-    [stats.responses, "Directs respondidos", "#53657d", "reply"]
+    [stats.directs, "Directs enviados", "#b58b00", "send"],
+    [stats.responses, "Directs respondidos", "#53657d", "reply"],
+    [phoneActionCount(stats), "Telefones captados", "#3f5b78", "phone"]
   ];
   activityMetrics.forEach(([value, label, tone, icon], index) => {
-    const x = 82 + index * 229;
-    canvasMetric(ctx, x, 534, value, label, tone, 214, icon);
+    const x = 82 + (index % 3) * 305;
+    const y = 292 + Math.floor(index / 3) * 120;
+    canvasMetric(ctx, x, y, value, label, tone, 282, icon);
   });
 
-  canvasRoundedRect(ctx, 82, 666, 916, 56, 16, "#fff9dc", "#eadf9f");
+  canvasRoundedRect(ctx, 82, 540, 916, 58, 16, "#fff9dc", "#eadf9f");
   ctx.fillStyle = "#68717d";
   ctx.font = "500 14px Arial";
-  canvasFitText(ctx, "Resultados usam a data em que cada atualização foi registrada; agendamentos e comparecimentos podem vir de leads anteriores.", 104, 694, 870, { size: 14, minSize: 11, weight: 500, color: "#68717d" });
+  canvasFitText(ctx, "Mesmos contadores da Home. Telefone captado continua sendo uma ação mesmo com o lead ainda em Conversando.", 104, 575, 870, { size: 14, minSize: 11, weight: 500, color: "#68717d" });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Conversão da safra mapeada", 82, 770);
-  canvasFitText(ctx, reportCohortLabel(cohort), 998, 770, 510, { size: 14, minSize: 10, weight: 500, color: "#68717d", align: "right" });
-  canvasRoundedRect(ctx, 82, 794, 916, 142, 24, "#fff2b8");
+  ctx.fillText("Atualizações no CRM", 82, 654);
   ctx.fillStyle = "#68717d";
-  ctx.font = "500 15px Arial";
-  ctx.fillText("Etapa anterior", 112, 828);
-  ctx.fillStyle = "#b58b00";
-  ctx.font = "700 15px Arial";
-  ctx.fillText("/", 215, 828);
-  ctx.fillStyle = "#68717d";
-  ctx.font = "500 15px Arial";
-  ctx.fillText("total da safra", 232, 828);
-  ctx.strokeStyle = "#e9d77b";
-  ctx.beginPath(); ctx.moveTo(112, 846); ctx.lineTo(968, 846); ctx.stroke();
-  const efficiency = [
-    ["Responderam", responseRate, responseTotalRate],
-    ["Telefones", phoneRate, phoneTotalRate],
-    ["Encaminhados", qualificationRate, qualificationTotalRate],
-    ["Agendados", appointmentRate, appointmentTotalRate],
-    ["Compareceram", attendanceRate, attendanceTotalRate]
+  ctx.font = "400 17px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText("Cards que mudaram no período", 998, 654);
+  ctx.textAlign = "left";
+  const movementMetrics = [
+    [movements.mapped, "Leads mapeados"],
+    [movements.talking, "Foram para Conversando"],
+    [movements.followups, "Entraram em follow-up"],
+    [movements.lost, "Foram para Perdidos"],
+    [movements.qualified, "Encaminhados"],
+    [movements.scheduled, "Agendamentos registrados"],
+    [movements.attended, "Comparecimentos registrados"]
   ];
-  efficiency.forEach(([label, previousValue, totalValue], index) => {
-    const x = 112 + index * 174;
-    const centerX = x + 68;
-    canvasFitText(ctx, label, centerX, 877, 150, { size: 12, minSize: 10, weight: 700, color: "#4d5561", align: "center" });
+  movementMetrics.forEach(([value, label], index) => {
+    const position = index < 4 ? index : index - 4;
+    const width = index < 4 ? 214 : 291;
+    const gap = index < 4 ? 229 : 307;
+    const x = 82 + position * gap;
+    const y = index < 4 ? 676 : 782;
+    canvasRoundedRect(ctx, x, y, width, 90, 18, "#fffdf5", "#eadf9f");
     ctx.fillStyle = "#8a6800";
-    ctx.font = "700 22px Arial";
-    ctx.textAlign = "right";
-    ctx.fillText(`${previousValue}%`, centerX - 8, 913);
-    ctx.fillStyle = "#68717d";
-    ctx.font = "600 18px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("/", centerX, 913);
-    ctx.fillStyle = "#8a6800";
-    ctx.font = "700 22px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(`${totalValue}%`, centerX + 8, 913);
-    ctx.textAlign = "left";
+    ctx.font = "700 27px Arial";
+    ctx.fillText(`+${value}`, x + 18, y + 37);
+    canvasFitText(ctx, label, x + 18, y + 67, width - 36, { size: 14, minSize: 10, weight: 600, color: "#68717d" });
   });
 
+  canvasRoundedRect(ctx, 82, 892, 916, 54, 16, "#fff9dc", "#eadf9f");
+  canvasFitText(ctx, "As atualizações usam a data da mudança; um agendamento de hoje pode vir de um lead encaminhado antes.", 104, 925, 870, { size: 14, minSize: 11, weight: 500, color: "#68717d" });
+
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Meta do mês atual", 82, 990);
+  ctx.fillText("Fila de oportunidades", 82, 1002);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 16px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date()), 998, 990);
+  ctx.fillText("Estoque atual de todo o CRM", 998, 1002);
   ctx.textAlign = "left";
-  canvasRoundedRect(ctx, 82, 1014, 916, 100, 22, "#fff9dc", "#eadf9f");
+  canvasRoundedRect(ctx, 82, 1026, 916, 178, 24, "#202631");
+  const pipelineMetrics = [
+    [pipeline.mapped, "Mapeados", "base atual"],
+    [pipeline.talking, "Conversando", `${pipelineRates.talking}% do total`],
+    [pipeline.followups, "Em follow-up", `${pipelineRates.followups}% das conversas`],
+    [pipeline.lost, "Perdidos", `${pipelineRates.lost}% de saída`],
+    [pipeline.qualified, "Encaminhados", `${pipelineRates.qualified}% das conversas`],
+    [pipeline.scheduled, "Agendados", `${pipelineRates.scheduled}% dos encaminhados`],
+    [pipeline.attended, "Compareceram", `${pipelineRates.attended}% dos agendados`]
+  ];
+  pipelineMetrics.forEach(([value, label, helper], index) => {
+    const centerX = 105 + index * 128 + 56;
+    if (index) {
+      ctx.strokeStyle = "rgba(255,255,255,.12)";
+      ctx.beginPath(); ctx.moveTo(centerX - 64, 1052); ctx.lineTo(centerX - 64, 1177); ctx.stroke();
+    }
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 32px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(String(value), centerX, 1086);
+    canvasFitText(ctx, label, centerX, 1123, 112, { size: 13, minSize: 10, weight: 700, color: "rgba(255,255,255,.84)", align: "center" });
+    canvasFitText(ctx, helper, centerX, 1161, 112, { size: 11, minSize: 8, weight: 500, color: index === 3 ? "#f3b8a8" : "#f4cf4f", align: "center" });
+  });
+
+  ctx.fillStyle = "#202631";
+  ctx.font = "700 24px Arial";
+  ctx.fillText("Meta do mês atual", 82, 1262);
+  ctx.fillStyle = "#68717d";
+  ctx.font = "400 16px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText(new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date()), 998, 1262);
+  ctx.textAlign = "left";
+  canvasRoundedRect(ctx, 82, 1286, 916, 100, 22, "#fff9dc", "#eadf9f");
   const monthlyGoals = [
     [monthly.phonesTotal, state.goals.phones, "Telefones captados"],
     [monthly.scheduledTotal, state.goals.scheduled, "Agendamentos confirmados"]
@@ -2333,25 +2350,25 @@ async function exportReport(share = false) {
     const x = 112 + index * 438;
     ctx.fillStyle = "#202631";
     ctx.font = "700 24px Arial";
-    ctx.fillText(`${value} / ${goal}`, x, 1057);
-    canvasFitText(ctx, label, x + 112, 1057, 285, { size: 15, minSize: 12, weight: 500, color: "#68717d" });
-    canvasRoundedRect(ctx, x, 1080, 390, 8, 4, "#efe3aa");
+    ctx.fillText(`${value} / ${goal}`, x, 1329);
+    canvasFitText(ctx, label, x + 112, 1329, 285, { size: 15, minSize: 12, weight: 500, color: "#68717d" });
+    canvasRoundedRect(ctx, x, 1352, 390, 8, 4, "#efe3aa");
     const progressWidth = goal ? Math.min(390, value / goal * 390) : 0;
-    if (progressWidth > 0) canvasRoundedRect(ctx, x, 1080, Math.max(8, progressWidth), 8, 4, "#d3a900");
+    if (progressWidth > 0) canvasRoundedRect(ctx, x, 1352, Math.max(8, progressWidth), 8, 4, "#d3a900");
   });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Resultado por clínica", 82, 1170);
+  ctx.fillText("Resultado por clínica", 82, 1442);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 1170);
+  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 1442);
   ctx.textAlign = "left";
   const clinicRows = reportClinicRows;
   if (clinicRows.length) {
     clinicRows.forEach(({ clinic, actions: clinicActions, captured, phonesTotal, qualifiedTotal, scheduledTotal, attendedTotal }, index) => {
-      const y = 1195 + index * 82;
+      const y = 1467 + index * 82;
       if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fff9dc");
       ctx.fillStyle = clinic.color || "#d3a900";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
@@ -2361,7 +2378,7 @@ async function exportReport(share = false) {
       ctx.fillText(initials(clinic.name).slice(0, 1), 101, y + 30);
       ctx.textAlign = "left";
       canvasFitText(ctx, clinic.name, 134, y + 21, 390, { size: 19, minSize: 14, weight: 700, color: "#202631" });
-      canvasFitText(ctx, `${captured} ${captured === 1 ? "lead captado" : "leads captados"} · ${clinicActions} ${clinicActions === 1 ? "ação" : "ações"}`, 134, y + 47, 460, { size: 16, minSize: 12, weight: 700, color: "#8a6800" });
+      canvasFitText(ctx, `${captured} ${captured === 1 ? "lead movimentado" : "leads movimentados"} · ${clinicActions} ${clinicActions === 1 ? "ação" : "ações"}`, 134, y + 47, 460, { size: 16, minSize: 12, weight: 700, color: "#8a6800" });
       canvasFitText(ctx, `${phonesTotal} telef. · ${qualifiedTotal} encamin. · ${scheduledTotal} agend. · ${attendedTotal} comp.`, 982, y + 32, 400, { size: 15, minSize: 10, weight: 600, color: "#59616d", align: "right" });
       if (index < clinicRows.length - 1) {
         ctx.strokeStyle = "#ebe3c8";
@@ -2371,7 +2388,7 @@ async function exportReport(share = false) {
   } else {
     ctx.fillStyle = "#7a8782";
     ctx.font = "400 18px Arial";
-    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1215);
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1487);
   }
 
   const footerY = canvas.height - 100;
@@ -2452,8 +2469,14 @@ $("#recovery-form").addEventListener("submit", async event => {
 });
 $("#signout").addEventListener("click", async () => { await authGateway.signOut(); location.reload(); });
 $$("[data-view]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.view)));
-$$("[data-period]").forEach(button => button.addEventListener("click", () => { $$("[data-period]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.period = button.dataset.period; renderDashboard(); }));
-$$("[data-report-period]").forEach(button => button.addEventListener("click", () => { $$("[data-report-period]").forEach(b => b.classList.remove("active")); button.classList.add("active"); state.reportPeriod = button.dataset.reportPeriod; renderReport(); }));
+function selectReportingPeriod(period) {
+  state.period = period;
+  state.reportPeriod = period;
+  $$("[data-period]").forEach(button => button.classList.toggle("active", button.dataset.period === period));
+  $$("[data-report-period]").forEach(button => button.classList.toggle("active", button.dataset.reportPeriod === period));
+}
+$$("[data-period]").forEach(button => button.addEventListener("click", () => { selectReportingPeriod(button.dataset.period); renderDashboard(); }));
+$$("[data-report-period]").forEach(button => button.addEventListener("click", () => { selectReportingPeriod(button.dataset.reportPeriod); renderReport(); }));
 $("#choose-clinic").addEventListener("click", clinicPicker);
 $$("[data-action]").forEach(button => button.addEventListener("click", () => handleSessionAction(button.dataset.action)));
 $("#undo-action").addEventListener("click", () => state.lastAction ? (updateAction(state.lastAction, -1), state.lastAction = null, showToast("Última ação desfeita")) : showToast("Nenhuma ação para desfazer"));
