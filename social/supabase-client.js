@@ -48,6 +48,12 @@ async function getContext(client) {
   return { user, organizationId: membership.organization_id, role: membership.role };
 }
 
+async function getWritableContext(client) {
+  const context = await getContext(client);
+  if (context.role === "manager") throw new Error("Acesso de Gestor é somente leitura.");
+  return context;
+}
+
 async function isPlatformAdmin(client) {
   const { data, error } = await client.rpc("is_platform_admin");
   return !error && Boolean(data);
@@ -154,7 +160,7 @@ export const dataGateway = {
   async uploadProfileImage(file) {
     if (!isSupabaseConfigured || !file) return null;
     const client = await getClient();
-    const { user, organizationId } = await getContext(client);
+    const { user, organizationId } = await getWritableContext(client);
     const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${organizationId}/profiles/${user.id}-${Date.now()}.${extension}`;
     const { error } = await client.storage.from("clinic-images").upload(path, file, {
@@ -173,7 +179,7 @@ export const dataGateway = {
   async uploadClinicImage(file, clinicId) {
     if (!isSupabaseConfigured || !file || !clinicId) return null;
     const client = await getClient();
-    const { organizationId } = await getContext(client);
+    const { organizationId } = await getWritableContext(client);
     const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${organizationId}/${clinicId}-${Date.now()}.${extension}`;
     const { error } = await client.storage.from("clinic-images").upload(path, file, {
@@ -301,7 +307,7 @@ export const dataGateway = {
   async saveSnapshot(payload) {
     if (!isSupabaseConfigured) return;
     const client = await getClient();
-    await getContext(client);
+    await getWritableContext(client);
     const { error } = await client.rpc("save_organization_snapshot_v2", { incoming_payload: payload });
     if (error) throw error;
   },
@@ -323,7 +329,8 @@ export const dataGateway = {
   async loadPendingExtensionEvents() {
     if (!isSupabaseConfigured) return [];
     const client = await getClient();
-    const { organizationId } = await getContext(client);
+    const { organizationId, role } = await getContext(client);
+    if (role === "manager") return [];
     const { data, error } = await client
       .from("extension_events")
       .select("id, clinic_id, session_id, event_type, instagram_handle, instagram_url, event_at, payload")
@@ -337,7 +344,7 @@ export const dataGateway = {
   async markExtensionEventsProcessed(ids) {
     if (!isSupabaseConfigured || !ids?.length) return;
     const client = await getClient();
-    const { organizationId } = await getContext(client);
+    const { organizationId } = await getWritableContext(client);
     const { error } = await client
       .from("extension_events")
       .update({ processed_at: new Date().toISOString() })

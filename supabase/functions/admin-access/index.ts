@@ -39,9 +39,22 @@ export default {
     if (inviteError || !invite?.active) return response({ error: "Convite não encontrado ou inativo." }, 404);
     if (invite.claimed_by) return response({ ok: true, status: "linked", userId: invite.claimed_by });
 
+    const { data: organization } = await context.supabaseAdmin
+      .from("organizations")
+      .select("name")
+      .eq("id", invite.organization_id)
+      .single();
+    const accessLabel = invite.role === "manager"
+      ? "Gestor · somente leitura"
+      : invite.role === "admin" ? "Administrador" : "Social seller";
+
     const { data: invited, error: invitationError } = await context.supabaseAdmin.auth.admin.inviteUserByEmail(invite.email, {
-      redirectTo: "https://social.munnius.com.br/",
-      data: { full_name: invite.full_name }
+      redirectTo: "https://social.munnius.com.br/?invite=1",
+      data: {
+        full_name: invite.full_name,
+        organization_name: organization?.name || "Munnius Social",
+        access_label: accessLabel
+      }
     });
     if (invitationError || !invited.user) {
       const alreadyRegistered = /already|registered|exists/i.test(invitationError?.message || "");

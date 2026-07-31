@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <body style="margin:0;background:#f4f2ec;font-family:Arial,sans-serif;color:#202631">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f2ec;padding:32px 14px">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;overflow:hidden;background:#fffdf7;border:1px solid #e4dfd0;border-radius:24px">
+          <tr>
+            <td style="padding:26px 30px;background:#123f50">
+              <table role="presentation" cellspacing="0" cellpadding="0"><tr>
+                <td style="width:42px;height:42px;text-align:center;background:rgba(255,255,255,.1);border-radius:13px">
+                  <img src="https://social.munnius.com.br/assets/munnius-mark-light.png" width="22" height="22" alt="Munnius" style="display:inline-block;vertical-align:middle">
+                </td>
+                <td style="padding-left:12px;color:#fff;font-size:14px;font-weight:700">Munnius Social</td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:34px 30px 12px">
+              <div style="display:inline-block;padding:6px 10px;background:#fff0a8;border-radius:999px;color:#665000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Convite privado</div>
+              <h1 style="margin:18px 0 10px;font-size:28px;line-height:1.15">Seu acesso está pronto.</h1>
+              <p style="margin:0;color:#666b70;font-size:15px;line-height:1.65">Olá, {{ .Data.full_name }}. Você recebeu acesso ao ambiente <strong style="color:#202631">{{ .Data.organization_name }}</strong>.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 30px">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f1ee;border-radius:16px">
+                <tr><td style="padding:16px 18px;color:#777d81;font-size:12px">Cargo</td><td align="right" style="padding:16px 18px;color:#202631;font-size:13px;font-weight:700">{{ .Data.access_label }}</td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 30px 10px">
+              <a href="{{ .ConfirmationURL }}" style="display:block;padding:15px 20px;background:#e8c53e;border-radius:14px;color:#202631;text-align:center;text-decoration:none;font-size:14px;font-weight:700">Criar minha senha e acessar</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px 30px 34px;color:#83878a;font-size:12px;line-height:1.55">Este é um ambiente privado. O botão acima confirma seu e-mail e direciona você para criar uma senha segura.</td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;color:#929699;font-size:11px">Munnius · tecnologia para uma operação comercial mais clara</p>
+      </td></tr>
+    </table>
+  </body>
+</html>

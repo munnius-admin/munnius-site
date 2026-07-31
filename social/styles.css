@@ -636,3 +636,45 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   .sidebar-brand>span{background:rgba(255,255,255,.09)!important;box-shadow:0 8px 20px rgba(4,24,32,.2)!important}
   .sidebar-brand img{filter:none!important}
 }
+
+/* v37 · identidade mais sóbria e perfil Gestor */
+:root{
+  --ink:#252a2f;
+  --muted:#6f7477;
+  --cream:#f7f5ee;
+  --card:#fffdf8;
+  --line:#e2ded1;
+  --green:#123f50;
+  --green-dark:#082f3d;
+  --green-soft:#efeee8;
+  --plum:#747b80;
+  --coral:#a96354;
+  --amber:#c6a22a;
+}
+.topbar-subline{display:flex;align-items:center;gap:8px}
+.topbar-subline .overline{margin:0}
+.access-mode-badge,.viewer-status{display:inline-flex;align-items:center;gap:4px;border:1px solid #d9d7cf;border-radius:999px;background:#efeee9;color:#596066;font-size:.52rem;font-weight:800;white-space:nowrap}
+.access-mode-badge{padding:4px 7px}
+.access-mode-badge .material-symbols-outlined,.viewer-status .material-symbols-outlined{font-size:.72rem}
+.viewer-status{padding:7px 9px}
+.viewer-clinic-card{cursor:default}
+.viewer-detail-actions{grid-template-columns:1fr}
+.viewer-mode .manager-write{display:none!important}
+.viewer-mode .avatar-edit{cursor:default}
+.viewer-mode .avatar-edit .material-symbols-outlined{display:none}
+.viewer-mode .session-empty{padding:7vh 20px 4vh}
+.viewer-mode .session-empty .large-icon{background:#efeee9;color:#123f50}
+.secondary-button,.clinic-start,.kanban-navigation button{background:#efeee9!important;color:#3f4a50!important}
+.crm-phone-filter.active{border-color:#c7c5bd!important;background:#e9e8e2!important;color:#30383d!important;box-shadow:none!important}
+.kanban-column-tools>b{background:#e7e5de!important;color:#30383d!important}
+.period-control,.report-kind-control{background:#e9e8e2}
+.period-control button.active{box-shadow:0 2px 7px rgba(24,38,44,.06)}
+.bottom-nav button.active{color:#123f50}
+@media(min-width:760px){
+  .app-shell{padding-left:82px}
+  .bottom-nav{width:82px!important;padding:22px 8px!important;background:#123f50!important;box-shadow:8px 0 28px rgba(8,43,57,.16)!important}
+  .bottom-nav button{min-height:60px!important;border-radius:14px!important}
+  .bottom-nav button.active{background:rgba(235,234,228,.15)!important;box-shadow:inset 3px 0 0 #e8c53e!important}
+  .bottom-nav small{font-size:.58rem!important}
+  .sidebar-brand>span{width:40px!important;height:40px!important;border-radius:13px!important}
+}

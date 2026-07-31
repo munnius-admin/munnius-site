@@ -67,7 +67,9 @@ demonstração apareçam para outro usuário.
 - Interface: PWA mobile-first, funcionando também no desktop.
 - Relatórios: o PNG é uma captura local do próprio card renderizado, usando `html2canvas` 1.4.1 vendorizado sob licença MIT, sem API paga.
 - Cadastro público: inexistente. Usuários entram somente por convite.
-- Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação.
+- Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação; `manager`
+  visualiza dados, usa filtros e exporta relatórios sem qualquer permissão de escrita.
+  O bloqueio do Gestor existe tanto na interface quanto nas políticas RLS do banco.
 - Administração da plataforma: `platform_admins` concede ao Gabriel uma área própria para
   criar organizações e permitir, pausar ou reativar acessos. Esse privilégio não mistura
   dados operacionais: o RLS continua exigindo vínculo ativo com a organização para ler
@@ -127,11 +129,15 @@ em imagem devem ser gerados sob demanda, não armazenados.
 1. Crie um projeto na região mais próxima disponível.
 2. Em Authentication, mantenha e-mail/senha e desative cadastro público.
 3. Execute, em ordem, os arquivos de `supabase/migrations` no SQL Editor.
-4. Após a migração `008_platform_admin_and_access.sql`, use **Mais → Organizações e
+4. Após as migrations `008_platform_admin_and_access.sql` e `010_manager_read_only.sql`, use **Mais → Organizações e
    acessos** no perfil administrador da plataforma para criar organizações e permitir
    usuários. A função `admin-access` pode enviar o convite por e-mail; login com Google
    também reivindica automaticamente um e-mail previamente permitido. Nunca exponha a
    `service_role` no navegador.
+   O template visual do convite está versionado em `docs/supabase-invite-email-template.html`.
+   No projeto gratuito atual, o Supabase só libera a edição do assunto e do HTML depois
+   da configuração de um SMTP próprio. Sem SMTP, o convite funcional usa o modelo padrão
+   do Supabase; não contrate nem conecte um provedor sem aprovação explícita.
 5. Copie URL e chave pública `anon` para `social/config.js`.
 6. Adicione `https://social.munnius.com.br` às URLs permitidas de autenticação.
 7. Teste dois membros na mesma organização e dois usuários em organizações diferentes.

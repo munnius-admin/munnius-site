@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=36";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=37";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -66,8 +66,11 @@ const qualificationGroups = [
 ];
 const qualificationItems = qualificationGroups.flatMap(group => group.items);
 const googleEnabled = Boolean(window.MUNNIUS_SOCIAL_CONFIG?.googleEnabled);
-const recoveryLinkDetected = new URLSearchParams(location.hash.slice(1)).get("type") === "recovery"
-  || new URLSearchParams(location.search).get("type") === "recovery";
+const initialAuthFlow = new URLSearchParams(location.hash.slice(1)).get("type")
+  || new URLSearchParams(location.search).get("type")
+  || (new URLSearchParams(location.search).has("invite") ? "invite" : "");
+const recoveryLinkDetected = ["recovery", "invite"].includes(initialAuthFlow);
+const invitationLinkDetected = initialAuthFlow === "invite";
 
 const seed = {
   version: 3,
@@ -356,6 +359,9 @@ function loadState() {
   const base = isSupabaseConfigured
     ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], directs: [], followups: [], sessions: [] }
     : structuredClone(seed);
+  if (!isSupabaseConfigured && new URLSearchParams(location.search).get("role") === "manager") {
+    base.profile = { name: "Gestora Teste", initials: "GT", role: "manager" };
+  }
   if (isSupabaseConfigured) {
     return { ...base, session: null, timerId: null, lastAction: null, leadFilter: "all", followupFilter: "today", reportPeriod: "day" };
   }
@@ -377,6 +383,13 @@ let stopWorkspaceRealtime;
 let stopExtensionRealtime;
 let adminDirectoryCache = { organizations: [], memberships: [], invites: [] };
 const processedExtensionEvents = new Set();
+function isReadOnlyManager() { return state.profile?.role === "manager"; }
+function canEditOperation() { return !isReadOnlyManager(); }
+function requireOperationEdit() {
+  if (canEditOperation()) return true;
+  showToast("Seu acesso de Gestor é somente para visualização.");
+  return false;
+}
 function operationalStorageKey(profileId = state.profile?.id) {
   return isSupabaseConfigured && profileId ? `${STORAGE_KEY}:${profileId}` : STORAGE_KEY;
 }
@@ -446,6 +459,7 @@ function operationalSnapshot() {
   return serializable;
 }
 function persist() {
+  if (isReadOnlyManager()) return;
   const serializable = operationalSnapshot();
   localStorage.setItem(operationalStorageKey(), JSON.stringify(serializable));
   if (isSupabaseConfigured) {
@@ -457,6 +471,7 @@ function persist() {
   }
 }
 async function persistImmediately() {
+  if (isReadOnlyManager()) return;
   const serializable = operationalSnapshot();
   localStorage.setItem(operationalStorageKey(), JSON.stringify(serializable));
   if (isSupabaseConfigured) await dataGateway.saveSnapshot(serializable);
@@ -951,14 +966,34 @@ function renderProfile() {
   });
   headerAvatar.textContent = avatarUrl ? "" : initials;
   profileAvatar.innerHTML = `${avatarUrl ? "" : escapeHtml(initials)}<span class="material-symbols-outlined">add_a_photo</span>`;
+  profileAvatar.disabled = isReadOnlyManager();
   $("#profile-name").textContent = name;
   $("#profile-role").textContent = state.profile?.platformAdmin
     ? "Administrador da plataforma"
-    : state.profile?.role === "admin" ? "Admin · Social seller" : "Social seller";
+    : state.profile?.role === "admin" ? "Admin · Social seller"
+      : isReadOnlyManager() ? "Gestor · Somente leitura" : "Social seller";
+  $("#profile-avatar-hint").textContent = isReadOnlyManager()
+    ? "Acesso protegido para acompanhamento"
+    : "Toque na foto para alterar";
+  $("#access-mode-badge").classList.toggle("hidden", !isReadOnlyManager());
   $("#admin-access-menu").classList.toggle("hidden", !state.profile?.platformAdmin);
 }
 
+function applyAccessMode() {
+  const viewer = isReadOnlyManager();
+  document.body.classList.toggle("viewer-mode", viewer);
+  $$(".manager-write button, button.manager-write, input.manager-write, select.manager-write").forEach(element => {
+    element.disabled = viewer;
+  });
+  $("#home-clinics-title").textContent = viewer ? "Clínicas acompanhadas" : "Começar por uma clínica";
+  $("#session-empty-title").textContent = viewer ? "Acompanhamento das sessões" : "Pronta para começar?";
+  $("#session-empty-copy").textContent = viewer
+    ? "Consulte abaixo o tempo e as ações registradas em cada clínica hoje."
+    : "Escolha uma clínica e registre seu trabalho sem perder o ritmo.";
+}
+
 async function saveProfileImage(file) {
+  if (!requireOperationEdit()) return;
   if (!file) return;
   if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return showToast("Use uma imagem PNG, JPG ou WebP.");
   if (file.size > 2 * 1024 * 1024) return showToast("Escolha uma foto de até 2 MB.");
@@ -981,6 +1016,11 @@ async function saveProfileImage(file) {
 
 function showRecoveryForm() {
   recoveryMode = true;
+  $("#recovery-eyebrow").textContent = invitationLinkDetected ? "Convite aceito" : "Acesso recuperado";
+  $("#recovery-title").textContent = invitationLinkDetected ? "Crie sua senha de acesso" : "Crie sua nova senha";
+  $("#recovery-copy").textContent = invitationLinkDetected
+    ? "Só falta definir sua senha. Depois disso, você entrará diretamente no ambiente autorizado."
+    : "Defina uma senha segura e você entrará no aplicativo logo em seguida.";
   $("#login-form").classList.add("hidden");
   $("#recovery-form").classList.remove("hidden");
   requestAnimationFrame(() => $("#new-password").focus());
@@ -1004,6 +1044,7 @@ async function openWorkspace(message = "Bem-vindo") {
     state = loadLocalOperational(identity || state.profile);
     message = "Conta aberta · sincronização será retomada";
   }
+  applyAccessMode();
   $("#auth-screen").classList.add("hidden");
   $("#app-shell").classList.remove("hidden");
   expireUnansweredLeads();
@@ -1018,13 +1059,15 @@ async function openWorkspace(message = "Bem-vindo") {
     console.warn("Atualização em tempo real será retomada depois.", error);
   }
   stopExtensionRealtime?.();
-  try {
-    await syncPendingExtensionEvents();
-    stopExtensionRealtime = await dataGateway.subscribeToExtensionEvents?.(event => {
-      applyExtensionEvents(event, true).catch(error => console.warn("Evento da extensão pendente.", error));
-    });
-  } catch (error) {
-    console.info("Extensão Chrome ainda não conectada.", error);
+  if (canEditOperation()) {
+    try {
+      await syncPendingExtensionEvents();
+      stopExtensionRealtime = await dataGateway.subscribeToExtensionEvents?.(event => {
+        applyExtensionEvents(event, true).catch(error => console.warn("Evento da extensão pendente.", error));
+      });
+    } catch (error) {
+      console.info("Extensão Chrome ainda não conectada.", error);
+    }
   }
   showToast(message);
 }
@@ -1307,17 +1350,18 @@ function renderDashboard() {
 function clinicLeadCount(clinicId, period = "day") { return state.leads.filter(lead => lead.clinicId === clinicId && inPeriod(lead.prospectedAt, period)).length; }
 function clinicMarkup(clinic, detailed = false) {
   const active = state.session?.clinicId === clinic.id;
+  const editable = canEditOperation();
   const priority = clinicPriority(clinic);
   const activity = clinicActivityToday(clinic.id);
   const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), "month")).length;
   const avatar = clinic.photoUrl
     ? `<img src="${escapeHtml(clinic.photoUrl)}" alt="" loading="lazy">`
     : escapeHtml(clinic.name.split(" ").slice(-1)[0]?.[0] || "C");
-  return `<article class="clinic-card ${detailed ? "clickable" : "home-clinic-card"} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
+  return `<article class="clinic-card ${detailed && editable ? "clickable" : detailed ? "viewer-clinic-card" : "home-clinic-card"} ${active ? "has-active-session" : ""}" ${detailed && editable ? `data-clinic-detail="${clinic.id}"` : ""}>
     <div class="clinic-avatar" style="background:${clinic.color}">${avatar}</div>
     <div class="clinic-main"><strong title="${escapeHtml(clinic.name)}">${escapeHtml(clinic.name)} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${detailed ? `${escapeHtml(clinic.instagram)} · Closer ${escapeHtml(clinic.hunter)} · ${priority.minutes} min` : `${activity.actions} ${activity.actions === 1 ? "ação" : "ações"} hoje · ${priority.label}`}</span><div class="progress"><i style="width:${Math.min(100, activity.seconds / (priority.minutes * 60) * 100)}%"></i></div></div>
     <div class="clinic-card-side">${detailed ? `<div class="clinic-score"><strong>${activity.actions}</strong><span>ações hoje · ${scheduled} agend.</span></div>` : ""}
-      ${detailed ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>`}
+      ${detailed ? editable ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<span class="viewer-status"><span class="material-symbols-outlined">visibility</span>Ver</span>` : editable ? `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>` : `<span class="viewer-status"><span class="material-symbols-outlined">visibility</span>Ver</span>`}
     </div>
   </article>`;
 }
@@ -1340,6 +1384,10 @@ function renderClinics() {
 function slugifyOrganization(value = "") {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function accessRoleLabel(role) {
+  return { admin: "Admin da organização", social_seller: "Social seller", manager: "Gestor · Somente leitura" }[role] || "Social seller";
 }
 
 async function renderAdminAccess() {
@@ -1383,7 +1431,7 @@ async function renderAdminAccess() {
       <header><span class="material-symbols-outlined">domain</span><div><strong>${escapeHtml(organization.name)}</strong><small>${escapeHtml(organization.slug)} · ${accessRows.filter(item => item.active).length} acessos</small></div><span class="admin-organization-actions"><button data-admin-edit-organization="${organization.id}" aria-label="Editar nome"><span class="material-symbols-outlined">edit</span></button><button data-admin-add-access="${organization.id}"><span class="material-symbols-outlined">person_add</span>Adicionar</button></span></header>
       <div class="admin-access-list">${accessRows.map(access => `<article>
         <span class="admin-access-avatar">${initials(access.fullName || access.email)}</span>
-        <div><strong>${escapeHtml(access.fullName || access.email)}</strong><small>${escapeHtml(access.email)} · ${access.role === "admin" ? "Admin da organização" : "Social seller"}</small></div>
+        <div><strong>${escapeHtml(access.fullName || access.email)}</strong><small>${escapeHtml(access.email)} · ${accessRoleLabel(access.role)}</small></div>
         <em class="${access.active ? access.claimed ? "active" : "pending" : "inactive"}">${access.active ? access.claimed ? "Ativo" : "Pendente" : "Pausado"}</em>
         ${access.id ? `<button data-admin-toggle-access="${access.id}" data-access-active="${access.active}">${access.active ? "Pausar" : "Reativar"}</button>` : ""}
       </article>`).join("") || `<div class="admin-empty-access">Nenhum acesso nesta organização.</div>`}</div>
@@ -1471,10 +1519,19 @@ function openAdminAccessForm(organizationId) {
     <form class="sheet-form" id="admin-access-form">
       ${field("admin-access-name", "Nome", "", true, "text", "Nome da pessoa")}
       ${field("admin-access-email", "E-mail permitido", "", true, "email", "pessoa@empresa.com.br")}
-      <div class="field"><label for="admin-access-role">Perfil</label><select id="admin-access-role"><option value="social_seller">Social seller</option><option value="admin">Admin da organização</option></select></div>
-      <div class="admin-isolation-note"><span class="material-symbols-outlined">shield_lock</span><p><strong>Acesso isolado</strong><small>Este usuário verá somente a operação de ${escapeHtml(organization.name)}.</small></p></div>
-      <button class="primary-button" type="submit">Permitir acesso</button>
+      <div class="field"><label for="admin-access-role">Cargo</label><select id="admin-access-role"><option value="social_seller">Social seller</option><option value="manager">Gestor · somente leitura</option><option value="admin">Admin da organização</option></select></div>
+      <div class="admin-isolation-note" id="admin-role-note"><span class="material-symbols-outlined">shield_lock</span><p><strong>Acesso isolado</strong><small>Social seller opera clínicas, sessões, leads e relatórios de ${escapeHtml(organization.name)}.</small></p></div>
+      <button class="primary-button" type="submit">Criar acesso e enviar convite</button>
     </form>`, () => {
+    const roleSelect = $("#admin-access-role");
+    const roleNote = $("#admin-role-note small");
+    roleSelect.addEventListener("change", () => {
+      roleNote.textContent = roleSelect.value === "manager"
+        ? `Gestor visualiza toda a operação de ${organization.name}, aplica filtros e exporta relatórios, sem alterar nenhum dado.`
+        : roleSelect.value === "admin"
+          ? `Administra os acessos da organização e também pode operar os dados de ${organization.name}.`
+          : `Social seller opera clínicas, sessões, leads e relatórios de ${organization.name}.`;
+    });
     $("#admin-access-form").addEventListener("submit", async event => {
       event.preventDefault();
       const button = event.submitter;
@@ -1488,7 +1545,7 @@ function openAdminAccessForm(organizationId) {
           role: $("#admin-access-role").value
         });
         closeSheet();
-        showToast(result.invitationSent ? "Acesso criado e convite enviado" : "E-mail permitido; acesso com Google já está liberado");
+        showToast(result.invitationSent ? "Acesso criado e convite enviado por e-mail" : "E-mail permitido; acesso com Google já está liberado");
         await renderAdminAccess();
       } catch (error) {
         console.warn("Falha ao criar acesso.", error);
@@ -1515,6 +1572,7 @@ function renderGoals() {
 }
 
 function openGoalsForm() {
+  if (!requireOperationEdit()) return;
   openSheet(`<h2 class="sheet-title">Metas globais</h2><p class="sheet-subtitle">Defina o alvo atual da operação inteira. Nenhuma meta é vinculada a uma clínica específica.</p>
     <form class="sheet-form" id="goals-form">
       ${field("goals-phones", "Números prospectados no período", state.goals.phones, true, "number", "60")}
@@ -1623,9 +1681,9 @@ function renderSessionClinicTracker() {
           </div>
           <span class="clinic-time-track" aria-hidden="true"><i style="width:${spentPct}%"></i></span>
         </div>
-        <button class="session-round-button ${activity.active ? "active" : ""}" data-session-clinic="${clinic.id}" ${state.session && !activity.active ? "disabled" : ""}>
+        ${canEditOperation() ? `<button class="session-round-button ${activity.active ? "active" : ""}" data-session-clinic="${clinic.id}" ${state.session && !activity.active ? "disabled" : ""}>
           <span class="material-symbols-outlined">${buttonIcon}</span>${buttonLabel}
-        </button>
+        </button>` : `<span class="viewer-status"><span class="material-symbols-outlined">visibility</span>Visualizar</span>`}
       </article>`;
     }).join("");
     return `<section class="priority-group priority-group-${priorityKey.toLowerCase()}">
@@ -1726,11 +1784,11 @@ function renderLeads() {
       return `<article class="kanban-volume-card ${column.key}">
         <span class="material-symbols-outlined">${column.key === "new" ? "alternate_email" : "forum"}</span>
         <div><strong>${batch.remaining} ${batch.remaining === 1 ? "lead anônimo" : "leads anônimos"}</strong><small>${escapeHtml(clinic?.name || "Clínica")} · ${anonymousBatchDeadline(batch, anonymousKind)}</small></div>
-        ${anonymousKind === "talking" ? `<button type="button" data-anonymous-hunter="${batch.groupedBatchIds?.[0] || batch.id}" aria-label="Identificar lead e enviar à Hunter"><span class="material-symbols-outlined">person_edit</span>Identificar</button>` : ""}
+        ${anonymousKind === "talking" && canEditOperation() ? `<button type="button" data-anonymous-hunter="${batch.groupedBatchIds?.[0] || batch.id}" aria-label="Identificar lead e enviar à Hunter"><span class="material-symbols-outlined">person_edit</span>Identificar</button>` : ""}
       </article>`;
     }).join("");
     return `<section class="kanban-column" data-kanban-column="${column.key}">
-      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><span class="kanban-column-tools"><b>${items.length + anonymousVolume}</b><button type="button" data-add-lead-stage="${column.key}" aria-label="Adicionar em ${column.title}"><span class="material-symbols-outlined">add</span></button></span></header>
+      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><span class="kanban-column-tools"><b>${items.length + anonymousVolume}</b>${canEditOperation() ? `<button type="button" data-add-lead-stage="${column.key}" aria-label="Adicionar em ${column.title}"><span class="material-symbols-outlined">add</span></button>` : ""}</span></header>
       <div class="kanban-cards">${volumeCard}${items.map(kanbanLeadCard).join("") || (!volumeCard ? `<div class="kanban-empty">Nenhum lead nesta etapa</div>` : "")}</div>
     </section>`;
   }).join("");
@@ -1787,7 +1845,7 @@ function kanbanLeadCard(lead) {
   const clinic = clinicById(lead.clinicId);
   const priority = clinicPriority(clinic);
   const canCapturePhone = ["new", "talking", "follow_up", "lost"].includes(lead.status);
-  const quickActions = [
+  const quickActions = canEditOperation() ? [
     ["new", "lost"].includes(lead.status)
       ? `<button type="button" data-quick-responded="${lead.id}"><span class="material-symbols-outlined">mark_chat_read</span>Respondeu</button>`
       : "",
@@ -1804,7 +1862,7 @@ function kanbanLeadCard(lead) {
     lead.status === "scheduled"
       ? `<button type="button" class="primary" data-quick-hunter-update="${lead.id}"><span class="material-symbols-outlined">how_to_reg</span>Registrar presença</button>`
       : ""
-  ].filter(Boolean).join("");
+  ].filter(Boolean).join("") : "";
   return `<article class="kanban-lead-card clickable" data-lead="${lead.id}">
     <div class="kanban-card-top"><span class="priority-dot priority-${priority.key.toLowerCase()}">${priority.key}</span><small>${escapeHtml(clinic?.name || "Clínica")}</small><span class="lead-temperature ${lead.temperature || "cold"}">${{ hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Frio"}</span></div>
     <strong>${escapeHtml(lead.name || lead.instagram || "Lead sem nome")}</strong>
@@ -1815,6 +1873,7 @@ function kanbanLeadCard(lead) {
 }
 
 function markLeadResponded(leadId) {
+  if (!requireOperationEdit()) return;
   const lead = leadById(leadId);
   if (!lead) return;
   const now = new Date().toISOString();
@@ -1831,6 +1890,7 @@ function markLeadResponded(leadId) {
 }
 
 function sendLeadToHunter(leadId) {
+  if (!requireOperationEdit()) return;
   const lead = leadById(leadId);
   if (!lead) return;
   if (!lead.whatsapp || !String(lead.name || "").trim() || !isUsableLeadHandle(lead.clinicId, lead.instagram)) {
@@ -1864,11 +1924,11 @@ function renderHunterFollowups(filteredLeads = state.leads) {
   const groupedItems = [...groups.values()];
   container.innerHTML = groupedItems.map((group, groupIndex) => `<section class="hunter-group">
     <header><span class="material-symbols-outlined">support_agent</span><div><strong>${escapeHtml(group.hunter)}</strong><small>${group.leads.length} ${group.leads.length === 1 ? "retorno pendente" : "retornos pendentes"}</small></div>
-      <button class="hunter-group-message" data-hunter-group="${groupIndex}"><span class="material-symbols-outlined">chat</span>Cobrar</button>
+      ${canEditOperation() ? `<button class="hunter-group-message" data-hunter-group="${groupIndex}"><span class="material-symbols-outlined">chat</span>Cobrar</button>` : `<span class="viewer-status"><span class="material-symbols-outlined">visibility</span>Acompanhamento</span>`}
     </header>
     <div>${group.leads.map(lead => {
       const clinic = clinicById(lead.clinicId);
-      return `<article data-hunter-update="${lead.id}"><div><strong>${escapeHtml(lead.name || lead.instagram)}</strong><small>${escapeHtml(clinic?.name || "")} · ${lead.status === "scheduled" ? `agendado ${formatDate(lead.scheduledAt, true)}` : "aguardando agendamento"}</small></div><span class="material-symbols-outlined">chevron_right</span></article>`;
+      return `<article ${canEditOperation() ? `data-hunter-update="${lead.id}"` : `data-lead="${lead.id}"`}><div><strong>${escapeHtml(lead.name || lead.instagram)}</strong><small>${escapeHtml(clinic?.name || "")} · ${lead.status === "scheduled" ? `agendado ${formatDate(lead.scheduledAt, true)}` : "aguardando agendamento"}</small></div><span class="material-symbols-outlined">chevron_right</span></article>`;
     }).join("")}</div>
   </section>`).join("") || `<p class="report-empty">Nenhum retorno pendente com as Hunters.</p>`;
   $$("[data-hunter-group]").forEach(button => button.addEventListener("click", event => {
@@ -1879,6 +1939,7 @@ function renderHunterFollowups(filteredLeads = state.leads) {
     event.stopPropagation();
     openHunterUpdate(button.dataset.hunterUpdate);
   }));
+  $$("[data-lead]", container).forEach(card => card.addEventListener("click", () => openLeadDetail(card.dataset.lead)));
 }
 
 function openHunterGroupReminder(group) {
@@ -2125,6 +2186,7 @@ function resumeSessionTimer() {
 }
 
 function startSession(clinicId) {
+  if (!requireOperationEdit()) return;
   const clinic = clinicById(clinicId);
   if (!clinic) return showToast("Clínica não encontrada.");
   const priority = clinicPriority(clinic);
@@ -2182,6 +2244,7 @@ function updateTimer() {
   if (elapsed % 10 === 0) renderSessionClinicTracker();
 }
 function updateAction(action, delta = 1) {
+  if (!requireOperationEdit()) return;
   if (!state.session) return;
   const previous = state.session.counts[action];
   state.session.counts[action] = Math.max(0, previous + delta);
@@ -2194,6 +2257,7 @@ function updateAction(action, delta = 1) {
   renderDirectHistory();
 }
 function handleSessionAction(action) {
+  if (!requireOperationEdit()) return;
   if (!state.session) return;
   if (action === "directs") {
     openActivityCapture("sent");
@@ -2314,6 +2378,7 @@ function openActivityCapture(stage, { instagram = "", phone = "", directId = nul
   });
 }
 async function finishSession() {
+  if (!requireOperationEdit()) return;
   if (!state.session) return;
   const endedAt = new Date();
   const completed = { ...state.session, endedAt: endedAt.toISOString(), durationSeconds: Math.max(1, activeSessionElapsed(state.session)), paused: true, resumedAt: null };
@@ -2326,6 +2391,7 @@ async function finishSession() {
 }
 
 function openAdjustCounts() {
+  if (!requireOperationEdit()) return;
   if (!state.session) return;
   openSheet(`<h2 class="sheet-title">Ajustar contagens</h2><p class="sheet-subtitle">Use somente para corrigir um toque por engano.</p>
     <div class="adjust-list">${Object.entries(countLabels).map(([key, label]) => `<div><span>${label}</span><button data-adjust="${key}" data-delta="-1">−</button><strong id="adjust-${key}">${state.session.counts[key]}</strong><button data-adjust="${key}" data-delta="1">+</button></div>`).join("")}</div>`, () => {
@@ -2337,6 +2403,7 @@ function openAdjustCounts() {
 }
 
 function openClinicForm(clinicId = null) {
+  if (!requireOperationEdit()) return;
   const clinic = clinicId ? clinicById(clinicId) : {};
   const edit = Boolean(clinicId);
   const currentPriority = clinicPriority(clinic);
@@ -2426,6 +2493,7 @@ function isBantComplete(lead = {}) {
 }
 
 function openOutcomeStagePicker() {
+  if (!requireOperationEdit()) return;
   openSheet(`<h2 class="sheet-title">Adicionar desfecho</h2><p class="sheet-subtitle">Escolha o resultado confirmado pela Hunter.</p>
     <div class="clinic-options">
       <button class="clinic-option" data-outcome-stage="attended"><span><strong>Compareceu</strong><small>Registrar atendimento realizado</small></span><b class="material-symbols-outlined">how_to_reg</b></button>
@@ -2436,6 +2504,7 @@ function openOutcomeStagePicker() {
 }
 
 function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymousBatchId = null, initialStatus = null } = {}) {
+  if (!requireOperationEdit()) return;
   const originalLead = leadId ? leadById(leadId) : null;
   const selectedAnonymousBatch = anonymousBatchId
     ? (state.anonymousConversationBatches || []).find(batch => batch.id === anonymousBatchId && Number(batch.remaining || 0) > 0)
@@ -2622,12 +2691,12 @@ function openLeadDetail(leadId) {
     const note = lead.qualificationNotes?.[group.key];
     return `<section class="bant-summary-group"><span>${group.key}</span><div><strong>${group.title}</strong>${checked.length ? checked.map(([, label]) => `<small>✓ ${escapeHtml(label)}</small>`).join("") : "<small>Ainda não explorado</small>"}${note ? `<small class="bant-summary-note">${escapeHtml(note)}</small>` : ""}</div></section>`;
   }).join("");
-  const canSend = lead.whatsapp && !lead.sentToHunterAt;
+  const canSend = canEditOperation() && lead.whatsapp && !lead.sentToHunterAt;
   const hunterTracking = lead.sentToHunterAt ? `<div class="hunter-tracking">
       <div><span class="material-symbols-outlined">${lead.status === "attended" ? "verified" : lead.status === "no_show" ? "event_busy" : lead.status === "scheduled" ? "event_available" : "hourglass_top"}</span>
         <p><strong>Retorno da Hunter</strong><small>${lead.status === "attended" ? "Paciente compareceu" : lead.status === "no_show" ? "Paciente não compareceu" : lead.status === "scheduled" ? `Agendado para ${formatDate(lead.scheduledAt, true)}` : "Aguardando confirmação do agendamento"}</small></p>
       </div>
-      ${lead.status === "sent_to_hunter" ? `<div class="hunter-tracking-actions"><button class="small-link" id="resend-hunter">Reencaminhar</button><button class="small-link" id="hunter-update">Atualizar</button></div>` : lead.status === "scheduled" ? `<button class="small-link" id="hunter-update">Atualizar</button>` : ""}
+      ${canEditOperation() ? lead.status === "sent_to_hunter" ? `<div class="hunter-tracking-actions"><button class="small-link" id="resend-hunter">Reencaminhar</button><button class="small-link" id="hunter-update">Atualizar</button></div>` : lead.status === "scheduled" ? `<button class="small-link" id="hunter-update">Atualizar</button>` : "" : ""}
     </div>` : "";
   openSheet(`<div class="lead-detail-head"><div class="lead-avatar">${initials(lead.name || lead.instagram)}</div><div><h2 class="sheet-title">${escapeHtml(lead.name || lead.instagram)}</h2><p class="sheet-subtitle">${escapeHtml(lead.instagram)} · ${clinic?.name || ""}</p></div></div>
     <div class="qualification-summary">
@@ -2638,13 +2707,13 @@ function openLeadDetail(leadId) {
     <div class="lead-bant-head"><h3 class="timeline-title">Pré-qualificação BANT</h3><span>${progress.done}/${progress.total}</span></div>
     <div class="bant-summary">${bantSummary}</div>
     ${hunterTracking}
-    <div class="detail-actions"><button class="secondary-button" id="edit-lead">Editar</button><button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
+    <div class="detail-actions ${canEditOperation() ? "" : "viewer-detail-actions"}">${canEditOperation() ? `<button class="secondary-button" id="edit-lead">Editar</button>` : ""}<button class="primary-button" id="contact-lead">Abrir Instagram</button></div>
     <h3 class="timeline-title">Histórico resumido</h3><div class="timeline">${[...(lead.timeline || [])].reverse().map(item => `<div><i></i><span><strong>${escapeHtml(item.label)}</strong><small>${formatDate(item.at, true)}</small></span></div>`).join("")}</div>
     ${canSend ? `<button class="primary-button" id="send-hunter"><span class="material-symbols-outlined">forward_to_inbox</span>Enviar para closer</button>` : ""}
-    <button class="danger-link" id="delete-lead"><span class="material-symbols-outlined">delete</span>Excluir lead</button>`, () => {
-    $("#edit-lead").addEventListener("click", () => openLeadForm({ leadId }));
+    ${canEditOperation() ? `<button class="danger-link" id="delete-lead"><span class="material-symbols-outlined">delete</span>Excluir lead</button>` : ""}`, () => {
+    $("#edit-lead")?.addEventListener("click", () => openLeadForm({ leadId }));
     $("#contact-lead").addEventListener("click", () => window.open(`https://instagram.com/${lead.instagram.replace("@", "")}`, "_blank", "noopener"));
-    $("#delete-lead").addEventListener("click", () => openDeleteLeadConfirmation(leadId));
+    $("#delete-lead")?.addEventListener("click", () => openDeleteLeadConfirmation(leadId));
     $("#resend-hunter")?.addEventListener("click", () => openHunterWhatsApp(lead));
     $("#hunter-update")?.addEventListener("click", () => openHunterUpdate(leadId));
     $("#send-hunter")?.addEventListener("click", () => sendLeadToHunter(leadId));
@@ -2652,6 +2721,7 @@ function openLeadDetail(leadId) {
 }
 
 function openDeleteLeadConfirmation(leadId) {
+  if (!requireOperationEdit()) return;
   const lead = leadById(leadId);
   if (!lead) return;
   openSheet(`<div class="destructive-confirmation">
@@ -2720,6 +2790,7 @@ function openDeleteLeadConfirmation(leadId) {
 }
 
 function openHunterUpdate(leadId) {
+  if (!requireOperationEdit()) return;
   const lead = leadById(leadId);
   const clinic = clinicById(lead.clinicId);
   if (lead.status === "sent_to_hunter") {
@@ -2795,6 +2866,7 @@ function openHunterWhatsApp(lead) {
 }
 
 function openFollowup(followupId) {
+  if (!requireOperationEdit()) return;
   const followup = state.followups.find(item => item.id === followupId);
   const lead = leadById(followup.leadId);
   const clinic = clinicById(lead.clinicId);
