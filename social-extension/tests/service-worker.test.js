@@ -58,10 +58,10 @@ test("keeps sessions isolated by tab and advances the second Direct to a respons
 
   const persisted = getPersisted().munniusExtensionState;
   assert.deepEqual({ ...persisted.tabContexts["101"].counters }, {
-    profiles: 0, likes: 0, comments: 0, directs: 1, responses: 1, phones: 0
+    likes: 0, comments: 0, directs: 1, responses: 1, phones: 0
   });
   assert.deepEqual({ ...persisted.tabContexts["202"].counters }, {
-    profiles: 0, likes: 0, comments: 0, directs: 1, responses: 0, phones: 0
+    likes: 0, comments: 0, directs: 1, responses: 0, phones: 0
   });
   assert.equal(ignored.ignored, "conversation_already_tracked");
 });

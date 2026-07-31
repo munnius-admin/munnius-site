@@ -9,7 +9,6 @@ chrome.storage.local
   .catch(() => {});
 
 const EMPTY_COUNTS = Object.freeze({
-  profiles: 0,
   likes: 0,
   comments: 0,
   directs: 0,
@@ -17,7 +16,6 @@ const EMPTY_COUNTS = Object.freeze({
   phones: 0
 });
 const COUNTER_BY_EVENT = {
-  follow: "profiles",
   like: "likes",
   comment: "comments",
   direct_sent: "directs",
@@ -28,7 +26,6 @@ const EVENT_LABELS = {
   session_started: "Sessão iniciada",
   session_finished: "Sessão encerrada",
   profile_viewed: "Perfil mapeado",
-  follow: "Novo follow mapeado",
   like: "Curtida mapeada",
   comment: "Comentário mapeado",
   direct_sent: "Direct mapeado",

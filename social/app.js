@@ -4,12 +4,12 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const STORAGE_KEY = "munnius-social-v3";
 const LEGACY_STORAGE_KEY = "munnius-social-v2";
-const countLabels = { profiles: "Novos follows", likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
+const countLabels = { likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
 const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", more: "Mais", clinics: "Clínicas e metas", reports: "Relatórios" };
 const statusNames = {
   new: "Lead mapeado",
   talking: "Conversando",
-  follow_up: "Em follow-up",
+  follow_up: "Conversando",
   lost: "Perdido",
   sent_to_hunter: "Qualificado e encaminhado",
   scheduled: "Agendamento confirmado",
@@ -84,6 +84,7 @@ const seed = {
   ],
   directs: [],
   anonymousDirectBatches: [],
+  anonymousConversationBatches: [],
   anonymousDirectsVersion: 0,
   followups: [
     { id: "fu-1", leadId: "lead-2", scheduledFor: new Date(Date.now() - 3600000).toISOString(), step: "1º follow-up", status: "pending" },
@@ -107,6 +108,7 @@ function normalizeState(candidate) {
   normalized.deletedLeadIds ||= [];
   normalized.directs ||= [];
   normalized.anonymousDirectBatches ||= [];
+  normalized.anonymousConversationBatches ||= [];
   normalized.followups ||= [];
   normalized.sessions ||= [];
   normalized.goals ||= structuredClone(seed.goals);
@@ -242,6 +244,7 @@ function mergeOperationalState(localState, remoteState, profile) {
     leads: mergeById(local.leads, remote.leads).filter(lead => !deletedLeadSet.has(lead.id)),
     directs: mergeById(local.directs, remote.directs).filter(direct => !direct.leadId || !deletedLeadSet.has(direct.leadId)),
     anonymousDirectBatches: mergeById(local.anonymousDirectBatches, remote.anonymousDirectBatches),
+    anonymousConversationBatches: mergeById(local.anonymousConversationBatches, remote.anonymousConversationBatches),
     followups: mergeById(local.followups, remote.followups).filter(followup => !deletedLeadSet.has(followup.leadId)),
     sessions: mergeById(local.sessions, remote.sessions),
     templates: mergeById(local.templates, remote.templates),
@@ -308,7 +311,6 @@ function applyRemoteSnapshot(remote) {
 }
 
 const extensionCounterMap = {
-  follow: "profiles",
   like: "likes",
   comment: "comments",
   direct_sent: "directs",
@@ -403,11 +405,21 @@ function addAnonymousDirect(clinicId, sessionId, sentAt = new Date().toISOString
 }
 
 function expireAnonymousDirects(target = state) {
-  const cutoff = Date.now() - 7 * 86400000;
+  const mappedCutoff = Date.now() - 7 * 86400000;
+  const talkingCutoff = Date.now() - 14 * 86400000;
   let changed = false;
   (target.anonymousDirectBatches || []).forEach(batch => {
     const remaining = Number(batch.remaining || 0);
-    if (!remaining || new Date(batch.sentAt || 0).getTime() >= cutoff) return;
+    if (!remaining || new Date(batch.sentAt || 0).getTime() >= mappedCutoff) return;
+    batch.remaining = 0;
+    batch.expired = Number(batch.expired || 0) + remaining;
+    batch.expiredAt = new Date().toISOString();
+    batch.updatedAt = batch.expiredAt;
+    changed = true;
+  });
+  (target.anonymousConversationBatches || []).forEach(batch => {
+    const remaining = Number(batch.remaining || 0);
+    if (!remaining || new Date(batch.respondedAt || 0).getTime() >= talkingCutoff) return;
     batch.remaining = 0;
     batch.expired = Number(batch.expired || 0) + remaining;
     batch.expiredAt = new Date().toISOString();
@@ -429,17 +441,82 @@ function consumeOldestAnonymousDirect(clinicId) {
   return batch;
 }
 
+function addAnonymousConversation(clinicId, sessionId, respondedAt = new Date().toISOString(), source = "manual_web", sourceBatch = null) {
+  if (!clinicId) return null;
+  state.anonymousConversationBatches ||= [];
+  const dayKey = respondedAt.slice(0, 10);
+  let batch = state.anonymousConversationBatches.find(item => item.clinicId === clinicId
+    && item.sessionId === sessionId
+    && String(item.respondedAt || "").slice(0, 10) === dayKey
+    && !item.expiredAt);
+  if (!batch) {
+    batch = {
+      id: uid("anonymous-talking"), clinicId, sessionId, respondedAt,
+      quantity: 0, remaining: 0, consumed: 0, expired: 0, source,
+      sourceBatchId: sourceBatch?.id || null,
+      sourceSentAt: sourceBatch?.sentAt || null
+    };
+    state.anonymousConversationBatches.push(batch);
+  }
+  batch.quantity = Number(batch.quantity || 0) + 1;
+  batch.remaining = Number(batch.remaining || 0) + 1;
+  batch.updatedAt = respondedAt;
+  return batch;
+}
+
+function consumeOldestAnonymousConversation(clinicId) {
+  expireAnonymousDirects();
+  const batch = (state.anonymousConversationBatches || [])
+    .filter(item => item.clinicId === clinicId && Number(item.remaining || 0) > 0)
+    .sort((a, b) => new Date(a.respondedAt) - new Date(b.respondedAt))[0];
+  if (!batch) return null;
+  batch.remaining = Math.max(0, Number(batch.remaining || 0) - 1);
+  batch.consumed = Number(batch.consumed || 0) + 1;
+  batch.updatedAt = new Date().toISOString();
+  return batch;
+}
+
+function advanceAnonymousLead(clinicId, stage, at = new Date().toISOString(), sessionId = null, source = "manual_web") {
+  if (stage === "responded") {
+    const sourceBatch = consumeOldestAnonymousDirect(clinicId);
+    return addAnonymousConversation(clinicId, sessionId, at, source, sourceBatch);
+  }
+  if (stage === "phone") return null;
+  return null;
+}
+
 function anonymousPipelineCount(kind, priorityFilter = "all") {
-  return (state.anonymousDirectBatches || [])
+  const source = kind === "talking" ? state.anonymousConversationBatches : state.anonymousDirectBatches;
+  const primary = (source || [])
     .filter(batch => priorityFilter === "all" || clinicPriority(clinicById(batch.clinicId)).key === priorityFilter)
-    .reduce((total, batch) => total + Number(kind === "lost" ? batch.expired : batch.remaining || 0), 0);
+    .reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+  if (kind !== "lost") return primary;
+  return [...(state.anonymousDirectBatches || []), ...(state.anonymousConversationBatches || [])]
+    .filter(batch => priorityFilter === "all" || clinicPriority(clinicById(batch.clinicId)).key === priorityFilter)
+    .reduce((total, batch) => total + Number(batch.expired || 0), 0);
+}
+
+function anonymousPipelineBatches(kind, priorityFilter = "all") {
+  const source = kind === "talking" ? state.anonymousConversationBatches : state.anonymousDirectBatches;
+  return (source || [])
+    .filter(batch => Number(batch.remaining || 0) > 0)
+    .filter(batch => priorityFilter === "all" || clinicPriority(clinicById(batch.clinicId)).key === priorityFilter)
+    .sort((a, b) => new Date(kind === "talking" ? a.respondedAt : a.sentAt) - new Date(kind === "talking" ? b.respondedAt : b.sentAt));
+}
+
+function anonymousBatchDeadline(batch, kind) {
+  const reference = new Date(kind === "talking" ? batch.respondedAt : batch.sentAt).getTime();
+  const limit = kind === "talking" ? 14 : 7;
+  const elapsed = Math.max(0, Math.floor((Date.now() - reference) / 86400000));
+  return `${Math.max(0, limit - elapsed)}d para expirar`;
 }
 
 function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = "sent", at = new Date().toISOString(), phone = "", source = "manual_web", sessionId = null }) {
   const instagram = instagramHandle(rawInstagram);
   if (instagram === "@") return { direct: null, lead: null };
   let direct = findLatestDirect(clinicId, instagram);
-  const anonymousMatch = !direct && stage !== "sent" ? consumeOldestAnonymousDirect(clinicId) : null;
+  const anonymousConversationMatch = !direct && ["responded", "phone"].includes(stage) ? consumeOldestAnonymousConversation(clinicId) : null;
+  const anonymousMatch = !direct && stage !== "sent" && !anonymousConversationMatch ? consumeOldestAnonymousDirect(clinicId) : null;
   const shouldCreate = !direct || (stage === "sent" && ["phone", "lost"].includes(direct.status));
   if (shouldCreate) {
     direct = {
@@ -448,13 +525,14 @@ function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = 
       instagram,
       leadId: null,
       sessionId,
-      sentAt: stage === "sent" ? at : anonymousMatch?.sentAt || null,
+      sentAt: stage === "sent" ? at : anonymousMatch?.sentAt || anonymousConversationMatch?.sourceSentAt || null,
       respondedAt: null,
       phoneAt: null,
       phone: "",
       status: stage === "sent" ? "sent" : stage,
       source,
-      anonymousSourceId: anonymousMatch?.id || null,
+      anonymousSourceId: anonymousMatch?.id || anonymousConversationMatch?.sourceBatchId || null,
+      anonymousConversationSourceId: anonymousConversationMatch?.id || null,
       createdAt: at,
       timeline: []
     };
@@ -545,9 +623,15 @@ async function applyExtensionEvents(events, notify = false) {
         if (event.instagram_handle) upsertLeadFromExtension(event, "mapped");
         else addAnonymousDirect(event.clinic_id, event.session_id, event.event_at, "chrome_extension");
       }
-      if (event.event_type === "response_detected") upsertLeadFromExtension(event, "responded");
+      if (event.event_type === "response_detected") {
+        if (event.instagram_handle) upsertLeadFromExtension(event, "responded");
+        else advanceAnonymousLead(event.clinic_id, "responded", event.event_at, event.session_id, "chrome_extension");
+      }
       if (event.event_type === "lead_qualified") upsertLeadFromExtension(event, "responded");
-      if (event.event_type === "phone_captured") upsertLeadFromExtension(event, "phone");
+      if (event.event_type === "phone_captured") {
+        if (event.instagram_handle) upsertLeadFromExtension(event, "phone");
+        else advanceAnonymousLead(event.clinic_id, "phone", event.event_at, event.session_id, "chrome_extension");
+      }
     }
     processedExtensionEvents.add(event.id);
     changed = true;
@@ -763,7 +847,7 @@ function isPhoneStage(lead) {
 }
 
 function reportActionCount(stats) {
-  return ["profiles", "likes", "comments", "directs", "responses"].reduce((total, key) => total + Number(stats[key] || 0), 0)
+  return ["likes", "comments", "directs", "responses"].reduce((total, key) => total + Number(stats[key] || 0), 0)
     + phoneActionCount(stats);
 }
 
@@ -778,8 +862,7 @@ function rate(part, total) {
 function currentPipelineStats() {
   return {
     mapped: state.leads.filter(lead => lead.status === "new").length + anonymousPipelineCount("mapped"),
-    talking: state.leads.filter(lead => lead.status === "talking").length,
-    followups: state.leads.filter(lead => lead.status === "follow_up").length,
+    talking: state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length + anonymousPipelineCount("talking"),
     lost: state.leads.filter(lead => lead.status === "lost").length + anonymousPipelineCount("lost"),
     qualified: state.leads.filter(lead => lead.status === "sent_to_hunter").length,
     scheduled: state.leads.filter(lead => lead.status === "scheduled").length,
@@ -789,13 +872,11 @@ function currentPipelineStats() {
 
 function currentPipelineRates(pipeline) {
   const advanced = pipeline.qualified + pipeline.scheduled + pipeline.attended;
-  const conversations = pipeline.talking + pipeline.followups + advanced;
-  const total = pipeline.mapped + conversations + pipeline.lost;
+  const conversations = pipeline.talking + advanced;
+  const total = pipeline.mapped + conversations;
   return {
     mapped: 100,
     talking: rate(conversations, total),
-    followups: rate(pipeline.followups + advanced, conversations),
-    lost: rate(pipeline.lost, total),
     qualified: rate(advanced, conversations),
     scheduled: rate(pipeline.scheduled + pipeline.attended, advanced),
     attended: rate(pipeline.attended, pipeline.scheduled + pipeline.attended)
@@ -807,11 +888,13 @@ function timelineMovementCount(period, pattern) {
 }
 
 function crmMovementStats(period, stats = periodStats(period)) {
+  const anonymousExpired = [...(state.anonymousDirectBatches || []), ...(state.anonymousConversationBatches || [])]
+    .filter(batch => batch.expiredAt && inPeriod(batch.expiredAt, period))
+    .reduce((total, batch) => total + Number(batch.expired || 0), 0);
   return {
     mapped: Number(stats.directs || 0),
     talking: Math.max(Number(stats.responses || 0), timelineMovementCount(period, /lead respondeu|resposta registrada|etapa alterada para conversando/i)),
-    followups: timelineMovementCount(period, /follow-up agendado|etapa alterada para em follow-up/i),
-    lost: timelineMovementCount(period, /sem resposta após|sem evolução após|etapa alterada para perdido/i),
+    lost: timelineMovementCount(period, /sem resposta após|sem evolução após|etapa alterada para perdido/i) + anonymousExpired,
     qualified: Number(stats.huntersTotal || 0),
     scheduled: Number(stats.scheduledTotal || 0),
     attended: Number(stats.attendedTotal || 0)
@@ -849,7 +932,10 @@ function clinicReportStats(clinicId, period, periodSummary) {
       .some(date => date && inPeriod(date, period));
   }).length;
   return {
-    actions: Number(sessionCounts.profiles || 0) + Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses + Math.max(Number(sessionCounts.phones || 0), phonesTotal),
+    actions: Number(sessionCounts.likes || 0) + Number(sessionCounts.comments || 0) + directs + responses + Math.max(Number(sessionCounts.phones || 0), phonesTotal),
+    directs,
+    responses,
+    lost: clinicLeads.filter(lead => (lead.timeline || []).some(item => item.at && inPeriod(item.at, period) && /sem resposta após|sem evolução após|etapa alterada para perdido/i.test(item.label || ""))).length,
     leads: clinicLeads.filter(lead => inPeriod(lead.prospectedAt, period)).length,
     phones: mappedPhonesCurrent,
     phonesTotal,
@@ -867,18 +953,15 @@ function renderDashboard() {
   expireUnansweredLeads();
   const stats = periodStats(state.period);
   const activeClinics = state.clinics.filter(clinic => clinic.active);
-  const conversations = state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length;
   const actions = reportActionCount(stats);
   const pipeline = currentPipelineStats();
   $("#actions-total").textContent = actions;
   $("#leads-total").textContent = stats.phonesTotal;
   $("#clinics-total").textContent = activeClinics.length;
   $("#hunters-total").textContent = stats.scheduledTotal;
-  $("#followups-total").textContent = conversations;
+  $("#followups-total").textContent = pipeline.talking;
   $("#pipeline-mapped").textContent = pipeline.mapped;
   $("#pipeline-talking").textContent = pipeline.talking;
-  $("#pipeline-followups").textContent = pipeline.followups;
-  $("#pipeline-lost").textContent = pipeline.lost;
   $("#pipeline-qualified").textContent = pipeline.qualified;
   $("#pipeline-scheduled").textContent = pipeline.scheduled;
   $("#pipeline-attended").textContent = pipeline.attended;
@@ -1033,7 +1116,6 @@ function renderSessionClinicTracker() {
           <div><strong>${escapeHtml(clinic.name)}</strong><span class="session-round-status ${activity.active ? "active" : activity.worked ? "worked" : "pending"}">${status}</span></div>
           <small>${escapeHtml(clinic.instagram)} · ${compactDuration(activity.seconds)} de ${priority.minutes} min · ${activity.actions} ${activity.actions === 1 ? "ação" : "ações"}</small>
           <div class="session-clinic-counts">
-            <span><i class="material-symbols-outlined">person_add</i>${activity.counts.profiles}</span>
             <span><i class="material-symbols-outlined">favorite</i>${activity.counts.likes}</span>
             <span><i class="material-symbols-outlined">chat_bubble</i>${activity.counts.comments}</span>
             <span><i class="material-symbols-outlined">send</i>${activity.counts.directs}</span>
@@ -1125,8 +1207,7 @@ function renderLeads() {
       || new Date(b.lastContactAt || b.prospectedAt) - new Date(a.lastContactAt || a.prospectedAt));
   const columns = [
     { key: "new", title: "Mapeados", subtitle: "Direct enviado", matcher: lead => lead.status === "new", icon: "send" },
-    { key: "talking", title: "Conversando", subtitle: "Responderam", matcher: lead => lead.status === "talking", icon: "forum" },
-    { key: "follow_up", title: "Em follow", subtitle: "Retomar conversa", matcher: lead => lead.status === "follow_up", icon: "schedule" },
+    { key: "talking", title: "Conversando", subtitle: "Conversas em andamento", matcher: lead => ["talking", "follow_up"].includes(lead.status), icon: "forum" },
     { key: "lost", title: "Perdidos", subtitle: "Sem evolução", matcher: lead => lead.status === "lost", icon: "person_cancel" },
     { key: "sent_to_hunter", title: "Com a Hunter", subtitle: "Aguardando retorno", matcher: lead => lead.status === "sent_to_hunter", icon: "forward_to_inbox" },
     { key: "scheduled", title: "Agendados", subtitle: "Confirmar presença", matcher: lead => lead.status === "scheduled", icon: "event_available" },
@@ -1134,15 +1215,17 @@ function renderLeads() {
   ];
   $("#lead-kanban").innerHTML = columns.map(column => {
     const items = filtered.filter(column.matcher);
-    const anonymousVolume = column.key === "new"
-      ? anonymousPipelineCount("mapped", priorityFilter)
-      : column.key === "lost"
-        ? anonymousPipelineCount("lost", priorityFilter)
-        : 0;
-    const volumeCard = anonymousVolume ? `<article class="kanban-volume-card ${column.key}">
-      <span class="material-symbols-outlined">${column.key === "new" ? "alternate_email" : "timer_off"}</span>
-      <div><strong>${anonymousVolume} ${anonymousVolume === 1 ? "lead sem @" : "leads sem @"}</strong><small>${column.key === "new" ? "Saldo agregado dos Directs · expira em 7 dias" : "Directs que não evoluíram em 7 dias"}</small></div>
-    </article>` : "";
+    const anonymousKind = column.key === "new" ? "mapped" : column.key === "talking" ? "talking" : null;
+    const anonymousBatches = anonymousKind ? anonymousPipelineBatches(anonymousKind, priorityFilter) : [];
+    const anonymousVolume = anonymousBatches.reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+    const volumeCard = anonymousBatches.map(batch => {
+      const clinic = clinicById(batch.clinicId);
+      const reference = anonymousKind === "talking" ? batch.respondedAt : batch.sentAt;
+      return `<article class="kanban-volume-card ${column.key}">
+        <span class="material-symbols-outlined">${column.key === "new" ? "alternate_email" : "forum"}</span>
+        <div><strong>${batch.remaining} ${batch.remaining === 1 ? "lead anônimo" : "leads anônimos"}</strong><small>${escapeHtml(clinic?.name || "Clínica")} · ${formatDate(reference)} · ${anonymousBatchDeadline(batch, anonymousKind)}</small></div>
+      </article>`;
+    }).join("");
     return `<section class="kanban-column" data-kanban-column="${column.key}">
       <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><b>${items.length + anonymousVolume}</b></header>
       <div class="kanban-cards">${volumeCard}${items.map(kanbanLeadCard).join("") || (!volumeCard ? `<div class="kanban-empty">Nenhum lead nesta etapa</div>` : "")}</div>
@@ -1336,25 +1419,21 @@ function renderReport() {
   $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
   $("#report-phones").textContent = phoneActionCount(stats);
   $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação no período" : "ações no período"}`;
-  $("#report-profiles").textContent = stats.profiles;
   $("#report-likes").textContent = stats.likes;
   $("#report-comments").textContent = stats.comments;
   $("#report-directs-detail").textContent = stats.directs;
   $("#report-responses").textContent = stats.responses;
-  Object.entries(movements).forEach(([key, value]) => {
-    $(`#report-movement-${key}`).textContent = `+${value}`;
-  });
   const pipelineItems = [
-    ["mapped", "person_search", "Leads mapeados", "base atual"],
-    ["talking", "forum", "Conversando", `${pipelineRates.talking}% avançaram do total`],
-    ["followups", "schedule", "Em follow-up", `${pipelineRates.followups}% das conversas`],
-    ["lost", "person_cancel", "Perdidos", `${pipelineRates.lost}% de saída`],
-    ["qualified", "forward_to_inbox", "Encaminhados", `${pipelineRates.qualified}% das conversas`],
-    ["scheduled", "event_available", "Agendados", `${pipelineRates.scheduled}% dos encaminhados`],
-    ["attended", "verified", "Compareceram", `${pipelineRates.attended}% dos agendados`]
+    ["mapped", "person_search", "Leads mapeados", "início do funil", movements.mapped],
+    ["talking", "forum", "Conversando", `${pipelineRates.talking}% avançaram`, movements.talking],
+    ["qualified", "forward_to_inbox", "Encaminhados", `${pipelineRates.qualified}% das conversas`, movements.qualified],
+    ["scheduled", "event_available", "Agendados", `${pipelineRates.scheduled}% dos encaminhados`, movements.scheduled],
+    ["attended", "verified", "Compareceram", `${pipelineRates.attended}% dos agendados`, movements.attended]
   ];
-  $("#report-current-pipeline").innerHTML = pipelineItems.map(([key, icon, label, helper]) => `
-    <div class="report-pipeline-stage ${key === "lost" ? "lost" : ""}"><span class="material-symbols-outlined">${icon}</span><strong>${pipeline[key]}</strong><small>${label}</small><em>${helper}</em></div>`).join("");
+  $("#report-current-pipeline").innerHTML = pipelineItems.map(([key, icon, label, helper, movement]) => `
+    <div class="report-pipeline-stage"><span class="material-symbols-outlined">${icon}</span><strong>${pipeline[key]}</strong><small>${label}</small><mark>+${movement} no período</mark><em>${helper}</em></div>`).join("");
+  $("#report-expired-note").classList.toggle("hidden", !movements.lost);
+  $("#report-expired-note").textContent = movements.lost ? `${movements.lost} ${movements.lost === 1 ? "oportunidade foi encaminhada" : "oportunidades foram encaminhadas"} discretamente para Perdidos por tempo de resposta esgotado.` : "";
   $("#report-goal-month").textContent = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date());
   $("#report-goal-phones").textContent = `${monthly.phonesTotal} / ${state.goals.phones}`;
   $("#report-goal-scheduled").textContent = `${monthly.scheduledTotal} / ${state.goals.scheduled}`;
@@ -1366,10 +1445,10 @@ function renderReport() {
     ...clinicReportStats(clinic.id, state.reportPeriod, stats)
   })).filter(row => row.actions || row.captured || row.qualifiedTotal || row.scheduledTotal || row.attendedTotal)
     .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, captured, phonesTotal, qualifiedTotal, scheduledTotal, attendedTotal }) => `
+  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, phonesTotal, directs, responses, qualifiedTotal, scheduledTotal, attendedTotal, lost }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
-      <p><strong>${escapeHtml(clinic.name)}</strong><em>${captured} ${captured === 1 ? "lead movimentado" : "leads movimentados"}</em><small>${clinicActions} ${clinicActions === 1 ? "ação realizada" : "ações realizadas"}</small></p>
-      <b>${phonesTotal} ${phonesTotal === 1 ? "telefone captado" : "telefones captados"} · ${qualifiedTotal} encaminhados · ${scheduledTotal} agend. confirmados · ${attendedTotal} comp. registrados</b>
+      <p><strong>${escapeHtml(clinic.name)}</strong><span class="clinic-report-actions"><em>${clinicActions} ${clinicActions === 1 ? "ação realizada" : "ações realizadas"}</em><small>${phonesTotal} ${phonesTotal === 1 ? "telefone captado" : "telefones captados"}</small></span></p>
+      <b><span>Atualizações no CRM</span>+${directs} mapeados · +${responses} conversando · +${qualifiedTotal} Hunter · +${scheduledTotal} agend. · +${attendedTotal} comp.${lost ? ` · ${lost} expirados` : ""}</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
@@ -1588,7 +1667,7 @@ function openActivityCapture(stage, { instagram = "", phone = "", directId = nul
       if (!normalizedInstagram && stage === "sent") {
         addAnonymousDirect(clinic.id, state.session.id, now, "manual_web");
       } else if (!normalizedInstagram && stage !== "sent") {
-        consumeOldestAnonymousDirect(clinic.id);
+        advanceAnonymousLead(clinic.id, stage, now, state.session.id, "manual_web");
       }
       if (stage === "phone" && result.lead) {
         result.lead.interest = $("#lead-interest").value.trim();
@@ -1755,7 +1834,7 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       </div>
       ${isPhone ? `<div class="phone-gate ${initialBant.complete ? "complete" : ""}" id="phone-gate"><span class="material-symbols-outlined">${initialBant.complete ? "verified" : "fact_check"}</span><p><strong>${initialBant.complete ? "Contexto completo" : "BANT é um guia, não uma trava"}</strong><small>${initialBant.complete ? "A Hunter receberá toda a pré-qualificação." : "Marque o que conseguiu descobrir e envie mesmo com contexto mínimo."}</small></p></div>` : ""}
       ${isPhone ? field("lead-phone", "WhatsApp para entrega", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
-      ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).map(([key, label]) => `<option value="${key}" ${(lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
+      ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).filter(([key]) => key !== "follow_up").map(([key, label]) => `<option value="${key}" ${(lead.status === "follow_up" ? "talking" : lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
       ${isPhone ? "" : `<div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>`}
       <button class="primary-button ${isPhone ? "victory-button" : ""}" id="lead-submit" type="submit">${submitLabel}</button>
     </form>`, () => {
@@ -1780,11 +1859,14 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       const clinicId = $("#lead-clinic").value;
       const instagram = instagramHandle($("#lead-instagram").value);
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
-      const anonymousMatch = !originalLead && !existing && (isResponse || isPhone)
+      const anonymousConversationMatch = !originalLead && !existing && (isResponse || isPhone)
+        ? consumeOldestAnonymousConversation(clinicId)
+        : null;
+      const anonymousMatch = !originalLead && !existing && (isResponse || isPhone) && !anonymousConversationMatch
         ? consumeOldestAnonymousDirect(clinicId)
         : null;
       const record = originalLead || existing || {
-        id: uid("lead"), prospectedAt: anonymousMatch?.sentAt || new Date().toISOString(), timeline: [], sentToHunterAt: null
+        id: uid("lead"), prospectedAt: anonymousMatch?.sentAt || anonymousConversationMatch?.respondedAt || new Date().toISOString(), timeline: [], sentToHunterAt: null
       };
       const now = new Date().toISOString();
       const status = fixedStatus || $("#lead-status").value;
@@ -1808,13 +1890,15 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
         record.timeline.push({ at: now, label: "WhatsApp captado e qualificação concluída" });
       }
       else record.timeline.push({ at: now, label: edit ? `Etapa alterada para ${statusNames[status]}` : "Lead mapeado" });
-      if (anonymousMatch && !state.directs.some(item => item.leadId === record.id)) {
+      if ((anonymousMatch || anonymousConversationMatch) && !state.directs.some(item => item.leadId === record.id)) {
         state.directs.push({
           id: uid("direct"), clinicId, leadId: record.id, instagram,
-          sessionId: anonymousMatch.sessionId || null, source: anonymousMatch.source || "manual_web",
-          sentAt: anonymousMatch.sentAt, respondedAt: now,
+          sessionId: anonymousMatch?.sessionId || anonymousConversationMatch?.sessionId || null, source: anonymousMatch?.source || anonymousConversationMatch?.source || "manual_web",
+          sentAt: anonymousMatch?.sentAt || null, respondedAt: anonymousConversationMatch?.respondedAt || now,
           phoneAt: isPhone ? now : null, status: isPhone ? "phone" : "responded",
-          anonymousSourceId: anonymousMatch.id, createdAt: anonymousMatch.sentAt, updatedAt: now
+          anonymousSourceId: anonymousMatch?.id || anonymousConversationMatch?.sourceBatchId || null,
+          anonymousConversationSourceId: anonymousConversationMatch?.id || null,
+          createdAt: anonymousMatch?.sentAt || anonymousConversationMatch?.respondedAt || now, updatedAt: now
         });
       }
       const followupAt = $("#lead-followup")?.value;
@@ -1883,13 +1967,26 @@ function openDeleteLeadConfirmation(leadId) {
   openSheet(`<div class="destructive-confirmation">
     <span class="material-symbols-outlined">delete_forever</span>
     <h2 class="sheet-title">Excluir este lead?</h2>
-    <p class="sheet-subtitle">${escapeHtml(lead.name || lead.instagram)} será removido do CRM, dos follow-ups e dos indicadores. Essa ação não pode ser desfeita.</p>
+    <p class="sheet-subtitle">${escapeHtml(lead.name || lead.instagram)} será removido do CRM, das pendências e dos indicadores. Essa ação não pode ser desfeita.</p>
     <div class="detail-actions"><button class="secondary-button" id="cancel-delete-lead">Cancelar</button><button class="danger-button" id="confirm-delete-lead">Excluir definitivamente</button></div>
   </div>`, () => {
     $("#cancel-delete-lead").addEventListener("click", () => openLeadDetail(leadId));
     $("#confirm-delete-lead").addEventListener("click", async () => {
       const linkedDirects = state.directs.filter(direct => direct.leadId === leadId);
       linkedDirects.forEach(direct => {
+        if (direct.anonymousConversationSourceId) {
+          const batch = (state.anonymousConversationBatches || []).find(item => item.id === direct.anonymousConversationSourceId);
+          if (batch) {
+            batch.consumed = Math.max(0, Number(batch.consumed || 0) - 1);
+            if (new Date(batch.respondedAt || 0).getTime() >= Date.now() - 14 * 86400000) {
+              batch.remaining = Number(batch.remaining || 0) + 1;
+              batch.expiredAt = null;
+            } else {
+              batch.expired = Number(batch.expired || 0) + 1;
+            }
+          }
+          return;
+        }
         if (direct.anonymousSourceId) {
           const batch = (state.anonymousDirectBatches || []).find(item => item.id === direct.anonymousSourceId);
           if (batch) {
@@ -1977,16 +2074,16 @@ function saveAttendanceOutcome(lead, outcome) {
 function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
   if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
-  const icons = {
-    phone: "\u{1F4F2}",
-    hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}"
-  };
-  const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[lead.temperature] || "Não avaliada";
+  const temperature = { hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliada";
   const notes = qualificationGroups.map(group => String(lead.qualificationNotes?.[group.key] || "").trim()).filter(Boolean);
   const checked = qualificationItems.filter(([key]) => lead.qualification?.[key]).map(([, label]) => label);
   const aligned = (notes.length ? notes : checked).slice(0, 3).join("; ") || "Contexto mínimo; continuar a qualificação.";
   const leadIdentity = [lead.name || "Nome não informado", lead.instagram].filter(Boolean).join(" · ");
-  const message = `${icons.phone} *${clinic.name}*\n*${leadIdentity}*\n${lead.whatsapp || "WhatsApp não informado"}\n\nInteresse: ${lead.interest || "Não identificado"}\nTemperatura: ${temperature}\nJá alinhado: ${aligned.slice(0, 240)}`;
+  const pendingFollowup = state.followups
+    .filter(item => item.leadId === lead.id && item.status === "pending")
+    .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor))[0];
+  const followLine = pendingFollowup ? `\nFollow combinado: ${formatDate(pendingFollowup.scheduledFor, true)}` : "";
+  const message = `*${clinic.name}*\n*${leadIdentity}*\nWhatsApp: ${lead.whatsapp || "não informado"}\n\nInteresse: ${lead.interest || "não identificado"}\nTemperatura: ${temperature}\nJá alinhado: ${aligned.slice(0, 220)}${followLine}`;
   showToast(`Mensagem preparada para ${clinic.hunter || "a Hunter"}`);
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
@@ -2170,8 +2267,8 @@ function canvasMetric(ctx, x, y, value, label, tone = "#b58b00", width = 282, ic
   ctx.font = "700 34px Arial";
   ctx.fillText(String(value), x + 74, y + 58);
   canvasFitText(ctx, label, x + 74, y + 82, width - 92, {
-    size: width < 250 ? 14 : 18,
-    minSize: 11,
+    size: width < 250 ? 13 : 18,
+    minSize: width < 250 ? 8 : 11,
     weight: 500,
     color: "#68717d"
   });
@@ -2191,7 +2288,7 @@ async function exportReport(share = false) {
     .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = Math.max(1840, 1510 + reportClinicRows.length * 82 + 150);
+  canvas.height = Math.max(1280, 1060 + reportClinicRows.length * 116 + 120);
   const ctx = canvas.getContext("2d");
 
   const background = ctx.createLinearGradient(0, 0, 1080, canvas.height);
@@ -2250,7 +2347,6 @@ async function exportReport(share = false) {
   ctx.fillText(`${actions} ${actions === 1 ? "ação" : "ações"} no período`, 998, 270);
   ctx.textAlign = "left";
   const activityMetrics = [
-    [stats.profiles, "Novos follows", "#8a6800", "person"],
     [stats.likes, "Curtidas", "#ef7d62", "heart"],
     [stats.comments, "Comentários", "#7c6f91", "chat"],
     [stats.directs, "Directs enviados", "#b58b00", "send"],
@@ -2258,90 +2354,59 @@ async function exportReport(share = false) {
     [phoneActionCount(stats), "Telefones captados", "#3f5b78", "phone"]
   ];
   activityMetrics.forEach(([value, label, tone, icon], index) => {
-    const x = 82 + (index % 3) * 305;
-    const y = 292 + Math.floor(index / 3) * 120;
-    canvasMetric(ctx, x, y, value, label, tone, 282, icon);
+    const width = 173.6;
+    const x = 82 + index * (width + 12);
+    canvasMetric(ctx, x, 292, value, label, tone, width, icon);
   });
-
-  canvasRoundedRect(ctx, 82, 540, 916, 58, 16, "#fff9dc", "#eadf9f");
-  ctx.fillStyle = "#68717d";
-  ctx.font = "500 14px Arial";
-  canvasFitText(ctx, "Mesmos contadores da Home. Telefone captado continua sendo uma ação mesmo com o lead ainda em Conversando.", 104, 575, 870, { size: 14, minSize: 11, weight: 500, color: "#68717d" });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Atualizações no CRM", 82, 654);
-  ctx.fillStyle = "#68717d";
-  ctx.font = "400 17px Arial";
-  ctx.textAlign = "right";
-  ctx.fillText("Cards que mudaram no período", 998, 654);
-  ctx.textAlign = "left";
-  const movementMetrics = [
-    [movements.mapped, "Leads mapeados"],
-    [movements.talking, "Foram para Conversando"],
-    [movements.followups, "Entraram em follow-up"],
-    [movements.lost, "Foram para Perdidos"],
-    [movements.qualified, "Encaminhados"],
-    [movements.scheduled, "Agendamentos registrados"],
-    [movements.attended, "Comparecimentos registrados"]
-  ];
-  movementMetrics.forEach(([value, label], index) => {
-    const position = index < 4 ? index : index - 4;
-    const width = index < 4 ? 214 : 291;
-    const gap = index < 4 ? 229 : 307;
-    const x = 82 + position * gap;
-    const y = index < 4 ? 676 : 782;
-    canvasRoundedRect(ctx, x, y, width, 90, 18, "#fffdf5", "#eadf9f");
-    ctx.fillStyle = "#8a6800";
-    ctx.font = "700 27px Arial";
-    ctx.fillText(`+${value}`, x + 18, y + 37);
-    canvasFitText(ctx, label, x + 18, y + 67, width - 36, { size: 14, minSize: 10, weight: 600, color: "#68717d" });
-  });
-
-  canvasRoundedRect(ctx, 82, 892, 916, 54, 16, "#fff9dc", "#eadf9f");
-  canvasFitText(ctx, "As atualizações usam a data da mudança; um agendamento de hoje pode vir de um lead encaminhado antes.", 104, 925, 870, { size: 14, minSize: 11, weight: 500, color: "#68717d" });
-
-  ctx.fillStyle = "#202631";
-  ctx.font = "700 24px Arial";
-  ctx.fillText("Fila de oportunidades", 82, 1002);
+  ctx.fillText("Fila de oportunidades", 82, 464);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 16px Arial";
   ctx.textAlign = "right";
-  ctx.fillText("Estoque atual de todo o CRM", 998, 1002);
+  ctx.fillText("Status atual de Social Selling", 998, 464);
   ctx.textAlign = "left";
-  canvasRoundedRect(ctx, 82, 1026, 916, 178, 24, "#202631");
+  canvasRoundedRect(ctx, 82, 488, 916, 204, 24, "#202631");
   const pipelineMetrics = [
-    [pipeline.mapped, "Mapeados", "base atual"],
-    [pipeline.talking, "Conversando", `${pipelineRates.talking}% do total`],
-    [pipeline.followups, "Em follow-up", `${pipelineRates.followups}% das conversas`],
-    [pipeline.lost, "Perdidos", `${pipelineRates.lost}% de saída`],
-    [pipeline.qualified, "Encaminhados", `${pipelineRates.qualified}% das conversas`],
-    [pipeline.scheduled, "Agendados", `${pipelineRates.scheduled}% dos encaminhados`],
-    [pipeline.attended, "Compareceram", `${pipelineRates.attended}% dos agendados`]
+    [pipeline.mapped, "Mapeados", movements.mapped, "início do funil"],
+    [pipeline.talking, "Conversando", movements.talking, `${pipelineRates.talking}% avançaram`],
+    [pipeline.qualified, "Encaminhados", movements.qualified, `${pipelineRates.qualified}% das conversas`],
+    [pipeline.scheduled, "Agendados", movements.scheduled, `${pipelineRates.scheduled}% dos encaminhados`],
+    [pipeline.attended, "Compareceram", movements.attended, `${pipelineRates.attended}% dos agendados`]
   ];
-  pipelineMetrics.forEach(([value, label, helper], index) => {
-    const centerX = 105 + index * 128 + 56;
+  pipelineMetrics.forEach(([value, label, movement, helper], index) => {
+    const stageWidth = 916 / pipelineMetrics.length;
+    const centerX = 82 + stageWidth * index + stageWidth / 2;
     if (index) {
       ctx.strokeStyle = "rgba(255,255,255,.12)";
-      ctx.beginPath(); ctx.moveTo(centerX - 64, 1052); ctx.lineTo(centerX - 64, 1177); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(82 + stageWidth * index, 514); ctx.lineTo(82 + stageWidth * index, 666); ctx.stroke();
     }
     ctx.fillStyle = "#ffffff";
     ctx.font = "700 32px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(String(value), centerX, 1086);
-    canvasFitText(ctx, label, centerX, 1123, 112, { size: 13, minSize: 10, weight: 700, color: "rgba(255,255,255,.84)", align: "center" });
-    canvasFitText(ctx, helper, centerX, 1161, 112, { size: 11, minSize: 8, weight: 500, color: index === 3 ? "#f3b8a8" : "#f4cf4f", align: "center" });
+    ctx.fillText(String(value), centerX, 534);
+    canvasFitText(ctx, label, centerX, 568, stageWidth - 20, { size: 14, minSize: 10, weight: 700, color: "rgba(255,255,255,.88)", align: "center" });
+    canvasRoundedRect(ctx, centerX - 58, 586, 116, 28, 14, "rgba(244,207,79,.18)", "rgba(244,207,79,.28)");
+    canvasFitText(ctx, `+${movement} no período`, centerX, 605, 104, { size: 11, minSize: 8, weight: 700, color: "#f4cf4f", align: "center" });
+    canvasFitText(ctx, helper, centerX, 644, stageWidth - 22, { size: 11, minSize: 8, weight: 500, color: "rgba(255,255,255,.58)", align: "center" });
   });
+  ctx.textAlign = "left";
+
+  if (movements.lost) {
+    canvasRoundedRect(ctx, 82, 710, 916, 48, 15, "#fff8ec", "#eadf9f");
+    canvasFitText(ctx, `${movements.lost} ${movements.lost === 1 ? "oportunidade encaminhada" : "oportunidades encaminhadas"} para Perdidos por tempo esgotado no período.`, 104, 740, 870, { size: 13, minSize: 10, weight: 500, color: "#8b735e" });
+  }
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Meta do mês atual", 82, 1262);
+  ctx.fillText("Meta do mês atual", 82, 814);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 16px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date()), 998, 1262);
+  ctx.fillText(new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date()), 998, 814);
   ctx.textAlign = "left";
-  canvasRoundedRect(ctx, 82, 1286, 916, 100, 22, "#fff9dc", "#eadf9f");
+  canvasRoundedRect(ctx, 82, 838, 916, 100, 22, "#fff9dc", "#eadf9f");
   const monthlyGoals = [
     [monthly.phonesTotal, state.goals.phones, "Telefones captados"],
     [monthly.scheduledTotal, state.goals.scheduled, "Agendamentos confirmados"]
@@ -2350,45 +2415,44 @@ async function exportReport(share = false) {
     const x = 112 + index * 438;
     ctx.fillStyle = "#202631";
     ctx.font = "700 24px Arial";
-    ctx.fillText(`${value} / ${goal}`, x, 1329);
-    canvasFitText(ctx, label, x + 112, 1329, 285, { size: 15, minSize: 12, weight: 500, color: "#68717d" });
-    canvasRoundedRect(ctx, x, 1352, 390, 8, 4, "#efe3aa");
+    ctx.fillText(`${value} / ${goal}`, x, 881);
+    canvasFitText(ctx, label, x + 112, 881, 285, { size: 15, minSize: 12, weight: 500, color: "#68717d" });
+    canvasRoundedRect(ctx, x, 904, 390, 8, 4, "#efe3aa");
     const progressWidth = goal ? Math.min(390, value / goal * 390) : 0;
-    if (progressWidth > 0) canvasRoundedRect(ctx, x, 1352, Math.max(8, progressWidth), 8, 4, "#d3a900");
+    if (progressWidth > 0) canvasRoundedRect(ctx, x, 904, Math.max(8, progressWidth), 8, 4, "#d3a900");
   });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Resultado por clínica", 82, 1442);
+  ctx.fillText("Resultado por clínica", 82, 994);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 1442);
+  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 994);
   ctx.textAlign = "left";
   const clinicRows = reportClinicRows;
   if (clinicRows.length) {
-    clinicRows.forEach(({ clinic, actions: clinicActions, captured, phonesTotal, qualifiedTotal, scheduledTotal, attendedTotal }, index) => {
-      const y = 1467 + index * 82;
-      if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fff9dc");
+    clinicRows.forEach(({ clinic, actions: clinicActions, phonesTotal, directs, responses, qualifiedTotal, scheduledTotal, attendedTotal, lost }, index) => {
+      const y = 1020 + index * 116;
+      canvasRoundedRect(ctx, 82, y, 916, 102, 17, index % 2 === 0 ? "#fff9dc" : "#fffef9", "#eee4bf");
       ctx.fillStyle = clinic.color || "#d3a900";
-      ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(108, y + 31, 17, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.font = "700 15px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(initials(clinic.name).slice(0, 1), 101, y + 30);
+      ctx.fillText(initials(clinic.name).slice(0, 1), 108, y + 36);
       ctx.textAlign = "left";
-      canvasFitText(ctx, clinic.name, 134, y + 21, 390, { size: 19, minSize: 14, weight: 700, color: "#202631" });
-      canvasFitText(ctx, `${captured} ${captured === 1 ? "lead movimentado" : "leads movimentados"} · ${clinicActions} ${clinicActions === 1 ? "ação" : "ações"}`, 134, y + 47, 460, { size: 16, minSize: 12, weight: 700, color: "#8a6800" });
-      canvasFitText(ctx, `${phonesTotal} telef. · ${qualifiedTotal} encamin. · ${scheduledTotal} agend. · ${attendedTotal} comp.`, 982, y + 32, 400, { size: 15, minSize: 10, weight: 600, color: "#59616d", align: "right" });
-      if (index < clinicRows.length - 1) {
-        ctx.strokeStyle = "#ebe3c8";
-        ctx.beginPath(); ctx.moveTo(134, y + 74); ctx.lineTo(982, y + 74); ctx.stroke();
-      }
+      canvasFitText(ctx, clinic.name, 138, y + 30, 410, { size: 19, minSize: 14, weight: 700, color: "#202631" });
+      ctx.fillStyle = "#8a6800"; ctx.font = "700 11px Arial"; ctx.fillText("AÇÕES", 138, y + 56);
+      canvasFitText(ctx, `${clinicActions} realizadas · ${phonesTotal} ${phonesTotal === 1 ? "telefone" : "telefones"}`, 204, y + 57, 350, { size: 14, minSize: 11, weight: 600, color: "#59616d" });
+      ctx.fillStyle = "#8a6800"; ctx.font = "700 11px Arial"; ctx.fillText("CRM", 138, y + 82);
+      const crmLine = `+${directs} mapeados · +${responses} conversando · +${qualifiedTotal} Hunter · +${scheduledTotal} agend. · +${attendedTotal} comp.${lost ? ` · ${lost} expirados` : ""}`;
+      canvasFitText(ctx, crmLine, 184, y + 83, 790, { size: 14, minSize: 9, weight: 600, color: "#59616d" });
     });
   } else {
     ctx.fillStyle = "#7a8782";
     ctx.font = "400 18px Arial";
-    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1487);
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1038);
   }
 
   const footerY = canvas.height - 100;

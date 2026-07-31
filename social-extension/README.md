@@ -11,7 +11,7 @@ Extensão Chrome Manifest V3 para acompanhar a operação manual no Instagram We
 - mantém clínica, automação, sessão e contadores separados por guia, inclusive em várias janelas;
 - inicia e encerra uma sessão por clínica, exigindo uma seleção válida;
 - separa o botão de automação da sessão: todos os lançamentos manuais continuam disponíveis com a automação desligada;
-- detecta visitas a perfis, follows, curtidas por botão ou duplo clique, comentários e Directs enviados em página ou modal;
+- detecta visitas a perfis, curtidas por botão ou duplo clique, comentários e Directs enviados em página ou modal;
 - mantém um botão manual independente em cada contador quando o Instagram não oferece contexto confiável;
 - transforma o primeiro Direct detectado em **Lead mapeado**, ligado ao `@` quando disponível;
 - não soma novamente o Direct de uma conversa que já foi mapeada;

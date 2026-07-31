@@ -8,8 +8,9 @@ O aplicativo funciona como dois produtos leves no mesmo fluxo:
 2. **mini CRM de pré-qualificação**, com o mínimo necessário para uma closer continuar o atendimento.
 
 O dashboard inicia ou retoma uma sessão diretamente em cada clínica. O CRM é um Kanban
-horizontal com `Mapeados → Conversando → Em follow-up → Perdidos → Com a Hunter →
-Agendados → Desfecho`. Cada Direct pode guardar um `@` e avançar no mesmo registro para
+horizontal com `Mapeados → Conversando → Perdidos → Com a Hunter → Agendados →
+Desfecho`. A data de follow-up continua disponível dentro do card, mas não cria uma etapa
+separada: o lead permanece em Conversando. Cada Direct pode guardar um `@` e avançar no mesmo registro para
 respondido e telefone captado. O `@` continua opcional para que exceções e trabalho em
 ritmo rápido não fiquem bloqueados. Ao captar o telefone, o lead pode ser entregue à
 Hunter/closer imediatamente.
@@ -25,12 +26,13 @@ Hunter. A mensagem de WhatsApp inclui apenas o contexto realmente apurado; quand
 há checklist preenchido, entrega os dados mínimos do lead sem inventar informações.
 
 Um Direct mapeado sem evolução vence em sete dias. Directs sem `@` ficam em lotes
-agregados por sessão, mas entram no estoque de Leads mapeados do CRM. Quando surge uma
-resposta identificada sem Direct anterior, o sistema consome o item anônimo mais antigo
-da mesma clínica (FIFO), preserva a data original da prospecção e passa a exibir apenas
-o card identificado. Assim o volume é auditável sem criar centenas de cards vazios.
-Ao receber resposta, o prazo comercial
-reinicia em quatorze dias. A atividade seguinte atualiza a data de referência; leads sem
+agregados e datados por clínica/sessão. Quando uma resposta também chega sem `@`, uma
+unidade sai do lote mapeado mais antigo (FIFO) e entra em um lote anônimo de Conversando,
+com novo prazo próprio de quatorze dias. Lotes criados em datas diferentes mantêm
+vencimentos independentes. Quando o perfil é identificado, o sistema consome primeiro o
+lote anônimo compatível e passa a exibir apenas o card nominal. Assim o volume é
+auditável sem criar centenas de cards vazios. Lotes anônimos expirados não inflam o total
+visual da coluna Perdidos; aparecem apenas como movimentação agregada no período. A atividade seguinte atualiza a data de referência; leads sem
 evolução são movidos para Perdidos quando o aplicativo é aberto. A fila da Hunter fica
 agrupada por responsável, com atalhos para cobrar agendamento e registrar comparecimento.
 
@@ -40,13 +42,15 @@ calculada a partir da faixa mensal informada no cadastro: A (30 min), B (20 min)
 sessão à força. Ao sair da seção Sessão, ele pausa; ao retornar, continua do saldo
 restante. Encerrar e reabrir a mesma clínica no mesmo dia desconta o tempo já trabalhado
 do limite diário, em vez de começar novamente do zero. Cada linha consolida tempo e os
-seis contadores de todas as sessões do dia. As metas de telefones e agendamentos são
+cinco contadores de todas as sessões do dia: curtidas, comentários, Directs, respostas e
+telefones. Novos follows não fazem parte da operação nem dos relatórios. As metas de telefones e agendamentos são
 globais, configuráveis por período e nunca vinculadas individualmente a uma clínica.
 A Home separa o estoque atual do CRM dos acontecimentos do período. Os relatórios usam
-três leituras: ações executadas no período (incluindo telefone captado); movimentações
-registradas no CRM no período; e o estoque atual completo da Fila de oportunidades.
-Os percentuais da fila mostram o avanço acumulado do estoque entre etapas, e Perdidos é
-tratado como taxa de saída. A data real do agendamento não substitui a data em que a
+duas leituras conectadas: ações executadas no período (incluindo telefone captado) e o
+Status atual de Social Selling da Fila de oportunidades. Cada etapa da fila exibe no
+mesmo bloco o saldo atual, quantos cards avançaram no período e o percentual de passagem.
+Perdidos permanece apenas no Kanban; no relatório aparece discretamente somente o volume
+que expirou dentro do período. A data real do agendamento não substitui a data em que a
 confirmação foi registrada.
 
 A imagem compartilhável do relatório é gerada sob demanda, com altura adaptável para
@@ -95,6 +99,8 @@ outra organização.
   resposta e telefone.
 - `anonymousDirectBatches` no snapshot: volume sem `@` agregado por clínica/sessão,
   com saldos mapeado, associado e expirado.
+- `anonymousConversationBatches` no snapshot: respostas sem `@` agregadas por data,
+  clínica e sessão, com prazo individual de quatorze dias.
 - `leads`: estado atual do mini CRM.
 - `lead_timeline`: histórico curto e datado do lead.
 - `follow_ups`, `message_templates`, `hunter_deliveries`: operação diária.

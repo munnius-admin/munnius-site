@@ -274,7 +274,7 @@ function render(nextState) {
   automationButton.querySelector("span").textContent = state.automationEnabled ? "Ativada" : "Desativada";
   automationButton.disabled = state.matchStatus !== "matched";
   const counts = state.counters || {};
-  Object.entries({ profiles: "profiles", likes: "likes", comments: "comments", directs: "directs", responses: "responses", phones: "phones" })
+  Object.entries({ likes: "likes", comments: "comments", directs: "directs", responses: "responses", phones: "phones" })
     .forEach(([key, id]) => $(`#count-${id}`).textContent = counts[key] || 0);
   if (document.activeElement !== $("#manual-profile") && state.currentContext?.profileHandle) {
     $("#manual-profile").value = state.currentContext.profileHandle;

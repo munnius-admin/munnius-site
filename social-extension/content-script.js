@@ -182,10 +182,6 @@
     const button = event.target.closest?.('button, [role="button"]');
     if (!button) return;
     const text = buttonText(button);
-    if (/(^|\s)(seguir|follow)(\s|$)/.test(text) && !/(seguindo|following|deixar de seguir|unfollow)/.test(text)) {
-      emit("follow", { target: button }, 1200);
-      return;
-    }
     if (/(^| )(curtir|like)( |$)/.test(text) && !/(descurtir|unlike)/.test(text)) {
       emit("like", { target: button }, 900);
       return;

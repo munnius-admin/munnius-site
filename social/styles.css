@@ -534,3 +534,34 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .report-pipeline-stage.lost>.material-symbols-outlined,.report-pipeline-stage.lost>em{color:#a65340}
 .report-pipeline-note{margin:8px 0 20px;color:var(--muted);font-size:.55rem;line-height:1.4}
 @media(min-width:760px){.report-crm-movements{grid-template-columns:repeat(4,minmax(0,1fr))}.report-current-pipeline{overflow:visible}.report-pipeline-stage{min-width:0}}
+
+/* Relatório v30 — ações em largura total e movimentação integrada ao funil */
+.pipeline-strip{grid-template-columns:repeat(5,minmax(92px,1fr))}
+.report-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin-bottom:22px}
+.report-actions-grid>div:last-child:nth-child(odd){grid-column:1/-1}
+.report-current-pipeline{grid-template-columns:1fr;overflow:visible;padding:9px}
+.report-pipeline-stage{position:relative;min-width:0;grid-template-columns:34px minmax(0,1fr) auto;grid-template-rows:auto auto;justify-items:start;align-items:center;gap:3px 9px;padding:10px 8px;text-align:left}
+.report-pipeline-stage+.report-pipeline-stage{border-top:1px solid #efe3aa;border-left:0}
+.report-pipeline-stage>.material-symbols-outlined{grid-column:1;grid-row:1/3}
+.report-pipeline-stage>strong{grid-column:3;grid-row:1;font-size:1.15rem}
+.report-pipeline-stage>small{grid-column:2;grid-row:1}
+.report-pipeline-stage>em{grid-column:2;grid-row:2;max-width:none}
+.report-pipeline-stage mark{margin-top:4px;padding:4px 7px;border-radius:999px;background:#fff0a8;color:#8a6800;font-size:.48rem;font-weight:800;white-space:nowrap}
+.report-pipeline-stage mark{grid-column:3;grid-row:2;margin-top:0}
+.report-expired-note{margin:9px 0 20px;padding:8px 11px;border-left:3px solid #d9b86a;border-radius:5px;background:#fff9ec;color:#806f5e;font-size:.54rem;line-height:1.4}
+.report-clinic-breakdown{grid-template-columns:1fr!important}
+.report-clinic-breakdown>div{align-items:flex-start;padding:12px}
+.report-clinic-breakdown p{display:grid;gap:5px}
+.clinic-report-actions{display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px}
+.clinic-report-actions em,.clinic-report-actions small{margin:0!important}
+.report-clinic-breakdown b{display:grid;flex:1 1 230px;gap:4px;padding:8px 10px;border-radius:10px;background:#fff9dc;color:#59616d;text-align:left}
+.report-clinic-breakdown b>span{color:#8a6800;font-size:.5rem;text-transform:uppercase;letter-spacing:.04em}
+@media(min-width:760px){
+  .report-actions-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .report-actions-grid>div:last-child:nth-child(odd){grid-column:auto}
+  .report-current-pipeline{grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible}
+  .report-pipeline-stage{display:grid;grid-template-columns:1fr;grid-template-rows:auto;justify-items:center;align-content:start;gap:4px;padding:10px 8px;text-align:center}
+  .report-pipeline-stage+.report-pipeline-stage{border-top:0;border-left:1px solid #efe3aa}
+  .report-pipeline-stage>.material-symbols-outlined,.report-pipeline-stage>strong,.report-pipeline-stage>small,.report-pipeline-stage>mark,.report-pipeline-stage>em{grid-column:1;grid-row:auto}
+  .report-pipeline-stage>em{max-width:110px}
+}
