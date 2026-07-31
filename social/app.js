@@ -1,11 +1,11 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=32";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=33";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const STORAGE_KEY = "munnius-social-v3";
 const LEGACY_STORAGE_KEY = "munnius-social-v2";
 const countLabels = { likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
-const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", more: "Mais", clinics: "Clínicas e metas", reports: "Relatórios" };
+const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", more: "Mais", clinics: "Clínicas e metas", reports: "Relatórios", admin: "Administração" };
 const statusNames = {
   new: "Lead mapeado",
   talking: "Conversando",
@@ -143,6 +143,7 @@ function normalizeState(candidate) {
   migrateAnonymousDirects(normalized);
   migrateAnonymousResponsePlaceholders(normalized);
   applyWorkspaceDataCorrections(normalized);
+  reconcileRecentAnonymousResponses(normalized);
   return normalized;
 }
 
@@ -244,6 +245,84 @@ function applyWorkspaceDataCorrections(target) {
   target.dataCorrections[correctionKey] = true;
 }
 
+function localDayKey(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
+}
+
+function reconcileRecentAnonymousResponses(target) {
+  if (Number(target.anonymousResponseHistoryVersion || 0) >= 1) return;
+  const cutoffDate = new Date();
+  cutoffDate.setHours(0, 0, 0, 0);
+  cutoffDate.setDate(cutoffDate.getDate() - 6);
+  const cutoff = cutoffDate.getTime();
+  const expectedByClinicDay = new Map();
+  (target.sessions || []).forEach(session => {
+    if (!session.clinicId || new Date(session.startedAt || 0).getTime() < cutoff) return;
+    const quantity = Number(session.counts?.responses || 0);
+    if (!quantity) return;
+    const day = localDayKey(session.startedAt);
+    const key = `${session.clinicId}:${day}`;
+    const current = expectedByClinicDay.get(key) || { clinicId: session.clinicId, day, quantity: 0, reference: session.startedAt };
+    current.quantity += quantity;
+    expectedByClinicDay.set(key, current);
+  });
+  const represented = new Map();
+  const addRepresented = (clinicId, value, quantity = 1) => {
+    if (!clinicId || !value || new Date(value).getTime() < cutoff) return;
+    const key = `${clinicId}:${localDayKey(value)}`;
+    represented.set(key, Number(represented.get(key) || 0) + Number(quantity || 0));
+  };
+  (target.anonymousConversationBatches || []).forEach(batch => addRepresented(batch.clinicId, batch.respondedAt, batch.quantity));
+  const leadIdsWithTrackedResponse = new Set();
+  (target.directs || []).forEach(direct => {
+    if (!direct.respondedAt) return;
+    if (direct.leadId) leadIdsWithTrackedResponse.add(direct.leadId);
+    if (direct.anonymousConversationSourceId) return;
+    addRepresented(direct.clinicId, direct.respondedAt);
+  });
+  (target.leads || []).forEach(lead => {
+    if (!lead.respondedAt || leadIdsWithTrackedResponse.has(lead.id)) return;
+    addRepresented(lead.clinicId, lead.respondedAt);
+  });
+  expectedByClinicDay.forEach(({ clinicId, day, quantity, reference }, key) => {
+    let missing = Math.max(0, quantity - Number(represented.get(key) || 0));
+    if (!missing) return;
+    const mappedBatches = (target.anonymousDirectBatches || [])
+      .filter(batch => batch.clinicId === clinicId && Number(batch.remaining || 0) > 0)
+      .sort((a, b) => new Date(a.sentAt || 0) - new Date(b.sentAt || 0));
+    const available = mappedBatches.reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+    missing = Math.min(missing, available);
+    if (!missing) return;
+    const quantityToAdd = missing;
+    let sourceBatch = null;
+    mappedBatches.forEach(batch => {
+      if (!missing) return;
+      const moved = Math.min(missing, Number(batch.remaining || 0));
+      if (!sourceBatch && moved) sourceBatch = batch;
+      batch.remaining = Number(batch.remaining || 0) - moved;
+      batch.consumed = Number(batch.consumed || 0) + moved;
+      batch.updatedAt = new Date().toISOString();
+      missing -= moved;
+    });
+    target.anonymousConversationBatches.push({
+      id: `anonymous-history-${clinicId}-${day}`,
+      clinicId,
+      sessionId: null,
+      respondedAt: reference,
+      quantity: quantityToAdd,
+      remaining: quantityToAdd,
+      consumed: 0,
+      expired: 0,
+      source: "system",
+      sourceBatchId: sourceBatch?.id || null,
+      sourceSentAt: sourceBatch?.sentAt || null,
+      reconciledFromSessions: true
+    });
+  });
+  target.anonymousResponseHistoryVersion = 1;
+}
+
 function loadState() {
   const base = isSupabaseConfigured
     ? { ...structuredClone(seed), profile: { name: "Carregando", initials: "··", role: "social_seller" }, clinics: [], leads: [], directs: [], followups: [], sessions: [] }
@@ -267,6 +346,7 @@ let workspaceOpened = false;
 let recoveryMode = recoveryLinkDetected;
 let stopWorkspaceRealtime;
 let stopExtensionRealtime;
+let adminDirectoryCache = { organizations: [], memberships: [], invites: [] };
 const processedExtensionEvents = new Set();
 function operationalStorageKey(profileId = state.profile?.id) {
   return isSupabaseConfigured && profileId ? `${STORAGE_KEY}:${profileId}` : STORAGE_KEY;
@@ -804,7 +884,10 @@ function renderProfile() {
   $("#profile-avatar-button").textContent = initials;
   $("#profile-avatar-large").textContent = initials;
   $("#profile-name").textContent = name;
-  $("#profile-role").textContent = state.profile?.role === "admin" ? "Admin · Social seller" : "Social seller";
+  $("#profile-role").textContent = state.profile?.platformAdmin
+    ? "Administrador da plataforma"
+    : state.profile?.role === "admin" ? "Admin · Social seller" : "Social seller";
+  $("#admin-access-menu").classList.toggle("hidden", !state.profile?.platformAdmin);
 }
 
 function showRecoveryForm() {
@@ -893,6 +976,7 @@ function navigate(view) {
   if (view === "clinics") renderClinics();
   if (view === "leads") renderLeads();
   if (view === "reports") renderReport();
+  if (view === "admin") renderAdminAccess();
   if (view === "session") renderSessionClinicTracker();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -990,6 +1074,23 @@ function currentPipelineStats() {
     qualified: state.leads.filter(lead => lead.status === "sent_to_hunter").length,
     scheduled: state.leads.filter(lead => lead.status === "scheduled").length,
     attended: state.leads.filter(lead => lead.status === "attended").length
+  };
+}
+
+function clinicCurrentPipelineStats(clinicId) {
+  const anonymousMapped = (state.anonymousDirectBatches || [])
+    .filter(batch => batch.clinicId === clinicId)
+    .reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+  const anonymousTalking = (state.anonymousConversationBatches || [])
+    .filter(batch => batch.clinicId === clinicId)
+    .reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+  const leads = state.leads.filter(lead => lead.clinicId === clinicId);
+  return {
+    mapped: leads.filter(lead => lead.status === "new").length + anonymousMapped,
+    talking: leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length + anonymousTalking,
+    qualified: leads.filter(lead => lead.status === "sent_to_hunter").length,
+    scheduled: leads.filter(lead => lead.status === "scheduled").length,
+    attended: leads.filter(lead => lead.status === "attended").length
   };
 }
 
@@ -1125,6 +1226,142 @@ function renderClinics() {
   $$("[data-clinic-detail]").forEach(card => card.addEventListener("click", () => openClinicForm(card.dataset.clinicDetail)));
   renderGoals();
   renderSessionClinicTracker();
+}
+
+function slugifyOrganization(value = "") {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+async function renderAdminAccess() {
+  if (!state.profile?.platformAdmin) return navigate("home");
+  $("#admin-metrics").innerHTML = `<div class="admin-loading"><span class="material-symbols-outlined">progress_activity</span>Carregando acessos…</div>`;
+  $("#admin-organization-list").innerHTML = "";
+  try {
+    adminDirectoryCache = await dataGateway.loadAdminDirectory();
+  } catch (error) {
+    console.warn("Não foi possível carregar a administração.", error);
+    $("#admin-metrics").innerHTML = "";
+    $("#admin-organization-list").innerHTML = emptyState("Não foi possível carregar organizações e acessos.");
+    return;
+  }
+  const organizations = adminDirectoryCache.organizations || [];
+  const invites = adminDirectoryCache.invites || [];
+  const memberships = adminDirectoryCache.memberships || [];
+  const activeAccesses = invites.filter(invite => invite.active).length;
+  const pendingAccesses = invites.filter(invite => invite.active && !invite.claimed).length;
+  $("#admin-metrics").innerHTML = [
+    ["domain", organizations.filter(item => item.active).length, "Organizações"],
+    ["verified_user", activeAccesses, "Acessos ativos"],
+    ["outgoing_mail", pendingAccesses, "Convites pendentes"]
+  ].map(([icon, value, label]) => `<article><span class="material-symbols-outlined">${icon}</span><div><strong>${value}</strong><small>${label}</small></div></article>`).join("");
+  $("#admin-organization-list").innerHTML = organizations.map(organization => {
+    const organizationInvites = invites.filter(invite => invite.organizationId === organization.id);
+    const organizationMemberships = memberships.filter(member => member.organizationId === organization.id);
+    const knownKeys = new Set(organizationInvites.map(invite => invite.email.toLowerCase()));
+    const accessRows = [
+      ...organizationInvites,
+      ...organizationMemberships.filter(member => !knownKeys.has(member.email.toLowerCase())).map(member => ({
+        id: null,
+        email: member.email,
+        fullName: member.fullName,
+        role: member.role,
+        active: member.active,
+        claimed: true
+      }))
+    ];
+    return `<section class="admin-organization-card">
+      <header><span class="material-symbols-outlined">domain</span><div><strong>${escapeHtml(organization.name)}</strong><small>${escapeHtml(organization.slug)} · ${accessRows.filter(item => item.active).length} acessos</small></div><button data-admin-add-access="${organization.id}"><span class="material-symbols-outlined">person_add</span>Adicionar</button></header>
+      <div class="admin-access-list">${accessRows.map(access => `<article>
+        <span class="admin-access-avatar">${initials(access.fullName || access.email)}</span>
+        <div><strong>${escapeHtml(access.fullName || access.email)}</strong><small>${escapeHtml(access.email)} · ${access.role === "admin" ? "Admin da organização" : "Social seller"}</small></div>
+        <em class="${access.active ? access.claimed ? "active" : "pending" : "inactive"}">${access.active ? access.claimed ? "Ativo" : "Pendente" : "Pausado"}</em>
+        ${access.id ? `<button data-admin-toggle-access="${access.id}" data-access-active="${access.active}">${access.active ? "Pausar" : "Reativar"}</button>` : ""}
+      </article>`).join("") || `<div class="admin-empty-access">Nenhum acesso nesta organização.</div>`}</div>
+    </section>`;
+  }).join("") || emptyState("Crie a primeira organização para começar.");
+  $$("[data-admin-add-access]").forEach(button => button.addEventListener("click", () => openAdminAccessForm(button.dataset.adminAddAccess)));
+  $$("[data-admin-toggle-access]").forEach(button => button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      await dataGateway.setAccessActive(button.dataset.adminToggleAccess, button.dataset.accessActive !== "true");
+      showToast(button.dataset.accessActive === "true" ? "Acesso pausado" : "Acesso reativado");
+      await renderAdminAccess();
+    } catch (error) {
+      console.warn("Falha ao atualizar acesso.", error);
+      button.disabled = false;
+      showToast("Não foi possível atualizar o acesso.");
+    }
+  }));
+}
+
+function openAdminOrganizationForm() {
+  openSheet(`<h2 class="sheet-title">Nova organização</h2><p class="sheet-subtitle">Cada organização possui banco operacional e usuários completamente isolados.</p>
+    <form class="sheet-form" id="admin-organization-form">
+      ${field("admin-organization-name", "Nome da organização", "", true, "text", "Ex.: Ambiente de testes")}
+      ${field("admin-organization-slug", "Identificador", "", true, "text", "ambiente-de-testes")}
+      <button class="primary-button" type="submit">Criar organização</button>
+    </form>`, () => {
+    $("#admin-organization-name").addEventListener("input", event => {
+      const slug = $("#admin-organization-slug");
+      if (!slug.dataset.edited) slug.value = slugifyOrganization(event.target.value);
+    });
+    $("#admin-organization-slug").addEventListener("input", event => {
+      event.target.dataset.edited = "true";
+      event.target.value = slugifyOrganization(event.target.value);
+    });
+    $("#admin-organization-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      try {
+        await dataGateway.createOrganization($("#admin-organization-name").value, $("#admin-organization-slug").value);
+        closeSheet();
+        showToast("Organização criada com isolamento próprio");
+        await renderAdminAccess();
+      } catch (error) {
+        console.warn("Falha ao criar organização.", error);
+        button.disabled = false;
+        showToast("Não foi possível criar. Confira se o identificador já existe.");
+      }
+    });
+  });
+}
+
+function openAdminAccessForm(organizationId) {
+  const organization = adminDirectoryCache.organizations.find(item => item.id === organizationId);
+  if (!organization) return showToast("Organização não encontrada.");
+  openSheet(`<h2 class="sheet-title">Permitir novo acesso</h2><p class="sheet-subtitle">${escapeHtml(organization.name)} terá dados separados das demais organizações.</p>
+    <form class="sheet-form" id="admin-access-form">
+      ${field("admin-access-name", "Nome", "", true, "text", "Nome da pessoa")}
+      ${field("admin-access-email", "E-mail permitido", "", true, "email", "pessoa@empresa.com.br")}
+      <div class="field"><label for="admin-access-role">Perfil</label><select id="admin-access-role"><option value="social_seller">Social seller</option><option value="admin">Admin da organização</option></select></div>
+      <div class="admin-isolation-note"><span class="material-symbols-outlined">shield_lock</span><p><strong>Acesso isolado</strong><small>Este usuário verá somente a operação de ${escapeHtml(organization.name)}.</small></p></div>
+      <button class="primary-button" type="submit">Permitir acesso</button>
+    </form>`, () => {
+    $("#admin-access-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      button.textContent = "Preparando acesso…";
+      try {
+        const result = await dataGateway.saveAccess({
+          email: $("#admin-access-email").value.trim().toLowerCase(),
+          name: $("#admin-access-name").value.trim(),
+          organizationId,
+          role: $("#admin-access-role").value
+        });
+        closeSheet();
+        showToast(result.invitationSent ? "Acesso criado e convite enviado" : "E-mail permitido; acesso com Google já está liberado");
+        await renderAdminAccess();
+      } catch (error) {
+        console.warn("Falha ao criar acesso.", error);
+        button.disabled = false;
+        button.textContent = "Permitir acesso";
+        showToast("Não foi possível preparar esse acesso.");
+      }
+    });
+  });
 }
 
 function renderGoals() {
@@ -1553,14 +1790,14 @@ function renderReport() {
   $("#report-directs-detail").textContent = stats.directs;
   $("#report-responses").textContent = stats.responses;
   const pipelineItems = [
-    ["mapped", "person_search", "Leads mapeados", "início do funil", movements.mapped],
-    ["talking", "forum", "Conversando", `${pipelineRates.talking}% avançaram`, movements.talking],
-    ["qualified", "forward_to_inbox", "Encaminhados", `${pipelineRates.qualified}% das conversas`, movements.qualified],
-    ["scheduled", "event_available", "Agendados", `${pipelineRates.scheduled}% dos encaminhados`, movements.scheduled],
-    ["attended", "verified", "Compareceram", `${pipelineRates.attended}% dos agendados`, movements.attended]
+    ["mapped", "person_search", "Leads mapeados", "início do funil", `${movements.mapped} directs enviados`],
+    ["talking", "forum", "Conversando", `${pipelineRates.talking}% avançaram`, `${movements.talking} responderam`],
+    ["qualified", "forward_to_inbox", "Encaminhados", `${pipelineRates.qualified}% das conversas`, `${movements.qualified} enviados`],
+    ["scheduled", "event_available", "Agendados", `${pipelineRates.scheduled}% dos encaminhados`, `${movements.scheduled} novos`],
+    ["attended", "verified", "Compareceram", `${pipelineRates.attended}% dos agendados`, `${movements.attended} registros`]
   ];
-  $("#report-current-pipeline").innerHTML = pipelineItems.map(([key, icon, label, helper, movement]) => `
-    <div class="report-pipeline-stage"><span class="material-symbols-outlined">${icon}</span><strong>${pipeline[key]}</strong><small>${label}</small><mark>+${movement} no período</mark><em>${helper}</em></div>`).join("");
+  $("#report-current-pipeline").innerHTML = pipelineItems.map(([key, icon, label, helper, movementLabel]) => `
+    <div class="report-pipeline-stage"><span class="material-symbols-outlined">${icon}</span><strong>${pipeline[key]}</strong><small>${label}</small><mark>${movementLabel}</mark><em>${helper}</em></div>`).join("");
   $("#report-expired-note").classList.toggle("hidden", !movements.lost);
   $("#report-expired-note").textContent = movements.lost ? `${movements.lost} ${movements.lost === 1 ? "oportunidade foi encaminhada" : "oportunidades foram encaminhadas"} discretamente para Perdidos por tempo de resposta esgotado.` : "";
   $("#report-goal-month").textContent = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date());
@@ -1574,11 +1811,15 @@ function renderReport() {
     ...clinicReportStats(clinic.id, state.reportPeriod, stats)
   })).filter(row => row.actions || row.captured || row.qualifiedTotal || row.scheduledTotal || row.attendedTotal)
     .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, phonesTotal, directs, responses, qualifiedTotal, scheduledTotal, attendedTotal, lost }) => `
-    <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
+  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, phonesTotal, directs, responses, qualifiedTotal, scheduledTotal, attendedTotal, lost }) => {
+    const current = clinicCurrentPipelineStats(clinic.id);
+    return `<div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
       <p><strong>${escapeHtml(clinic.name)}</strong><span class="clinic-report-actions"><em>${clinicActions} ${clinicActions === 1 ? "ação realizada" : "ações realizadas"}</em><small>${phonesTotal} ${phonesTotal === 1 ? "telefone captado" : "telefones captados"}</small></span></p>
-      <b><span>Atualizações no CRM</span>+${directs} mapeados · +${responses} conversando · +${qualifiedTotal} Hunter · +${scheduledTotal} agend. · +${attendedTotal} comp.${lost ? ` · ${lost} expirados` : ""}</b>
-    </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
+      <b><span>Movimentação no período</span>${directs} directs · ${responses} respostas · ${qualifiedTotal} Hunter · ${scheduledTotal} agend. · ${attendedTotal} comp.${lost ? ` · ${lost} expirados` : ""}
+        <span class="clinic-current-label">Status atual</span><i class="clinic-current-line">${current.mapped} mapeados · ${current.talking} conversando · ${current.qualified} Hunter · ${current.scheduled} agend.</i>
+      </b>
+    </div>`;
+  }).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
 function emptyState(message) { return `<div class="empty-inline"><span class="material-symbols-outlined">inbox</span><p>${message}</p></div>`; }
@@ -2772,6 +3013,7 @@ $("#sheet-close").addEventListener("click", closeSheet);
 $("#sheet-backdrop").addEventListener("click", event => { if (event.target === $("#sheet-backdrop")) closeSheet(); });
 $$("[data-sheet]").forEach(button => button.addEventListener("click", openMessages));
 $("#add-clinic").addEventListener("click", () => openClinicForm());
+$("#admin-add-organization").addEventListener("click", openAdminOrganizationForm);
 $("#edit-goals").addEventListener("click", openGoalsForm);
 $("#export-report").addEventListener("click", () => exportReport(false));
 $("#share-report").addEventListener("click", () => exportReport(true));

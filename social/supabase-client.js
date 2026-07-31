@@ -23,15 +23,34 @@ async function getClient() {
 async function getContext(client) {
   const { data: { user } } = await client.auth.getUser();
   if (!user) throw new Error("Sessão expirada.");
-  const { data: membership, error } = await client
+  let { data: membership, error } = await client
     .from("organization_members")
     .select("organization_id, role")
     .eq("profile_id", user.id)
     .eq("active", true)
     .limit(1)
-    .single();
+    .maybeSingle();
+  if (!membership) {
+    const { error: claimError } = await client.rpc("claim_access_invite");
+    if (!claimError) {
+      const retry = await client
+        .from("organization_members")
+        .select("organization_id, role")
+        .eq("profile_id", user.id)
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle();
+      membership = retry.data;
+      error = retry.error;
+    }
+  }
   if (error || !membership) throw new Error("Usuário sem organização ativa.");
   return { user, organizationId: membership.organization_id, role: membership.role };
+}
+
+async function isPlatformAdmin(client) {
+  const { data, error } = await client.rpc("is_platform_admin");
+  return !error && Boolean(data);
 }
 
 export const authGateway = {
@@ -152,6 +171,8 @@ export const dataGateway = {
     const { data: { user }, error } = await client.auth.getUser();
     if (error || !user) throw error || new Error("Sessão expirada.");
     const email = (user.email || "").toLowerCase();
+    const { role } = await getContext(client);
+    const platformAdmin = await isPlatformAdmin(client);
     const knownAccounts = {
       "grmunhoz7@gmail.com": { name: "Gabriel Munhoz", role: "admin" },
       "hiara@harmoniza.pro": { name: "Hiara Munhoz", role: "social_seller" }
@@ -163,20 +184,22 @@ export const dataGateway = {
       name,
       email,
       initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
-      role: known?.role || "social_seller"
+      role: known?.role || role || "social_seller",
+      platformAdmin
     };
   },
   async loadWorkspace() {
     if (!isSupabaseConfigured) return null;
     const client = await getClient();
     const { user, organizationId, role } = await getContext(client);
-    const [{ data, error }, { data: profile, error: profileError }] = await Promise.all([
+    const [{ data, error }, { data: profile, error: profileError }, platformAdmin] = await Promise.all([
       client
         .from("organization_snapshots")
         .select("payload")
         .eq("organization_id", organizationId)
         .maybeSingle(),
-      client.from("profiles").select("full_name, email").eq("id", user.id).single()
+      client.from("profiles").select("full_name, email").eq("id", user.id).single(),
+      isPlatformAdmin(client)
     ]);
     if (error) throw error;
     if (profileError) throw profileError;
@@ -199,9 +222,52 @@ export const dataGateway = {
         name,
         email: profile.email || user.email,
         initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
-        role
+        role,
+        platformAdmin
       }
     };
+  },
+  async loadAdminDirectory() {
+    if (!isSupabaseConfigured) return { organizations: [], memberships: [], invites: [] };
+    const client = await getClient();
+    const { data, error } = await client.rpc("admin_directory");
+    if (error) throw error;
+    return data || { organizations: [], memberships: [], invites: [] };
+  },
+  async createOrganization(name, slug) {
+    const client = await getClient();
+    const { data, error } = await client.rpc("admin_create_organization", {
+      organization_name: name,
+      organization_slug: slug
+    });
+    if (error) throw error;
+    return data;
+  },
+  async saveAccess({ email, name, organizationId, role = "social_seller" }) {
+    const client = await getClient();
+    const { data: inviteId, error } = await client.rpc("admin_save_access", {
+      access_email: email,
+      access_name: name,
+      target_organization_id: organizationId,
+      access_role: role
+    });
+    if (error) throw error;
+    const { data: invitation, error: invitationError } = await client.functions.invoke("admin-access", {
+      body: { inviteId }
+    });
+    return {
+      inviteId,
+      invitationSent: !invitationError && Boolean(invitation?.ok),
+      invitationStatus: invitation?.status || "allowed"
+    };
+  },
+  async setAccessActive(inviteId, active) {
+    const client = await getClient();
+    const { error } = await client.rpc("admin_set_access_active", {
+      invite_id: inviteId,
+      access_active: active
+    });
+    if (error) throw error;
   },
   async saveSnapshot(payload) {
     if (!isSupabaseConfigured) return;

@@ -68,6 +68,10 @@ demonstração apareçam para outro usuário.
 - Relatórios: o PNG é uma captura local do próprio card renderizado, usando `html2canvas` 1.4.1 vendorizado sob licença MIT, sem API paga.
 - Cadastro público: inexistente. Usuários entram somente por convite.
 - Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação.
+- Administração da plataforma: `platform_admins` concede ao Gabriel uma área própria para
+  criar organizações e permitir, pausar ou reativar acessos. Esse privilégio não mistura
+  dados operacionais: o RLS continua exigindo vínculo ativo com a organização para ler
+  clínicas, sessões, leads e relatórios.
 - Extensão Chrome: MV3 em `social-extension`, com painel lateral compacto, captura de
   eventos, fila offline, controles manuais independentes e card completo de BANT por `@`;
   não executa ações no Instagram.
@@ -94,6 +98,9 @@ em `organization_members`; conhecer ou alterar um ID no navegador não libera da
 outra organização.
 
 - `organizations`, `profiles`, `organization_members`: isolamento e acesso.
+- `platform_admins`, `access_invites`: gestão global de organizações e e-mails permitidos.
+  Um convite é associado a uma organização antes do primeiro login e é reivindicado pelo
+  mesmo e-mail autenticado; o usuário nunca escolhe a própria organização.
 - `clinics`: dados da clínica e Hunter vinculada.
 - `work_sessions`: contadores consolidados; não há uma linha por curtida.
 - `directs` no snapshot compacto: trilha individual enxuta por `@`, com datas de envio,
@@ -120,8 +127,11 @@ em imagem devem ser gerados sob demanda, não armazenados.
 1. Crie um projeto na região mais próxima disponível.
 2. Em Authentication, mantenha e-mail/senha e desative cadastro público.
 3. Execute, em ordem, os arquivos de `supabase/migrations` no SQL Editor.
-4. Crie a primeira organização e convide usuários usando uma função administrativa
-   server-side ou o painel do Supabase. Nunca exponha a `service_role`.
+4. Após a migração `008_platform_admin_and_access.sql`, use **Mais → Organizações e
+   acessos** no perfil administrador da plataforma para criar organizações e permitir
+   usuários. A função `admin-access` pode enviar o convite por e-mail; login com Google
+   também reivindica automaticamente um e-mail previamente permitido. Nunca exponha a
+   `service_role` no navegador.
 5. Copie URL e chave pública `anon` para `social/config.js`.
 6. Adicione `https://social.munnius.com.br` às URLs permitidas de autenticação.
 7. Teste dois membros na mesma organização e dois usuários em organizações diferentes.
