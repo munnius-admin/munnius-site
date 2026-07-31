@@ -2,7 +2,7 @@
 
 Extensão Chrome Manifest V3 para acompanhar a operação manual no Instagram Web.
 
-## O que a versão 0.4 faz
+## O que a versão 0.4.3 faz
 
 - abre um painel lateral persistente no Instagram;
 - autentica com a mesma conta do Munnius Social;
@@ -19,6 +19,7 @@ Extensão Chrome Manifest V3 para acompanhar a operação manual no Instagram We
 - reconstrói o histórico mínimo a partir dos Directs e Leads sincronizados para manter a deduplicação após recarregar a extensão;
 - avança o mesmo `@` para **Conversando** e **Telefone captado**, sem duplicar o lead;
 - permite registrar resposta ou telefone mesmo sem Direct anterior, para cobrir exceções;
+- descarta o `@` da própria clínica quando o Instagram o entrega por engano e mantém a oportunidade como anônima;
 - identifica possíveis telefones com ou sem DDD visíveis no Direct e abre uma revisão;
 - mostra nome, `@` editável, temperatura, procedimento, checklist BANT e resumo das respostas no painel;
 - salva o telefone ou envia a mensagem pronta para a Hunter mesmo com o checklist vazio;

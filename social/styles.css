@@ -315,6 +315,7 @@ body{background:#faf6e8}
 .kanban-card-actions .material-symbols-outlined{flex:0 0 auto;font-size:.78rem}
 
 .report-card,.report-card *{min-width:0;box-sizing:border-box}
+.report-card.is-exporting,.report-card.is-exporting *{animation:none!important;transition:none!important}
 .report-heading>div{min-width:0}
 .report-heading h2,.report-heading p,.report-metrics span,.report-actions-grid small,.report-efficiency-grid small,.report-clinic-breakdown p small,.report-clinic-breakdown b{overflow-wrap:anywhere}
 .report-metrics>div,.report-actions-grid>div,.report-efficiency-grid>div{overflow:hidden}

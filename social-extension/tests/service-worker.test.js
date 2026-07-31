@@ -80,3 +80,19 @@ test("manual actions still work while automation is disabled", async () => {
   assert.equal(automatic.ignored, "automation_disabled");
   assert.equal(getPersisted().munniusExtensionState.tabContexts["303"].counters.likes, 1);
 });
+
+test("treats the clinic account handle as an anonymous lead response", async () => {
+  const { context, getPersisted } = workerHarness();
+  const state = context.defaultState();
+  state.clinics = [{ id: "clinic-a", name: "Clínica A", instagram: "@clinicaa", active: true }];
+  await context.writeState(state, 404);
+  await context.selectClinic(404, "clinic-a");
+  await context.startSession("clinic-a", 404);
+
+  await context.trackEvent({ type: "response_detected", profileHandle: "@clinicaa", manual: true }, 404);
+
+  const persisted = getPersisted().munniusExtensionState;
+  assert.equal(persisted.tabContexts["404"].counters.responses, 1);
+  assert.equal(persisted.recentEvents[0].profileHandle, "");
+  assert.equal(persisted.outreach.length, 0);
+});

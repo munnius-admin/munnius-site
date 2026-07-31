@@ -65,6 +65,7 @@ demonstração apareçam para outro usuário.
 
 - Custo inicial: R$ 0 com GitHub Pages, Cloudflare Free e Supabase Free.
 - Interface: PWA mobile-first, funcionando também no desktop.
+- Relatórios: o PNG é uma captura local do próprio card renderizado, usando `html2canvas` 1.4.1 vendorizado sob licença MIT, sem API paga.
 - Cadastro público: inexistente. Usuários entram somente por convite.
 - Papéis: `admin` gerencia usuários; `social_seller` gerencia toda a operação.
 - Extensão Chrome: MV3 em `social-extension`, com painel lateral compacto, captura de

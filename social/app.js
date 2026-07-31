@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=29";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=31";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -141,6 +141,7 @@ function normalizeState(candidate) {
     direct.timeline ||= [];
   });
   migrateAnonymousDirects(normalized);
+  migrateAnonymousResponsePlaceholders(normalized);
   return normalized;
 }
 
@@ -167,6 +168,43 @@ function migrateAnonymousDirects(target) {
       });
     });
   target.anonymousDirectsVersion = 1;
+}
+
+function migrateAnonymousResponsePlaceholders(target) {
+  if (Number(target.anonymousResponsePlaceholdersVersion || 0) >= 1) return;
+  const placeholders = (target.leads || []).filter(lead => {
+    const handle = instagramHandle(lead.instagram || "");
+    return ["talking", "follow_up"].includes(lead.status)
+      && (!handle || handle === "@")
+      && !String(lead.name || "").trim()
+      && !phoneDigits(lead.whatsapp || "");
+  });
+  placeholders.forEach(lead => {
+    const respondedAt = lead.respondedAt || lead.lastContactAt || lead.prospectedAt || new Date().toISOString();
+    target.anonymousConversationBatches.push({
+      id: `anonymous-response-${lead.id}`,
+      clinicId: lead.clinicId,
+      sessionId: null,
+      respondedAt,
+      quantity: 1,
+      remaining: 1,
+      consumed: 0,
+      expired: 0,
+      source: lead.source || "manual_web",
+      sourceBatchId: null,
+      sourceSentAt: lead.prospectedAt || null,
+      migratedFromLeadId: lead.id
+    });
+    target.deletedLeadIds.push(lead.id);
+  });
+  if (placeholders.length) {
+    const ids = new Set(placeholders.map(lead => lead.id));
+    target.leads = target.leads.filter(lead => !ids.has(lead.id));
+    target.directs = target.directs.filter(direct => !ids.has(direct.leadId));
+    target.followups = target.followups.filter(followup => !ids.has(followup.leadId));
+    target.deletedLeadIds = [...new Set(target.deletedLeadIds)];
+  }
+  target.anonymousResponsePlaceholdersVersion = 1;
 }
 
 function loadState() {
@@ -485,6 +523,13 @@ function advanceAnonymousLead(clinicId, stage, at = new Date().toISOString(), se
   return null;
 }
 
+function isUsableLeadHandle(clinicId, rawHandle = "") {
+  const handle = instagramHandle(rawHandle);
+  if (!handle || handle === "@") return false;
+  const clinicHandle = instagramHandle(clinicById(clinicId)?.instagram || "");
+  return !clinicHandle || clinicHandle === "@" || handle.toLowerCase() !== clinicHandle.toLowerCase();
+}
+
 function anonymousPipelineCount(kind, priorityFilter = "all") {
   const source = kind === "talking" ? state.anonymousConversationBatches : state.anonymousDirectBatches;
   const primary = (source || [])
@@ -619,17 +664,21 @@ async function applyExtensionEvents(events, notify = false) {
     } else {
       const countKey = extensionCounterMap[event.event_type];
       if (countKey) session.counts[countKey] = Number(session.counts[countKey] || 0) + 1;
+      const hasLeadHandle = isUsableLeadHandle(event.clinic_id, event.instagram_handle);
       if (event.event_type === "direct_sent") {
-        if (event.instagram_handle) upsertLeadFromExtension(event, "mapped");
+        if (hasLeadHandle) upsertLeadFromExtension(event, "mapped");
         else addAnonymousDirect(event.clinic_id, event.session_id, event.event_at, "chrome_extension");
       }
       if (event.event_type === "response_detected") {
-        if (event.instagram_handle) upsertLeadFromExtension(event, "responded");
+        if (hasLeadHandle) upsertLeadFromExtension(event, "responded");
         else advanceAnonymousLead(event.clinic_id, "responded", event.event_at, event.session_id, "chrome_extension");
       }
-      if (event.event_type === "lead_qualified") upsertLeadFromExtension(event, "responded");
+      if (event.event_type === "lead_qualified") {
+        if (hasLeadHandle) upsertLeadFromExtension(event, "responded");
+        else advanceAnonymousLead(event.clinic_id, "responded", event.event_at, event.session_id, "chrome_extension");
+      }
       if (event.event_type === "phone_captured") {
-        if (event.instagram_handle) upsertLeadFromExtension(event, "phone");
+        if (hasLeadHandle) upsertLeadFromExtension(event, "phone");
         else advanceAnonymousLead(event.clinic_id, "phone", event.event_at, event.session_id, "chrome_extension");
       }
     }
@@ -1818,7 +1867,7 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
   const initialBant = qualificationProgress(lead.qualification);
   openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Conclua a pré-qualificação e entregue a oportunidade sem a closer repetir perguntas." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
     <form class="sheet-form" id="lead-form">
-      ${field("lead-instagram", "Instagram", lead.instagram, true, "text", "@usuario ou link")}
+      ${field("lead-instagram", "Instagram", lead.instagram, !isResponse, "text", "@usuario ou link")}
       ${field("lead-name", "Nome", lead.name, false, "text", "Nome do lead")}
       ${edit && !isPhone ? field("lead-phone", "WhatsApp", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
       <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic">${state.clinics.filter(c => c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
@@ -1857,7 +1906,19 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
     $("#lead-form").addEventListener("submit", event => {
       event.preventDefault();
       const clinicId = $("#lead-clinic").value;
-      const instagram = instagramHandle($("#lead-instagram").value);
+      const rawInstagram = $("#lead-instagram").value.trim();
+      const now = new Date().toISOString();
+      if (!rawInstagram && isResponse && !originalLead) {
+        advanceAnonymousLead(clinicId, "responded", now, state.session?.id || null, "manual_web");
+        if (state.session?.clinicId === clinicId) updateAction("responses");
+        persist();
+        renderDashboard();
+        renderLeads();
+        closeSheet();
+        showToast("Resposta anônima movida para Conversando");
+        return;
+      }
+      const instagram = instagramHandle(rawInstagram);
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
       const anonymousConversationMatch = !originalLead && !existing && (isResponse || isPhone)
         ? consumeOldestAnonymousConversation(clinicId)
@@ -1868,7 +1929,6 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       const record = originalLead || existing || {
         id: uid("lead"), prospectedAt: anonymousMatch?.sentAt || anonymousConversationMatch?.respondedAt || new Date().toISOString(), timeline: [], sentToHunterAt: null
       };
-      const now = new Date().toISOString();
       const status = fixedStatus || $("#lead-status").value;
       const shouldSend = isPhone || (status === "sent_to_hunter" && !record.sentToHunterAt);
       record.timeline ||= [];
@@ -2075,15 +2135,31 @@ function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
   if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
   const temperature = { hot: "Quente", warm: "Morno", cold: "Frio" }[lead.temperature] || "Não avaliada";
-  const notes = qualificationGroups.map(group => String(lead.qualificationNotes?.[group.key] || "").trim()).filter(Boolean);
-  const checked = qualificationItems.filter(([key]) => lead.qualification?.[key]).map(([, label]) => label);
-  const aligned = (notes.length ? notes : checked).slice(0, 3).join("; ") || "Contexto mínimo; continuar a qualificação.";
+  const notes = qualificationGroups
+    .map(group => String(lead.qualificationNotes?.[group.key] || "").trim())
+    .filter(Boolean);
+  const checked = qualificationItems
+    .filter(([key]) => lead.qualification?.[key])
+    .map(([, label]) => label);
+  const aligned = [...notes, ...checked]
+    .filter((value, index, items) => value && items.indexOf(value) === index)
+    .slice(0, 6)
+    .join("; ") || "Contexto mínimo; continuar a qualificação.";
   const leadIdentity = [lead.name || "Nome não informado", lead.instagram].filter(Boolean).join(" · ");
   const pendingFollowup = state.followups
     .filter(item => item.leadId === lead.id && item.status === "pending")
     .sort((a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor))[0];
-  const followLine = pendingFollowup ? `\nFollow combinado: ${formatDate(pendingFollowup.scheduledFor, true)}` : "";
-  const message = `*${clinic.name}*\n*${leadIdentity}*\nWhatsApp: ${lead.whatsapp || "não informado"}\n\nInteresse: ${lead.interest || "não identificado"}\nTemperatura: ${temperature}\nJá alinhado: ${aligned.slice(0, 220)}${followLine}`;
+  const sections = [
+    "*NOVA OPORTUNIDADE GERADA!* 🎉",
+    `*Clínica*\n${clinic.doctor || clinic.name}`,
+    `*Nome da Lead*\n${leadIdentity}`,
+    `*Telefone*\n${lead.whatsapp || "Não informado"}`,
+    `*Interesse*\n${lead.interest || "Não identificado"}`,
+    `*Temperatura*\n${temperature}`,
+    `*Já alinhado*\n${aligned.slice(0, 650)}`
+  ];
+  if (pendingFollowup) sections.push(`*Follow combinado*\n${formatDate(pendingFollowup.scheduledFor, true)}`);
+  const message = sections.join("\n\n");
   showToast(`Mensagem preparada para ${clinic.hunter || "a Hunter"}`);
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
@@ -2274,7 +2350,7 @@ function canvasMetric(ctx, x, y, value, label, tone = "#b58b00", width = 282, ic
   });
 }
 
-async function exportReport(share = false) {
+async function exportReportLegacy(share = false) {
   const stats = periodStats(state.reportPeriod);
   const movements = crmMovementStats(state.reportPeriod, stats);
   const pipeline = currentPipelineStats();
@@ -2476,6 +2552,54 @@ async function exportReport(share = false) {
     link.click();
     URL.revokeObjectURL(link.href);
     showToast("Relatório baixado em imagem");
+  }
+}
+
+async function exportReport(share = false) {
+  const reportCard = $("#report-card");
+  if (!reportCard) return showToast("Relatório indisponível para exportação");
+  if (!window.html2canvas) return exportReportLegacy(share);
+  showToast("Preparando a imagem do relatório...");
+  reportCard.classList.add("is-exporting");
+  try {
+    await document.fonts?.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const canvas = await window.html2canvas(reportCard, {
+      backgroundColor: "#fffef9",
+      logging: false,
+      scale: Math.min(3, Math.max(2, Number(window.devicePixelRatio || 1))),
+      useCORS: true,
+      width: reportCard.scrollWidth,
+      height: reportCard.scrollHeight,
+      windowWidth: document.documentElement.clientWidth,
+      windowHeight: document.documentElement.clientHeight,
+      onclone: clonedDocument => {
+        const clonedCard = clonedDocument.getElementById("report-card");
+        if (!clonedCard) return;
+        clonedCard.style.animation = "none";
+        clonedCard.style.opacity = "1";
+        clonedCard.style.transform = "none";
+      }
+    });
+    reportCard.classList.remove("is-exporting");
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png", 1));
+    if (!blob) throw new Error("Falha ao montar a imagem");
+    const file = new File([blob], `relatorio-social-selling-${state.reportPeriod}.png`, { type: "image/png" });
+    if (share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: "Relatório de social selling" });
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast("Relatório baixado igual ao cartão da tela");
+  } catch (error) {
+    reportCard.classList.remove("is-exporting");
+    console.error("Falha ao capturar o relatório", error);
+    showToast("Não foi possível gerar a imagem agora");
   }
 }
 

@@ -172,24 +172,24 @@ function hunterMessage(candidate, qualification) {
     interestedThisMonth: "Interesse ainda este mês",
     importantDate: "Tem uma data importante"
   };
-  const icons = {
-    person: "\u{1F464}", compass: "\u{1F9ED}", calendar: "\u{1F4C5}",
-    check: "\u{2705}", dot: "\u{25AB}\u{FE0F}",
-    hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}", message: "\u{1F4AC}"
-  };
   const notes = readExtensionQualificationNotes();
-  const qualificationKeys = Object.keys(labels);
-  const principal = qualificationKeys.map(key => {
-    const noteKey = ({ priorInvestment: "B", valueUnderstood: "B", decisionAuthority: "A", knowsDoctor: "A", procedureDiscussed: "N", fitConfirmed: "N", interestedThisMonth: "T", importantDate: "T" })[key];
-    const note = String(notes[noteKey] || "").trim();
-    if (note) return note;
-    return qualification[key] ? labels[key] : "";
-  }).filter((value, index, items) => value && items.indexOf(value) === index);
-  const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[$("#qualification-temperature").value];
-  return {
-    clinic,
-    text: `\u{1F4F2} *${clinic?.name || "Clínica"}*\n*${[$("#qualification-name").value || "Nome não informado", candidate.profileHandle].filter(Boolean).join(" · ")}*\n${$("#qualification-phone").value || "WhatsApp não informado"}\n\nInteresse: ${$("#qualification-interest").value || "Não identificado"}\nTemperatura: ${temperature}\nJá alinhado: ${(principal.slice(0, 3).join("; ") || "Contexto mínimo; continuar a qualificação.").slice(0, 240)}`
-  };
+  const aligned = [
+    ...Object.values(notes).map(value => String(value || "").trim()).filter(Boolean),
+    ...Object.entries(labels).filter(([key]) => qualification[key]).map(([, label]) => label)
+  ].filter((value, index, items) => value && items.indexOf(value) === index).slice(0, 6).join("; ")
+    || "Contexto mínimo; continuar a qualificação.";
+  const temperature = { hot: "Quente", warm: "Morno", cold: "Frio" }[$("#qualification-temperature").value] || "Não avaliada";
+  const leadIdentity = [$("#qualification-name").value || "Nome não informado", candidate.profileHandle].filter(Boolean).join(" · ");
+  const sections = [
+    "*NOVA OPORTUNIDADE GERADA!* 🎉",
+    `*Clínica*\n${clinic?.doctor || clinic?.name || "Clínica"}`,
+    `*Nome da Lead*\n${leadIdentity}`,
+    `*Telefone*\n${$("#qualification-phone").value || "Não informado"}`,
+    `*Interesse*\n${$("#qualification-interest").value || "Não identificado"}`,
+    `*Temperatura*\n${temperature}`,
+    `*Já alinhado*\n${aligned.slice(0, 650)}`
+  ];
+  return { clinic, text: sections.join("\n\n") };
 }
 
 async function saveLeadContext(sendToHunter = false) {

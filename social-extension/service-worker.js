@@ -498,7 +498,15 @@ async function trackEvent(input, tabId) {
     session: context.activeSession
   };
   const clinicId = context.activeSession.clinicId;
-  const handle = normalizeHandle(event.profileHandle);
+  const clinic = state.clinics.find(item => item.id === clinicId);
+  const clinicHandle = normalizeHandle(clinic?.instagram);
+  let handle = normalizeHandle(event.profileHandle);
+  if (handle && clinicHandle && handle === clinicHandle) {
+    handle = "";
+    event.profileHandle = "";
+    event.instagramUrl = "";
+    event.context = { ...(event.context || {}), profileHandle: "", instagramUrl: "", ownAccountDiscarded: true };
+  }
   const existingOutreach = handle && state.outreach?.find(item => item.clinicId === clinicId && normalizeHandle(item.profileHandle) === handle);
   if (event.type === "direct_sent" && existingOutreach?.sentAt) {
     if (!existingOutreach.respondedAt) {
