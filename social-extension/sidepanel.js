@@ -178,12 +178,17 @@ function hunterMessage(candidate, qualification) {
     hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}", message: "\u{1F4AC}"
   };
   const notes = readExtensionQualificationNotes();
-  const checked = Object.entries(qualification).filter(([, value]) => value).map(([key]) => `${icons.check} ${labels[key]}`);
-  const noteLines = Object.entries(notes).filter(([, value]) => value).map(([key, value]) => `${icons.message} ${key}: ${value}`);
+  const qualificationKeys = Object.keys(labels);
+  const principal = qualificationKeys.map(key => {
+    const noteKey = ({ priorInvestment: "B", valueUnderstood: "B", decisionAuthority: "A", knowsDoctor: "A", procedureDiscussed: "N", fitConfirmed: "N", interestedThisMonth: "T", importantDate: "T" })[key];
+    const note = String(notes[noteKey] || "").trim();
+    if (note) return note;
+    return qualification[key] ? labels[key] : "";
+  }).filter((value, index, items) => value && items.indexOf(value) === index);
   const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[$("#qualification-temperature").value];
   return {
     clinic,
-    text: `${icons.person} *NOVO LEAD · ${clinic?.name || "Clínica"}*\n\nOi, ${clinic?.hunter || "Hunter"}! Seguem as informações para continuar o atendimento sem repetir o que já foi alinhado.\n\n*Dados do contato*\n• Nome: ${$("#qualification-name").value || "Não informado"}\n• Instagram: ${candidate.profileHandle || "Não informado"}\n• WhatsApp: ${$("#qualification-phone").value || "Não informado"}\n• Interesse: ${$("#qualification-interest").value || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n${icons.compass} *Contexto já alinhado*\n${checked.length || noteLines.length ? [...checked, ...noteLines].join("\n") : `${icons.dot} Contexto mínimo — continue a qualificação por aqui.`}\n\n${icons.calendar} Captado em ${new Intl.DateTimeFormat("pt-BR").format(new Date())}`
+    text: `\u{1F4F2} *${clinic?.name || "Clínica"}*\n*${[$("#qualification-name").value || "Nome não informado", candidate.profileHandle].filter(Boolean).join(" · ")}*\n${$("#qualification-phone").value || "WhatsApp não informado"}\n\nInteresse: ${$("#qualification-interest").value || "Não identificado"}\nTemperatura: ${temperature}\nJá alinhado: ${(principal.slice(0, 3).join("; ") || "Contexto mínimo; continuar a qualificação.").slice(0, 240)}`
   };
 }
 

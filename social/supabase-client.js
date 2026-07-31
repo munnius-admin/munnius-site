@@ -132,6 +132,20 @@ export const authGateway = {
 };
 
 export const dataGateway = {
+  async uploadClinicImage(file, clinicId) {
+    if (!isSupabaseConfigured || !file || !clinicId) return null;
+    const client = await getClient();
+    const { organizationId } = await getContext(client);
+    const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const path = `${organizationId}/${clinicId}-${Date.now()}.${extension}`;
+    const { error } = await client.storage.from("clinic-images").upload(path, file, {
+      cacheControl: "31536000",
+      contentType: file.type || "image/jpeg",
+      upsert: false
+    });
+    if (error) throw error;
+    return client.storage.from("clinic-images").getPublicUrl(path).data.publicUrl;
+  },
   async loadIdentity() {
     if (!isSupabaseConfigured) return null;
     const client = await getClient();

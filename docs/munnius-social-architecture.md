@@ -24,7 +24,12 @@ guia, não uma trava: nenhum item é obrigatório para salvar o telefone ou envi
 Hunter. A mensagem de WhatsApp inclui apenas o contexto realmente apurado; quando não
 há checklist preenchido, entrega os dados mínimos do lead sem inventar informações.
 
-Um Direct mapeado sem evolução vence em sete dias. Ao receber resposta, o prazo comercial
+Um Direct mapeado sem evolução vence em sete dias. Directs sem `@` ficam em lotes
+agregados por sessão, mas entram no estoque de Leads mapeados do CRM. Quando surge uma
+resposta identificada sem Direct anterior, o sistema consome o item anônimo mais antigo
+da mesma clínica (FIFO), preserva a data original da prospecção e passa a exibir apenas
+o card identificado. Assim o volume é auditável sem criar centenas de cards vazios.
+Ao receber resposta, o prazo comercial
 reinicia em quatorze dias. A atividade seguinte atualiza a data de referência; leads sem
 evolução são movidos para Perdidos quando o aplicativo é aberto. A fila da Hunter fica
 agrupada por responsável, com atalhos para cobrar agendamento e registrar comparecimento.
@@ -37,6 +42,12 @@ restante. Encerrar e reabrir a mesma clínica no mesmo dia desconta o tempo já 
 do limite diário, em vez de começar novamente do zero. Cada linha consolida tempo e os
 seis contadores de todas as sessões do dia. As metas de telefones e agendamentos são
 globais, configuráveis por período e nunca vinculadas individualmente a uma clínica.
+A Home separa o estoque atual do CRM dos acontecimentos do período. Os relatórios usam
+três leituras: atividade executada no período; eventos comerciais registrados no período
+(telefone, encaminhamento, confirmação de agendamento e comparecimento); e conversão da
+safra de leads mapeados naquele período, acompanhada até o estágio atual. A data real do
+agendamento não substitui a data em que a confirmação foi registrada.
+
 A imagem compartilhável do relatório é gerada sob demanda, com altura adaptável para
 incluir todas as clínicas, identidade discreta, ações, qualificados, agendamentos e comparecimentos;
 nenhuma imagem é armazenada.
@@ -80,7 +91,9 @@ outra organização.
 - `clinics`: dados da clínica e Hunter vinculada.
 - `work_sessions`: contadores consolidados; não há uma linha por curtida.
 - `directs` no snapshot compacto: trilha individual enxuta por `@`, com datas de envio,
-  resposta e telefone; directs sem `@` permanecem somente como contagem.
+  resposta e telefone.
+- `anonymousDirectBatches` no snapshot: volume sem `@` agregado por clínica/sessão,
+  com saldos mapeado, associado e expirado.
 - `leads`: estado atual do mini CRM.
 - `lead_timeline`: histórico curto e datado do lead.
 - `follow_ups`, `message_templates`, `hunter_deliveries`: operação diária.
@@ -104,6 +117,11 @@ em imagem devem ser gerados sob demanda, não armazenados.
 5. Copie URL e chave pública `anon` para `social/config.js`.
 6. Adicione `https://social.munnius.com.br` às URLs permitidas de autenticação.
 7. Teste dois membros na mesma organização e dois usuários em organizações diferentes.
+
+Fotos de clínicas podem usar o bucket público `clinic-images`, com limite de 2 MB e
+políticas por organização previstas em `007_clinic_images.sql`. A migração deve ser
+aplicada somente quando o recurso for ativado; imagens contam na franquia gratuita de
+Storage e não ocupam o banco PostgreSQL.
 
 As migrations devem permanecer versionadas junto do código e ser aplicadas primeiro
 em prévia sempre que houver um ambiente separado.

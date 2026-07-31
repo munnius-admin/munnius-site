@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=27";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=28";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -83,6 +83,8 @@ const seed = {
     { id: "lead-3", name: "Fernanda Lima", instagram: "@fernandalima", whatsapp: "41999990010", clinicId: "leve", status: "sent_to_hunter", interest: "Preenchimento labial", location: "Belo Horizonte", temperature: "hot", prospectedAt: new Date().toISOString(), lastContactAt: new Date().toISOString(), sentToHunterAt: new Date().toISOString(), timeline: [{ at: new Date().toISOString(), label: "Enviado para closer" }] }
   ],
   directs: [],
+  anonymousDirectBatches: [],
+  anonymousDirectsVersion: 0,
   followups: [
     { id: "fu-1", leadId: "lead-2", scheduledFor: new Date(Date.now() - 3600000).toISOString(), step: "1º follow-up", status: "pending" },
     { id: "fu-2", leadId: "lead-1", scheduledFor: new Date(Date.now() + 5400000).toISOString(), step: "Pedir WhatsApp", status: "pending" }
@@ -104,6 +106,7 @@ function normalizeState(candidate) {
   normalized.leads ||= [];
   normalized.deletedLeadIds ||= [];
   normalized.directs ||= [];
+  normalized.anonymousDirectBatches ||= [];
   normalized.followups ||= [];
   normalized.sessions ||= [];
   normalized.goals ||= structuredClone(seed.goals);
@@ -127,6 +130,7 @@ function normalizeState(candidate) {
     lead.qualificationNotes ||= {};
     lead.timeline ||= [];
     lead.scheduledAt ||= null;
+    lead.scheduledRecordedAt ||= [...(lead.timeline || [])].reverse().find(item => /confirmou agendamento/i.test(item.label || ""))?.at || lead.scheduledAt || null;
     lead.attendedAt ||= null;
     lead.noShowAt ||= null;
   });
@@ -134,7 +138,33 @@ function normalizeState(candidate) {
     direct.status ||= direct.phoneAt ? "phone" : direct.respondedAt ? "responded" : "sent";
     direct.timeline ||= [];
   });
+  migrateAnonymousDirects(normalized);
   return normalized;
+}
+
+function migrateAnonymousDirects(target) {
+  if (Number(target.anonymousDirectsVersion || 0) >= 1) return;
+  const cutoff = Date.now() - 8 * 86400000;
+  (target.sessions || [])
+    .filter(session => new Date(session.startedAt || 0).getTime() >= cutoff)
+    .forEach(session => {
+      const counted = Number(session.counts?.directs || 0);
+      const identified = (target.directs || []).filter(direct => direct.sessionId === session.id && direct.sentAt).length;
+      const quantity = Math.max(0, counted - identified);
+      if (!quantity) return;
+      target.anonymousDirectBatches.push({
+        id: `anonymous-${session.id}`,
+        clinicId: session.clinicId,
+        sessionId: session.id,
+        sentAt: session.startedAt,
+        quantity,
+        remaining: quantity,
+        consumed: 0,
+        expired: 0,
+        source: session.source || "manual_web"
+      });
+    });
+  target.anonymousDirectsVersion = 1;
 }
 
 function loadState() {
@@ -211,6 +241,7 @@ function mergeOperationalState(localState, remoteState, profile) {
     clinics: mergeById(local.clinics, remote.clinics),
     leads: mergeById(local.leads, remote.leads).filter(lead => !deletedLeadSet.has(lead.id)),
     directs: mergeById(local.directs, remote.directs).filter(direct => !direct.leadId || !deletedLeadSet.has(direct.leadId)),
+    anonymousDirectBatches: mergeById(local.anonymousDirectBatches, remote.anonymousDirectBatches),
     followups: mergeById(local.followups, remote.followups).filter(followup => !deletedLeadSet.has(followup.leadId)),
     sessions: mergeById(local.sessions, remote.sessions),
     templates: mergeById(local.templates, remote.templates),
@@ -305,7 +336,7 @@ function isOpenCommercialStatus(status) {
   return !["sent_to_hunter", "scheduled", "attended", "no_show", "finished"].includes(status);
 }
 
-function upsertLeadFromActivity({ clinicId, instagram: rawInstagram = "", stage = "mapped", at = new Date().toISOString(), phone = "", source = "manual_web" }) {
+function upsertLeadFromActivity({ clinicId, instagram: rawInstagram = "", stage = "mapped", at = new Date().toISOString(), prospectedAt = at, phone = "", source = "manual_web" }) {
   const instagram = instagramHandle(rawInstagram);
   if (instagram === "@") return null;
   let lead = state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram);
@@ -320,7 +351,7 @@ function upsertLeadFromActivity({ clinicId, instagram: rawInstagram = "", stage 
       interest: "",
       temperature: "warm",
       qualification: {},
-      prospectedAt: at,
+      prospectedAt,
       lastContactAt: at,
       sentToHunterAt: null,
       source,
@@ -354,10 +385,61 @@ function findLatestDirect(clinicId, instagram) {
     .sort((a, b) => new Date(b.sentAt || b.createdAt) - new Date(a.sentAt || a.createdAt))[0] || null;
 }
 
+function addAnonymousDirect(clinicId, sessionId, sentAt = new Date().toISOString(), source = "manual_web", quantity = 1) {
+  if (!clinicId || quantity <= 0) return null;
+  state.anonymousDirectBatches ||= [];
+  let batch = state.anonymousDirectBatches.find(item => item.clinicId === clinicId && item.sessionId === sessionId && !item.expiredAt);
+  if (!batch) {
+    batch = {
+      id: uid("anonymous"), clinicId, sessionId, sentAt, quantity: 0,
+      remaining: 0, consumed: 0, expired: 0, source
+    };
+    state.anonymousDirectBatches.push(batch);
+  }
+  batch.quantity = Number(batch.quantity || 0) + quantity;
+  batch.remaining = Number(batch.remaining || 0) + quantity;
+  batch.updatedAt = sentAt;
+  return batch;
+}
+
+function expireAnonymousDirects(target = state) {
+  const cutoff = Date.now() - 7 * 86400000;
+  let changed = false;
+  (target.anonymousDirectBatches || []).forEach(batch => {
+    const remaining = Number(batch.remaining || 0);
+    if (!remaining || new Date(batch.sentAt || 0).getTime() >= cutoff) return;
+    batch.remaining = 0;
+    batch.expired = Number(batch.expired || 0) + remaining;
+    batch.expiredAt = new Date().toISOString();
+    batch.updatedAt = batch.expiredAt;
+    changed = true;
+  });
+  return changed;
+}
+
+function consumeOldestAnonymousDirect(clinicId) {
+  expireAnonymousDirects();
+  const batch = (state.anonymousDirectBatches || [])
+    .filter(item => item.clinicId === clinicId && Number(item.remaining || 0) > 0)
+    .sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt))[0];
+  if (!batch) return null;
+  batch.remaining = Math.max(0, Number(batch.remaining || 0) - 1);
+  batch.consumed = Number(batch.consumed || 0) + 1;
+  batch.updatedAt = new Date().toISOString();
+  return batch;
+}
+
+function anonymousPipelineCount(kind, priorityFilter = "all") {
+  return (state.anonymousDirectBatches || [])
+    .filter(batch => priorityFilter === "all" || clinicPriority(clinicById(batch.clinicId)).key === priorityFilter)
+    .reduce((total, batch) => total + Number(kind === "lost" ? batch.expired : batch.remaining || 0), 0);
+}
+
 function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = "sent", at = new Date().toISOString(), phone = "", source = "manual_web", sessionId = null }) {
   const instagram = instagramHandle(rawInstagram);
   if (instagram === "@") return { direct: null, lead: null };
   let direct = findLatestDirect(clinicId, instagram);
+  const anonymousMatch = !direct && stage !== "sent" ? consumeOldestAnonymousDirect(clinicId) : null;
   const shouldCreate = !direct || (stage === "sent" && ["phone", "lost"].includes(direct.status));
   if (shouldCreate) {
     direct = {
@@ -366,12 +448,13 @@ function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = 
       instagram,
       leadId: null,
       sessionId,
-      sentAt: stage === "sent" ? at : null,
+      sentAt: stage === "sent" ? at : anonymousMatch?.sentAt || null,
       respondedAt: null,
       phoneAt: null,
       phone: "",
       status: stage === "sent" ? "sent" : stage,
       source,
+      anonymousSourceId: anonymousMatch?.id || null,
       createdAt: at,
       timeline: []
     };
@@ -401,6 +484,7 @@ function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = 
     instagram,
     stage: stage === "sent" ? "mapped" : stage,
     at,
+    prospectedAt: direct.sentAt || at,
     phone,
     source
   });
@@ -457,7 +541,10 @@ async function applyExtensionEvents(events, notify = false) {
     } else {
       const countKey = extensionCounterMap[event.event_type];
       if (countKey) session.counts[countKey] = Number(session.counts[countKey] || 0) + 1;
-      if (event.event_type === "direct_sent") upsertLeadFromExtension(event, "mapped");
+      if (event.event_type === "direct_sent") {
+        if (event.instagram_handle) upsertLeadFromExtension(event, "mapped");
+        else addAnonymousDirect(event.clinic_id, event.session_id, event.event_at, "chrome_extension");
+      }
       if (event.event_type === "response_detected") upsertLeadFromExtension(event, "responded");
       if (event.event_type === "lead_qualified") upsertLeadFromExtension(event, "responded");
       if (event.event_type === "phone_captured") upsertLeadFromExtension(event, "phone");
@@ -484,7 +571,7 @@ async function syncPendingExtensionEvents() {
 function expireUnansweredLeads() {
   const mappedCutoff = Date.now() - 7 * 86400000;
   const talkingCutoff = Date.now() - 14 * 86400000;
-  let changed = false;
+  let changed = expireAnonymousDirects();
   state.leads.forEach(lead => {
     const referenceDate = new Date(lead.lastContactAt || lead.prospectedAt || 0).getTime();
     const mappedExpired = lead.status === "new" && referenceDate && referenceDate < mappedCutoff;
@@ -575,7 +662,7 @@ function periodStart(period) {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   if (period === "week") start.setDate(start.getDate() - 6);
-  if (period === "month") start.setDate(start.getDate() - 29);
+  if (period === "month") start.setDate(1);
   return start;
 }
 function inPeriod(value, period) { return new Date(value) >= periodStart(period); }
@@ -633,7 +720,7 @@ function periodStats(period = state.period || "day") {
     return mappedAt && inPeriod(mappedAt, period) && isPhoneStage(lead);
   }).length;
   const phonesTotal = mappedPhonesTotal;
-  const scheduledTotal = state.leads.filter(lead => lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length;
+  const scheduledTotal = state.leads.filter(lead => leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length;
   const attendedTotal = state.leads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length;
   return {
     leads: leads.length,
@@ -643,7 +730,7 @@ function periodStats(period = state.period || "day") {
     phonesTotal,
     hunters: state.leads.filter(lead => lead.status === "sent_to_hunter" && leadQualifiedAt(lead) && inPeriod(leadQualifiedAt(lead), period)).length,
     huntersTotal: qualifiedTotal,
-    scheduled: state.leads.filter(lead => lead.status === "scheduled" && lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length,
+    scheduled: state.leads.filter(lead => lead.status === "scheduled" && leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length,
     scheduledTotal,
     attended: state.leads.filter(lead => lead.status === "attended" && lead.attendedAt && inPeriod(lead.attendedAt, period)).length,
     attendedTotal,
@@ -656,6 +743,13 @@ function periodStats(period = state.period || "day") {
 function leadPhoneMappedAt(lead) {
   if (!phoneDigits(lead.whatsapp || "") && !lead.phoneCapturedAt) return null;
   return lead.phoneCapturedAt || lead.sentToHunterAt || lead.respondedAt || lead.lastContactAt || lead.prospectedAt || null;
+}
+
+function leadScheduledRecordedAt(lead) {
+  return lead.scheduledRecordedAt
+    || [...(lead.timeline || [])].reverse().find(item => /confirmou agendamento/i.test(item.label || ""))?.at
+    || lead.scheduledAt
+    || null;
 }
 
 function leadQualifiedAt(lead) {
@@ -674,6 +768,37 @@ function reportActionCount(stats) {
 
 function rate(part, total) {
   return total ? Math.round(Number(part || 0) / total * 100) : 0;
+}
+
+function cohortStats(period) {
+  const cohortDirects = state.directs.filter(direct => direct.sentAt && inPeriod(direct.sentAt, period));
+  const directLeadIds = new Set(cohortDirects.map(direct => direct.leadId).filter(Boolean));
+  const directKeys = new Set(cohortDirects.map(direct => `${direct.clinicId}:${instagramHandle(direct.instagram || "")}`));
+  const orphanLeads = state.leads.filter(lead => inPeriod(lead.prospectedAt, period)
+    && !directLeadIds.has(lead.id)
+    && !directKeys.has(`${lead.clinicId}:${instagramHandle(lead.instagram || "")}`));
+  const cohortLeadIds = new Set([...directLeadIds, ...orphanLeads.map(lead => lead.id)]);
+  const cohortLeads = state.leads.filter(lead => cohortLeadIds.has(lead.id));
+  const namedMapped = new Set(cohortDirects
+    .filter(direct => !direct.anonymousSourceId)
+    .map(direct => `${direct.clinicId}:${instagramHandle(direct.instagram || "")}`)).size;
+  const anonymousMapped = (state.anonymousDirectBatches || [])
+    .filter(batch => inPeriod(batch.sentAt, period))
+    .reduce((total, batch) => total + Number(batch.quantity || 0), 0);
+  const mapped = namedMapped + anonymousMapped + orphanLeads.length;
+  return {
+    mapped,
+    responses: cohortLeads.filter(lead => lead.respondedAt || leadPhoneMappedAt(lead)).length,
+    phones: cohortLeads.filter(lead => leadPhoneMappedAt(lead)).length,
+    hunters: cohortLeads.filter(lead => leadQualifiedAt(lead)).length,
+    scheduled: cohortLeads.filter(lead => leadScheduledRecordedAt(lead)).length,
+    attended: cohortLeads.filter(lead => lead.attendedAt).length
+  };
+}
+
+function reportCohortLabel(cohort) {
+  const mapped = Number(cohort?.mapped || 0);
+  return `${mapped} ${mapped === 1 ? "lead mapeado" : "leads mapeados"} no período, acompanhados até o estágio atual`;
 }
 
 function clinicReportStats(clinicId, period, periodSummary) {
@@ -703,7 +828,7 @@ function clinicReportStats(clinicId, period, periodSummary) {
   }).length;
   const captured = clinicLeads.filter(lead => {
     if (!leadPhoneMappedAt(lead)) return false;
-    return [leadPhoneMappedAt(lead), leadQualifiedAt(lead), lead.scheduledAt, lead.attendedAt, lead.noShowAt]
+    return [leadPhoneMappedAt(lead), leadQualifiedAt(lead), leadScheduledRecordedAt(lead), lead.attendedAt, lead.noShowAt]
       .some(date => date && inPeriod(date, period));
   }).length;
   return {
@@ -714,8 +839,8 @@ function clinicReportStats(clinicId, period, periodSummary) {
     captured,
     qualified: clinicLeads.filter(lead => lead.status === "sent_to_hunter" && leadQualifiedAt(lead) && inPeriod(leadQualifiedAt(lead), period)).length,
     qualifiedTotal,
-    scheduled: clinicLeads.filter(lead => lead.status === "scheduled" && lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length,
-    scheduledTotal: clinicLeads.filter(lead => lead.scheduledAt && inPeriod(lead.scheduledAt, period)).length,
+    scheduled: clinicLeads.filter(lead => lead.status === "scheduled" && leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length,
+    scheduledTotal: clinicLeads.filter(lead => leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), period)).length,
     attended: clinicLeads.filter(lead => lead.status === "attended" && lead.attendedAt && inPeriod(lead.attendedAt, period)).length,
     attendedTotal: clinicLeads.filter(lead => lead.attendedAt && inPeriod(lead.attendedAt, period)).length
   };
@@ -728,17 +853,18 @@ function renderDashboard() {
   const conversations = state.leads.filter(lead => ["talking", "follow_up"].includes(lead.status)).length;
   const actions = Object.keys(countLabels).reduce((total, key) => total + Number(stats[key] || 0), 0);
   const talking = state.leads.filter(lead => lead.status === "talking").length;
+  const mapped = state.leads.filter(lead => lead.status === "new").length + anonymousPipelineCount("mapped");
   const followingUp = state.leads.filter(lead => lead.status === "follow_up").length;
-  const lost = state.leads.filter(lead => lead.status === "lost").length;
+  const lost = state.leads.filter(lead => lead.status === "lost").length + anonymousPipelineCount("lost");
   const qualified = state.leads.filter(lead => lead.status === "sent_to_hunter").length;
   const scheduled = state.leads.filter(lead => lead.status === "scheduled").length;
   const attended = state.leads.filter(lead => lead.status === "attended").length;
   $("#actions-total").textContent = actions;
-  $("#leads-total").textContent = stats.phones;
+  $("#leads-total").textContent = stats.phonesTotal;
   $("#clinics-total").textContent = activeClinics.length;
   $("#hunters-total").textContent = stats.scheduledTotal;
   $("#followups-total").textContent = conversations;
-  $("#pipeline-mapped").textContent = stats.directs;
+  $("#pipeline-mapped").textContent = mapped;
   $("#pipeline-talking").textContent = talking;
   $("#pipeline-followups").textContent = followingUp;
   $("#pipeline-lost").textContent = lost;
@@ -746,7 +872,7 @@ function renderDashboard() {
   $("#pipeline-scheduled").textContent = scheduled;
   $("#pipeline-attended").textContent = attended;
   $("#hero-summary").textContent = actions
-    ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phones} telefones`
+    ? `${stats.directs} directs · ${stats.responses} respostas · ${stats.phonesTotal} telefones`
     : activeClinics.length ? "Escolha uma clínica abaixo e comece a sessão." : "Cadastre sua primeira clínica para começar.";
   renderClinics();
 }
@@ -756,9 +882,12 @@ function clinicMarkup(clinic, detailed = false) {
   const active = state.session?.clinicId === clinic.id;
   const priority = clinicPriority(clinic);
   const activity = clinicActivityToday(clinic.id);
-  const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && lead.scheduledAt && inPeriod(lead.scheduledAt, "month")).length;
+  const scheduled = state.leads.filter(lead => lead.clinicId === clinic.id && leadScheduledRecordedAt(lead) && inPeriod(leadScheduledRecordedAt(lead), "month")).length;
+  const avatar = clinic.photoUrl
+    ? `<img src="${escapeHtml(clinic.photoUrl)}" alt="" loading="lazy">`
+    : escapeHtml(clinic.name.split(" ").slice(-1)[0]?.[0] || "C");
   return `<article class="clinic-card ${detailed ? "clickable" : "home-clinic-card"} ${active ? "has-active-session" : ""}" ${detailed ? `data-clinic-detail="${clinic.id}"` : ""}>
-    <div class="clinic-avatar" style="background:${clinic.color}">${clinic.name.split(" ").slice(-1)[0][0]}</div>
+    <div class="clinic-avatar" style="background:${clinic.color}">${avatar}</div>
     <div class="clinic-main"><strong title="${escapeHtml(clinic.name)}">${escapeHtml(clinic.name)} <em class="priority-pill priority-${clinic.priority.toLowerCase()}">${clinic.priority}</em></strong><span>${detailed ? `${escapeHtml(clinic.instagram)} · Closer ${escapeHtml(clinic.hunter)} · ${priority.minutes} min` : `${activity.actions} ${activity.actions === 1 ? "ação" : "ações"} hoje · ${priority.label}`}</span><div class="progress"><i style="width:${Math.min(100, activity.seconds / (priority.minutes * 60) * 100)}%"></i></div></div>
     <div class="clinic-card-side">${detailed ? `<div class="clinic-score"><strong>${activity.actions}</strong><span>ações hoje · ${scheduled} agend.</span></div>` : ""}
       ${detailed ? `<span class="material-symbols-outlined clinic-chevron">chevron_right</span>` : `<button class="clinic-start ${active ? "active" : ""}" data-start-session="${clinic.id}"><span class="material-symbols-outlined">${active ? "timer" : "play_arrow"}</span>${active ? "Continuar" : "Iniciar"}</button>`}
@@ -994,9 +1123,18 @@ function renderLeads() {
   ];
   $("#lead-kanban").innerHTML = columns.map(column => {
     const items = filtered.filter(column.matcher);
+    const anonymousVolume = column.key === "new"
+      ? anonymousPipelineCount("mapped", priorityFilter)
+      : column.key === "lost"
+        ? anonymousPipelineCount("lost", priorityFilter)
+        : 0;
+    const volumeCard = anonymousVolume ? `<article class="kanban-volume-card ${column.key}">
+      <span class="material-symbols-outlined">${column.key === "new" ? "alternate_email" : "timer_off"}</span>
+      <div><strong>${anonymousVolume} ${anonymousVolume === 1 ? "lead sem @" : "leads sem @"}</strong><small>${column.key === "new" ? "Saldo agregado dos Directs · expira em 7 dias" : "Directs que não evoluíram em 7 dias"}</small></div>
+    </article>` : "";
     return `<section class="kanban-column" data-kanban-column="${column.key}">
-      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><b>${items.length}</b></header>
-      <div class="kanban-cards">${items.map(kanbanLeadCard).join("") || `<div class="kanban-empty">Nenhum lead nesta etapa</div>`}</div>
+      <header><span class="kanban-column-icon"><span class="material-symbols-outlined">${column.icon}</span></span><div><strong>${column.title}</strong><small>${column.subtitle}</small></div><b>${items.length + anonymousVolume}</b></header>
+      <div class="kanban-cards">${volumeCard}${items.map(kanbanLeadCard).join("") || (!volumeCard ? `<div class="kanban-empty">Nenhum lead nesta etapa</div>` : "")}</div>
     </section>`;
   }).join("");
   $$("[data-lead]").forEach(card => card.addEventListener("click", () => openLeadDetail(card.dataset.lead)));
@@ -1177,30 +1315,38 @@ function renderFollowups() {
 
 function renderReport() {
   const stats = periodStats(state.reportPeriod);
+  const cohort = cohortStats(state.reportPeriod);
+  const monthly = periodStats("month");
   const actions = reportActionCount(stats);
-  const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Últimos 30 dias" };
+  const labels = { day: "Hoje", week: "Últimos 7 dias", month: "Este mês" };
   $("#report-label").textContent = labels[state.reportPeriod];
   $("#report-date").textContent = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
   $("#report-actions-value").textContent = actions;
-  $("#report-phones").textContent = stats.phones;
-  $("#report-hunters").textContent = stats.hunters;
-  $("#report-scheduled").textContent = stats.scheduled;
-  $("#report-attended").textContent = stats.attended;
+  $("#report-phones").textContent = stats.phonesTotal;
+  $("#report-hunters").textContent = stats.huntersTotal;
+  $("#report-scheduled").textContent = stats.scheduledTotal;
+  $("#report-attended").textContent = stats.attendedTotal;
   $("#report-actions-total").textContent = `${actions} ${actions === 1 ? "ação realizada" : "ações realizadas"}`;
   $("#report-likes").textContent = stats.likes;
   $("#report-comments").textContent = stats.comments;
   $("#report-directs-detail").textContent = stats.directs;
   $("#report-responses").textContent = stats.responses;
-  $("#report-response-rate").textContent = `${rate(stats.responses, stats.directs)}%`;
-  $("#report-phone-rate").textContent = `${rate(stats.phonesTotal, stats.responses)}%`;
-  $("#report-qualification-rate").textContent = `${rate(stats.huntersTotal, stats.phonesTotal)}%`;
-  $("#report-appointment-rate").textContent = `${rate(stats.scheduledTotal, stats.huntersTotal)}%`;
-  $("#report-attendance-rate").textContent = `${rate(stats.attendedTotal, stats.scheduledTotal)}%`;
-  $("#report-response-total-rate").textContent = `${rate(stats.responses, stats.directs)}%`;
-  $("#report-phone-total-rate").textContent = `${rate(stats.phonesTotal, stats.directs)}%`;
-  $("#report-qualification-total-rate").textContent = `${rate(stats.huntersTotal, stats.directs)}%`;
-  $("#report-appointment-total-rate").textContent = `${rate(stats.scheduledTotal, stats.directs)}%`;
-  $("#report-attendance-total-rate").textContent = `${rate(stats.attendedTotal, stats.directs)}%`;
+  $("#report-response-rate").textContent = `${rate(cohort.responses, cohort.mapped)}%`;
+  $("#report-phone-rate").textContent = `${rate(cohort.phones, cohort.responses)}%`;
+  $("#report-qualification-rate").textContent = `${rate(cohort.hunters, cohort.phones)}%`;
+  $("#report-appointment-rate").textContent = `${rate(cohort.scheduled, cohort.hunters)}%`;
+  $("#report-attendance-rate").textContent = `${rate(cohort.attended, cohort.scheduled)}%`;
+  $("#report-response-total-rate").textContent = `${rate(cohort.responses, cohort.mapped)}%`;
+  $("#report-phone-total-rate").textContent = `${rate(cohort.phones, cohort.mapped)}%`;
+  $("#report-qualification-total-rate").textContent = `${rate(cohort.hunters, cohort.mapped)}%`;
+  $("#report-appointment-total-rate").textContent = `${rate(cohort.scheduled, cohort.mapped)}%`;
+  $("#report-attendance-total-rate").textContent = `${rate(cohort.attended, cohort.mapped)}%`;
+  $("#report-cohort-label").textContent = reportCohortLabel(cohort);
+  $("#report-goal-month").textContent = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date());
+  $("#report-goal-phones").textContent = `${monthly.phonesTotal} / ${state.goals.phones}`;
+  $("#report-goal-scheduled").textContent = `${monthly.scheduledTotal} / ${state.goals.scheduled}`;
+  $("#report-goal-phones-bar").style.width = `${Math.min(100, monthly.phonesTotal / state.goals.phones * 100)}%`;
+  $("#report-goal-scheduled-bar").style.width = `${Math.min(100, monthly.scheduledTotal / state.goals.scheduled * 100)}%`;
   $("#report-user").textContent = state.profile?.name || "Social seller";
   const days = state.reportPeriod === "day" ? 1 : state.reportPeriod === "week" ? 7 : 10;
   const values = Array.from({ length: days }, (_, index) => {
@@ -1212,12 +1358,12 @@ function renderReport() {
   const clinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
     clinic,
     ...clinicReportStats(clinic.id, state.reportPeriod, stats)
-  })).filter(row => row.actions || row.captured || row.qualified || row.scheduled || row.attended)
-    .sort((a, b) => (b.captured - a.captured) || (b.qualified - a.qualified) || (b.actions - a.actions));
-  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, phones, captured, qualified, scheduled, attended }) => `
+  })).filter(row => row.actions || row.captured || row.qualifiedTotal || row.scheduledTotal || row.attendedTotal)
+    .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
+  $("#report-clinic-breakdown").innerHTML = clinicRows.map(({ clinic, actions: clinicActions, captured, phonesTotal, qualifiedTotal, scheduledTotal, attendedTotal }) => `
     <div><span class="clinic-mini-avatar" style="background:${clinic.color}">${initials(clinic.name).slice(0,1)}</span>
       <p><strong>${escapeHtml(clinic.name)}</strong><em>${captured} ${captured === 1 ? "lead captado" : "leads captados"}</em><small>${clinicActions} ${clinicActions === 1 ? "ação" : "ações"} realizadas</small></p>
-      <b>${phones} com telefone · ${qualified} com Hunter · ${scheduled} agend. · ${attended} comp.</b>
+      <b>${phonesTotal} telef. captados · ${qualifiedTotal} encaminhados · ${scheduledTotal} agend. confirmados · ${attendedTotal} comp. registrados</b>
     </div>`).join("") || `<p class="report-empty">As clínicas aparecem aqui quando houver atividade no período.</p>`;
 }
 
@@ -1433,6 +1579,11 @@ function openActivityCapture(stage, { instagram = "", phone = "", directId = nul
           sessionId: state.session.id
         })
         : { direct: null, lead: null };
+      if (!normalizedInstagram && stage === "sent") {
+        addAnonymousDirect(clinic.id, state.session.id, now, "manual_web");
+      } else if (!normalizedInstagram && stage !== "sent") {
+        consumeOldestAnonymousDirect(clinic.id);
+      }
       if (stage === "phone" && result.lead) {
         result.lead.interest = $("#lead-interest").value.trim();
         result.lead.temperature = $("#lead-temperature").value;
@@ -1623,8 +1774,11 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       const clinicId = $("#lead-clinic").value;
       const instagram = instagramHandle($("#lead-instagram").value);
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
+      const anonymousMatch = !originalLead && !existing && (isResponse || isPhone)
+        ? consumeOldestAnonymousDirect(clinicId)
+        : null;
       const record = originalLead || existing || {
-        id: uid("lead"), prospectedAt: new Date().toISOString(), timeline: [], sentToHunterAt: null
+        id: uid("lead"), prospectedAt: anonymousMatch?.sentAt || new Date().toISOString(), timeline: [], sentToHunterAt: null
       };
       const now = new Date().toISOString();
       const status = fixedStatus || $("#lead-status").value;
@@ -1640,9 +1794,23 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
         qualificationNotes: readQualificationNotes()
       });
       if (!originalLead && !existing) state.leads.unshift(record);
-      if (isResponse) record.timeline.push({ at: now, label: existing ? "Nova resposta registrada" : "Lead respondeu ao direct" });
-      else if (isPhone) record.timeline.push({ at: now, label: "WhatsApp captado e qualificação concluída" });
+      if (isResponse) {
+        record.respondedAt ||= now;
+        record.timeline.push({ at: now, label: existing ? "Nova resposta registrada" : "Lead respondeu ao direct" });
+      } else if (isPhone) {
+        record.phoneCapturedAt ||= now;
+        record.timeline.push({ at: now, label: "WhatsApp captado e qualificação concluída" });
+      }
       else record.timeline.push({ at: now, label: edit ? `Etapa alterada para ${statusNames[status]}` : "Lead mapeado" });
+      if (anonymousMatch && !state.directs.some(item => item.leadId === record.id)) {
+        state.directs.push({
+          id: uid("direct"), clinicId, leadId: record.id, instagram,
+          sessionId: anonymousMatch.sessionId || null, source: anonymousMatch.source || "manual_web",
+          sentAt: anonymousMatch.sentAt, respondedAt: now,
+          phoneAt: isPhone ? now : null, status: isPhone ? "phone" : "responded",
+          anonymousSourceId: anonymousMatch.id, createdAt: anonymousMatch.sentAt, updatedAt: now
+        });
+      }
       const followupAt = $("#lead-followup")?.value;
       if (followupAt) {
         state.followups.push({ id: uid("fu"), leadId: record.id, scheduledFor: new Date(followupAt).toISOString(), step: "Follow-up", status: "pending" });
@@ -1716,6 +1884,19 @@ function openDeleteLeadConfirmation(leadId) {
     $("#confirm-delete-lead").addEventListener("click", async () => {
       const linkedDirects = state.directs.filter(direct => direct.leadId === leadId);
       linkedDirects.forEach(direct => {
+        if (direct.anonymousSourceId) {
+          const batch = (state.anonymousDirectBatches || []).find(item => item.id === direct.anonymousSourceId);
+          if (batch) {
+            batch.consumed = Math.max(0, Number(batch.consumed || 0) - 1);
+            if (new Date(batch.sentAt || 0).getTime() >= Date.now() - 7 * 86400000) {
+              batch.remaining = Number(batch.remaining || 0) + 1;
+              batch.expiredAt = null;
+            } else {
+              batch.expired = Number(batch.expired || 0) + 1;
+            }
+          }
+          return;
+        }
         const session = state.session?.id === direct.sessionId
           ? state.session
           : state.sessions.find(item => item.id === direct.sessionId);
@@ -1757,9 +1938,11 @@ function openHunterUpdate(leadId) {
       $("#hunter-schedule-form").addEventListener("submit", event => {
         event.preventDefault();
         const scheduledAt = new Date($("#hunter-scheduled-at").value).toISOString();
+        const recordedAt = new Date().toISOString();
         lead.status = "scheduled";
         lead.scheduledAt = scheduledAt;
-        lead.timeline.push({ at: new Date().toISOString(), label: `Hunter confirmou agendamento para ${formatDate(scheduledAt, true)}` });
+        lead.scheduledRecordedAt = recordedAt;
+        lead.timeline.push({ at: recordedAt, label: `Hunter confirmou agendamento para ${formatDate(scheduledAt, true)}` });
         persist(); renderDashboard(); renderLeads(); renderReport(); openLeadDetail(leadId); showToast("Agendamento confirmado");
       });
     });
@@ -1789,19 +1972,15 @@ function openHunterWhatsApp(lead) {
   const clinic = clinicById(lead.clinicId);
   if (!clinic) return showToast("Clínica não encontrada para esta entrega.");
   const icons = {
-    person: "\u{1F464}", compass: "\u{1F9ED}",
-    calendar: "\u{1F4C5}", check: "\u{2705}", dot: "\u{25AB}\u{FE0F}",
+    phone: "\u{1F4F2}",
     hot: "\u{1F525}", warm: "\u{1F324}\u{FE0F}", cold: "\u{2744}\u{FE0F}"
   };
   const temperature = { hot: `${icons.hot} Quente`, warm: `${icons.warm} Morno`, cold: `${icons.cold} Frio` }[lead.temperature] || "Não avaliada";
-  const alignedGroups = qualificationGroups.map(group => {
-    const checked = group.items.filter(([key]) => lead.qualification?.[key]);
-    const note = lead.qualificationNotes?.[group.key];
-    if (!checked.length && !note) return "";
-    return `*${group.key} · ${group.title}*\n${checked.map(([, label]) => `${icons.check} ${label}`).join("\n")}${note ? `${checked.length ? "\n" : ""}\u{1F4AC} ${note}` : ""}`;
-  }).filter(Boolean);
-  const aligned = alignedGroups.length ? alignedGroups.join("\n\n") : `${icons.dot} Contexto mínimo — seguir a qualificação na conversa.`;
-  const message = `${icons.person} *NOVO LEAD · ${clinic.name}*\n\nOi, ${clinic.hunter}! Seguem as informações para continuar o atendimento sem repetir o que já foi alinhado.\n\n*Dados do contato*\n• Nome: ${lead.name || "Não informado"}\n• Instagram: ${lead.instagram || "Não informado"}\n• WhatsApp: ${lead.whatsapp || "Não informado"}\n• Interesse: ${lead.interest || "Ainda não identificado"}\n• Temperatura: ${temperature}\n\n${icons.compass} *Contexto já alinhado*\n${aligned}\n\n${icons.calendar} Captado em ${formatDate(lead.prospectedAt, true)}`;
+  const notes = qualificationGroups.map(group => String(lead.qualificationNotes?.[group.key] || "").trim()).filter(Boolean);
+  const checked = qualificationItems.filter(([key]) => lead.qualification?.[key]).map(([, label]) => label);
+  const aligned = (notes.length ? notes : checked).slice(0, 3).join("; ") || "Contexto mínimo; continuar a qualificação.";
+  const leadIdentity = [lead.name || "Nome não informado", lead.instagram].filter(Boolean).join(" · ");
+  const message = `${icons.phone} *${clinic.name}*\n*${leadIdentity}*\n${lead.whatsapp || "WhatsApp não informado"}\n\nInteresse: ${lead.interest || "Não identificado"}\nTemperatura: ${temperature}\nJá alinhado: ${aligned.slice(0, 240)}`;
   showToast(`Mensagem preparada para ${clinic.hunter || "a Hunter"}`);
   window.open(`https://wa.me/${clinic.hunterPhone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
 }
@@ -1971,25 +2150,27 @@ function canvasMetric(ctx, x, y, value, label, tone = "#b58b00", width = 282, ic
 
 async function exportReport(share = false) {
   const stats = periodStats(state.reportPeriod);
+  const cohort = cohortStats(state.reportPeriod);
+  const monthly = periodStats("month");
   const actions = reportActionCount(stats);
-  const responseRate = rate(stats.responses, stats.directs);
-  const phoneRate = rate(stats.phonesTotal, stats.responses);
-  const qualificationRate = rate(stats.huntersTotal, stats.phonesTotal);
-  const appointmentRate = rate(stats.scheduledTotal, stats.huntersTotal);
-  const attendanceRate = rate(stats.attendedTotal, stats.scheduledTotal);
-  const responseTotalRate = rate(stats.responses, stats.directs);
-  const phoneTotalRate = rate(stats.phonesTotal, stats.directs);
-  const qualificationTotalRate = rate(stats.huntersTotal, stats.directs);
-  const appointmentTotalRate = rate(stats.scheduledTotal, stats.directs);
-  const attendanceTotalRate = rate(stats.attendedTotal, stats.directs);
+  const responseRate = rate(cohort.responses, cohort.mapped);
+  const phoneRate = rate(cohort.phones, cohort.responses);
+  const qualificationRate = rate(cohort.hunters, cohort.phones);
+  const appointmentRate = rate(cohort.scheduled, cohort.hunters);
+  const attendanceRate = rate(cohort.attended, cohort.scheduled);
+  const responseTotalRate = rate(cohort.responses, cohort.mapped);
+  const phoneTotalRate = rate(cohort.phones, cohort.mapped);
+  const qualificationTotalRate = rate(cohort.hunters, cohort.mapped);
+  const appointmentTotalRate = rate(cohort.scheduled, cohort.mapped);
+  const attendanceTotalRate = rate(cohort.attended, cohort.mapped);
   const reportClinicRows = state.clinics.filter(clinic => clinic.active).map(clinic => ({
     clinic,
     ...clinicReportStats(clinic.id, state.reportPeriod, stats)
-  })).filter(row => row.actions || row.captured || row.qualified || row.scheduled || row.attended)
-    .sort((a, b) => (b.captured - a.captured) || (b.qualified - a.qualified) || (b.actions - a.actions));
+  })).filter(row => row.actions || row.captured || row.qualifiedTotal || row.scheduledTotal || row.attendedTotal)
+    .sort((a, b) => (b.captured - a.captured) || (b.qualifiedTotal - a.qualifiedTotal) || (b.actions - a.actions));
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = Math.max(1270, 960 + reportClinicRows.length * 82 + 150);
+  canvas.height = Math.max(1510, 1215 + reportClinicRows.length * 82 + 150);
   const ctx = canvas.getContext("2d");
 
   const background = ctx.createLinearGradient(0, 0, 1080, canvas.height);
@@ -2048,13 +2229,13 @@ async function exportReport(share = false) {
   ctx.beginPath(); ctx.arc(965, 256, 125, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,.72)";
   ctx.font = "700 16px Arial";
-  ctx.fillText("FUNIL DO PERÍODO", 104, 284);
+  ctx.fillText("MOVIMENTAÇÕES DO PERÍODO", 104, 284);
   const heroMetrics = [
     [actions, "Ações realizadas"],
-    [stats.phones, "Telefones mapeados"],
-    [stats.hunters, "Qualif. e encaminhados"],
-    [stats.scheduled, "Agendados"],
-    [stats.attended, "Comparecidos"]
+    [stats.phonesTotal, "Telefones captados"],
+    [stats.huntersTotal, "Encaminhados"],
+    [stats.scheduledTotal, "Agend. confirmados"],
+    [stats.attendedTotal, "Comparec. registrados"]
   ];
   heroMetrics.forEach(([value, label], index) => {
     const x = 104 + index * 176;
@@ -2088,21 +2269,27 @@ async function exportReport(share = false) {
     canvasMetric(ctx, x, 534, value, label, tone, 214, icon);
   });
 
+  canvasRoundedRect(ctx, 82, 666, 916, 56, 16, "#fff9dc", "#eadf9f");
+  ctx.fillStyle = "#68717d";
+  ctx.font = "500 14px Arial";
+  canvasFitText(ctx, "Resultados usam a data em que cada atualização foi registrada; agendamentos e comparecimentos podem vir de leads anteriores.", 104, 694, 870, { size: 14, minSize: 11, weight: 500, color: "#68717d" });
+
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Eficiência do funil", 82, 690);
-  canvasRoundedRect(ctx, 82, 714, 916, 142, 24, "#fff2b8");
+  ctx.fillText("Conversão da safra mapeada", 82, 770);
+  canvasFitText(ctx, reportCohortLabel(cohort), 998, 770, 510, { size: 14, minSize: 10, weight: 500, color: "#68717d", align: "right" });
+  canvasRoundedRect(ctx, 82, 794, 916, 142, 24, "#fff2b8");
   ctx.fillStyle = "#68717d";
   ctx.font = "500 15px Arial";
-  ctx.fillText("Etapa anterior", 112, 748);
+  ctx.fillText("Etapa anterior", 112, 828);
   ctx.fillStyle = "#b58b00";
   ctx.font = "700 15px Arial";
-  ctx.fillText("/", 215, 748);
+  ctx.fillText("/", 215, 828);
   ctx.fillStyle = "#68717d";
   ctx.font = "500 15px Arial";
-  ctx.fillText("total de directs", 232, 748);
+  ctx.fillText("total da safra", 232, 828);
   ctx.strokeStyle = "#e9d77b";
-  ctx.beginPath(); ctx.moveTo(112, 766); ctx.lineTo(968, 766); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(112, 846); ctx.lineTo(968, 846); ctx.stroke();
   const efficiency = [
     ["Responderam", responseRate, responseTotalRate],
     ["Telefones", phoneRate, phoneTotalRate],
@@ -2113,34 +2300,58 @@ async function exportReport(share = false) {
   efficiency.forEach(([label, previousValue, totalValue], index) => {
     const x = 112 + index * 174;
     const centerX = x + 68;
-    canvasFitText(ctx, label, centerX, 797, 150, { size: 12, minSize: 10, weight: 700, color: "#4d5561", align: "center" });
+    canvasFitText(ctx, label, centerX, 877, 150, { size: 12, minSize: 10, weight: 700, color: "#4d5561", align: "center" });
     ctx.fillStyle = "#8a6800";
     ctx.font = "700 22px Arial";
     ctx.textAlign = "right";
-    ctx.fillText(`${previousValue}%`, centerX - 8, 833);
+    ctx.fillText(`${previousValue}%`, centerX - 8, 913);
     ctx.fillStyle = "#68717d";
     ctx.font = "600 18px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("/", centerX, 833);
+    ctx.fillText("/", centerX, 913);
     ctx.fillStyle = "#8a6800";
     ctx.font = "700 22px Arial";
     ctx.textAlign = "left";
-    ctx.fillText(`${totalValue}%`, centerX + 8, 833);
+    ctx.fillText(`${totalValue}%`, centerX + 8, 913);
     ctx.textAlign = "left";
   });
 
   ctx.fillStyle = "#202631";
   ctx.font = "700 24px Arial";
-  ctx.fillText("Resultado por clínica", 82, 910);
+  ctx.fillText("Meta do mês atual", 82, 990);
+  ctx.fillStyle = "#68717d";
+  ctx.font = "400 16px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText(new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date()), 998, 990);
+  ctx.textAlign = "left";
+  canvasRoundedRect(ctx, 82, 1014, 916, 100, 22, "#fff9dc", "#eadf9f");
+  const monthlyGoals = [
+    [monthly.phonesTotal, state.goals.phones, "Telefones captados"],
+    [monthly.scheduledTotal, state.goals.scheduled, "Agendamentos confirmados"]
+  ];
+  monthlyGoals.forEach(([value, goal, label], index) => {
+    const x = 112 + index * 438;
+    ctx.fillStyle = "#202631";
+    ctx.font = "700 24px Arial";
+    ctx.fillText(`${value} / ${goal}`, x, 1057);
+    canvasFitText(ctx, label, x + 112, 1057, 285, { size: 15, minSize: 12, weight: 500, color: "#68717d" });
+    canvasRoundedRect(ctx, x, 1080, 390, 8, 4, "#efe3aa");
+    const progressWidth = goal ? Math.min(390, value / goal * 390) : 0;
+    if (progressWidth > 0) canvasRoundedRect(ctx, x, 1080, Math.max(8, progressWidth), 8, 4, "#d3a900");
+  });
+
+  ctx.fillStyle = "#202631";
+  ctx.font = "700 24px Arial";
+  ctx.fillText("Resultado por clínica", 82, 1170);
   ctx.fillStyle = "#68717d";
   ctx.font = "400 17px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 910);
+  ctx.fillText(`${reportClinicRows.length} ${reportClinicRows.length === 1 ? "clínica" : "clínicas"} no período`, 998, 1170);
   ctx.textAlign = "left";
   const clinicRows = reportClinicRows;
   if (clinicRows.length) {
-    clinicRows.forEach(({ clinic, actions: clinicActions, phones, captured, qualified, scheduled, attended }, index) => {
-      const y = 935 + index * 82;
+    clinicRows.forEach(({ clinic, actions: clinicActions, captured, phonesTotal, qualifiedTotal, scheduledTotal, attendedTotal }, index) => {
+      const y = 1195 + index * 82;
       if (index % 2 === 0) canvasRoundedRect(ctx, 82, y - 4, 916, 72, 15, "#fff9dc");
       ctx.fillStyle = clinic.color || "#d3a900";
       ctx.beginPath(); ctx.arc(101, y + 25, 17, 0, Math.PI * 2); ctx.fill();
@@ -2151,7 +2362,7 @@ async function exportReport(share = false) {
       ctx.textAlign = "left";
       canvasFitText(ctx, clinic.name, 134, y + 21, 390, { size: 19, minSize: 14, weight: 700, color: "#202631" });
       canvasFitText(ctx, `${captured} ${captured === 1 ? "lead captado" : "leads captados"} · ${clinicActions} ${clinicActions === 1 ? "ação" : "ações"}`, 134, y + 47, 460, { size: 16, minSize: 12, weight: 700, color: "#8a6800" });
-      canvasFitText(ctx, `${phones} telefone · ${qualified} Hunter · ${scheduled} agend. · ${attended} comp.`, 982, y + 32, 380, { size: 15, minSize: 11, weight: 600, color: "#59616d", align: "right" });
+      canvasFitText(ctx, `${phonesTotal} telef. · ${qualifiedTotal} encamin. · ${scheduledTotal} agend. · ${attendedTotal} comp.`, 982, y + 32, 400, { size: 15, minSize: 10, weight: 600, color: "#59616d", align: "right" });
       if (index < clinicRows.length - 1) {
         ctx.strokeStyle = "#ebe3c8";
         ctx.beginPath(); ctx.moveTo(134, y + 74); ctx.lineTo(982, y + 74); ctx.stroke();
@@ -2160,7 +2371,7 @@ async function exportReport(share = false) {
   } else {
     ctx.fillStyle = "#7a8782";
     ctx.font = "400 18px Arial";
-    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 960);
+    ctx.fillText("As clínicas aparecem aqui quando houver atividade no período.", 82, 1215);
   }
 
   const footerY = canvas.height - 100;

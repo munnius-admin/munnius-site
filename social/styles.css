@@ -451,6 +451,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .operation-hero .hero-copy>p:last-child{margin-bottom:0}
 .home-clinic-card{gap:10px;padding:12px}
 .home-clinic-card .clinic-avatar{width:38px;height:38px;border-radius:12px;flex:0 0 auto}
+.clinic-avatar{overflow:hidden}.clinic-avatar img{width:100%;height:100%;display:block;object-fit:cover}
 .home-clinic-card .clinic-main strong,.home-clinic-card .clinic-main span{
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
@@ -497,5 +498,24 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     color:#fff;background:rgba(255,255,255,.2);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 8px 20px rgba(92,63,0,.12)
   }
-  .topbar .app-mark{display:grid}
+  .sidebar-brand{
+    position:absolute;top:24px;left:0;right:0;display:grid;justify-items:center;gap:6px;color:#fff
+  }
+  .sidebar-brand>span{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#252b35;box-shadow:0 8px 20px rgba(72,51,0,.2)}
+  .sidebar-brand img{width:22px;height:22px;filter:brightness(0) invert(1)}
+  .sidebar-brand small{font-size:.58rem;font-weight:800;letter-spacing:.04em}
 }
+
+.topbar-copy{display:grid;gap:3px}.topbar-copy h1{margin:0}.topbar-copy .overline{margin:0;color:var(--muted);font-size:.63rem;letter-spacing:.05em;text-transform:none}
+.sidebar-brand{display:none}
+.report-event-note{display:flex;align-items:flex-start;gap:8px;margin:0 0 20px;padding:11px 12px;border:1px solid #eadf9f;border-radius:14px;background:#fff9dc;color:var(--muted);font-size:.62rem;line-height:1.45}
+.report-event-note .material-symbols-outlined{flex:0 0 auto;color:#8a6800;font-size:1rem}
+.report-monthly-goal{display:grid;gap:8px;margin-bottom:20px}
+.report-monthly-goal>div{display:grid;grid-template-columns:32px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:3px 9px;padding:11px;border:1px solid #eadf9f;border-radius:14px;background:#fff9dc}
+.report-monthly-goal>div>.material-symbols-outlined{grid-row:1/3;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#fff0a8;color:#8a6800;font-size:1rem}
+.report-monthly-goal p{margin:0}.report-monthly-goal strong,.report-monthly-goal small{display:block}.report-monthly-goal strong{font-size:.76rem}.report-monthly-goal small{margin-top:2px;color:var(--muted);font-size:.56rem}
+.report-monthly-goal i{grid-column:2;display:block;height:6px;overflow:hidden;border-radius:5px;background:#efe3aa}.report-monthly-goal i b{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#f4cf4f,#d3a900)}
+.kanban-volume-card{display:flex;align-items:center;gap:9px;padding:12px;border:1px dashed #d8bd4c;border-radius:14px;background:#fff9dc}
+.kanban-volume-card>span{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:#fff0a8;color:#8a6800;font-size:1rem}
+.kanban-volume-card strong,.kanban-volume-card small{display:block}.kanban-volume-card strong{font-size:.67rem}.kanban-volume-card small{margin-top:3px;color:var(--muted);font-size:.54rem;line-height:1.35}.kanban-volume-card.lost{border-color:#e1bbb1;background:#fff5f1}.kanban-volume-card.lost>span{background:#ffe6dd;color:#a65340}
+@media(min-width:760px){.sidebar-brand{display:grid}.report-monthly-goal{grid-template-columns:1fr 1fr}}

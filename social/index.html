@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=27">
+  <link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
   <main id="app">
@@ -76,12 +76,9 @@
 
     <section class="app-shell hidden" id="app-shell">
       <header class="topbar">
-        <div class="app-brand">
-          <span class="app-mark"><img src="assets/munnius-mark.png" alt="Munnius"></span>
-          <div>
-            <p class="overline" id="greeting">Bem-vindo</p>
-            <h1 id="page-title">Visão geral</h1>
-          </div>
+        <div class="topbar-copy">
+          <h1 id="page-title">Visão geral</h1>
+          <p class="overline" id="greeting">Bem-vindo</p>
         </div>
         <button class="avatar-button" id="profile-avatar-button" data-view="more" aria-label="Abrir perfil">••</button>
       </header>
@@ -113,9 +110,9 @@
               <div><span class="material-symbols-outlined">event_available</span><p><strong id="goal-scheduled-progress">0 / 30</strong><small>Agendamentos</small></p><i class="goal-progress"><b id="goal-scheduled-bar"></b></i></div>
             </div>
           </article>
-          <div class="section-heading"><div><p class="overline">Próximo passo</p><h2>Fila de oportunidades</h2></div><button class="small-link" data-view="leads">Abrir CRM</button></div>
+          <div class="section-heading"><div><p class="overline">Estoque atual do CRM</p><h2>Fila de oportunidades</h2></div><button class="small-link" data-view="leads">Abrir CRM</button></div>
             <div class="pipeline-strip">
-              <button data-view="reports"><span class="pipeline-icon"><span class="material-symbols-outlined">send</span></span><strong id="pipeline-mapped">0</strong><small>Directs enviados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">person_search</span></span><strong id="pipeline-mapped">0</strong><small>Leads mapeados</small></button>
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">forum</span></span><strong id="pipeline-talking">0</strong><small>Conversando</small></button>
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">schedule</span></span><strong id="pipeline-followups">0</strong><small>Em follow-up</small></button>
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">person_cancel</span></span><strong id="pipeline-lost">0</strong><small>Perdidos</small></button>
@@ -222,11 +219,12 @@
             <div class="report-heading"><div><h2 id="report-label">Hoje</h2><p id="report-date"></p></div><span class="report-badge">Social selling</span></div>
             <div class="report-metrics">
               <div><strong id="report-actions-value">0</strong><span>Ações realizadas</span></div>
-              <div><strong id="report-phones">0</strong><span>Telefones mapeados</span></div>
-              <div><strong id="report-hunters">0</strong><span>Qualificados e encaminhados</span></div>
-              <div><strong id="report-scheduled">0</strong><span>Agendados</span></div>
-              <div><strong id="report-attended">0</strong><span>Comparecidos</span></div>
+              <div><strong id="report-phones">0</strong><span>Telefones captados no período</span></div>
+              <div><strong id="report-hunters">0</strong><span>Encaminhados no período</span></div>
+              <div><strong id="report-scheduled">0</strong><span>Agendamentos confirmados no período</span></div>
+              <div><strong id="report-attended">0</strong><span>Comparecimentos registrados no período</span></div>
             </div>
+            <p class="report-event-note"><span class="material-symbols-outlined">info</span>Os resultados acima mostram quando cada atualização foi registrada. Um agendamento de hoje pode vir de um lead encaminhado antes; um comparecimento pode pertencer a um agendamento de outro período.</p>
             <div class="report-section-title"><span>Atividade da operação</span><small id="report-actions-total">0 ações realizadas</small></div>
             <div class="report-actions-grid">
               <div><span class="material-symbols-outlined">favorite</span><strong id="report-likes">0</strong><small>Curtidas</small></div>
@@ -235,13 +233,18 @@
               <div><span class="material-symbols-outlined">mark_chat_read</span><strong id="report-responses">0</strong><small>Directs respondidos</small></div>
             </div>
             <div class="report-chart" id="report-chart"></div>
-            <div class="report-section-title"><span>Eficiência do funil</span><small>Conversões do período</small></div>
+            <div class="report-section-title"><span>Conversão da safra mapeada</span><small id="report-cohort-label">Leads iniciados no período, acompanhados até o estágio atual</small></div>
             <div class="report-efficiency-grid">
-              <div><small class="efficiency-stage">Responderam</small><span><strong id="report-response-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-response-total-rate">0%</strong><small>Dos directs</small></span></div>
-              <div><small class="efficiency-stage">Telefones</small><span><strong id="report-phone-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-phone-total-rate">0%</strong><small>Dos directs</small></span></div>
-              <div><small class="efficiency-stage">Encaminhados</small><span><strong id="report-qualification-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-qualification-total-rate">0%</strong><small>Dos directs</small></span></div>
-              <div><small class="efficiency-stage">Agendados</small><span><strong id="report-appointment-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-appointment-total-rate">0%</strong><small>Dos directs</small></span></div>
-              <div><small class="efficiency-stage">Compareceram</small><span><strong id="report-attendance-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-attendance-total-rate">0%</strong><small>Dos directs</small></span></div>
+              <div><small class="efficiency-stage">Responderam</small><span><strong id="report-response-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-response-total-rate">0%</strong><small>Da safra</small></span></div>
+              <div><small class="efficiency-stage">Telefones</small><span><strong id="report-phone-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-phone-total-rate">0%</strong><small>Da safra</small></span></div>
+              <div><small class="efficiency-stage">Encaminhados</small><span><strong id="report-qualification-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-qualification-total-rate">0%</strong><small>Da safra</small></span></div>
+              <div><small class="efficiency-stage">Agendados</small><span><strong id="report-appointment-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-appointment-total-rate">0%</strong><small>Da safra</small></span></div>
+              <div><small class="efficiency-stage">Compareceram</small><span><strong id="report-attendance-rate">0%</strong><small>Etapa anterior</small></span><span><strong id="report-attendance-total-rate">0%</strong><small>Da safra</small></span></div>
+            </div>
+            <div class="report-section-title"><span>Meta do mês atual</span><small id="report-goal-month">Acompanhamento mensal</small></div>
+            <div class="report-monthly-goal">
+              <div><span class="material-symbols-outlined">phone_in_talk</span><p><strong id="report-goal-phones">0 / 60</strong><small>Telefones captados</small></p><i><b id="report-goal-phones-bar"></b></i></div>
+              <div><span class="material-symbols-outlined">event_available</span><p><strong id="report-goal-scheduled">0 / 30</strong><small>Agendamentos confirmados</small></p><i><b id="report-goal-scheduled-bar"></b></i></div>
             </div>
             <div class="report-section-title"><span>Por clínica</span><small>Resultado e esforço</small></div>
             <div class="report-clinic-breakdown" id="report-clinic-breakdown"></div>
@@ -255,6 +258,7 @@
       </div>
 
       <nav class="bottom-nav" aria-label="Navegação principal">
+        <span class="sidebar-brand" aria-label="Munnius"><span><img src="assets/munnius-mark.png" alt=""></span><small>Munnius</small></span>
         <button class="active" data-view="home"><span class="material-symbols-outlined">home</span><small>Início</small></button>
         <button data-view="session"><span class="material-symbols-outlined">timer</span><small>Sessão</small></button>
         <button data-view="leads"><span class="material-symbols-outlined">group</span><small>Leads</small></button>
@@ -271,7 +275,7 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="config.js?v=27"></script>
-  <script type="module" src="app.js?v=27"></script>
+  <script src="config.js?v=28"></script>
+  <script type="module" src="app.js?v=28"></script>
 </body>
 </html>
