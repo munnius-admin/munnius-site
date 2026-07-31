@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=31";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=32";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -142,6 +142,7 @@ function normalizeState(candidate) {
   });
   migrateAnonymousDirects(normalized);
   migrateAnonymousResponsePlaceholders(normalized);
+  applyWorkspaceDataCorrections(normalized);
   return normalized;
 }
 
@@ -205,6 +206,42 @@ function migrateAnonymousResponsePlaceholders(target) {
     target.deletedLeadIds = [...new Set(target.deletedLeadIds)];
   }
   target.anonymousResponsePlaceholdersVersion = 1;
+}
+
+function applyWorkspaceDataCorrections(target) {
+  target.dataCorrections ||= {};
+  const correctionKey = "camilaAnonymousResponses20260731";
+  if (target.dataCorrections[correctionKey]) return;
+  const clinic = (target.clinics || []).find(item => /camila bandeira/i.test(`${item.name || ""} ${item.doctor || ""}`));
+  if (!clinic) return;
+  const responseBatches = (target.anonymousConversationBatches || [])
+    .filter(batch => batch.clinicId === clinic.id && String(batch.respondedAt || "").slice(0, 10) === "2026-07-31");
+  const current = responseBatches.reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+  if (current === 9) {
+    target.dataCorrections[correctionKey] = true;
+    return;
+  }
+  if (current !== 5 || !responseBatches.length) return;
+  let quantityToMove = 4;
+  const mappedBatches = (target.anonymousDirectBatches || [])
+    .filter(batch => batch.clinicId === clinic.id && Number(batch.remaining || 0) > 0)
+    .sort((a, b) => new Date(a.sentAt || 0) - new Date(b.sentAt || 0));
+  const mappedAvailable = mappedBatches.reduce((total, batch) => total + Number(batch.remaining || 0), 0);
+  if (mappedAvailable < quantityToMove) return;
+  mappedBatches.forEach(batch => {
+    if (!quantityToMove) return;
+    const moved = Math.min(quantityToMove, Number(batch.remaining || 0));
+    batch.remaining = Number(batch.remaining || 0) - moved;
+    batch.consumed = Number(batch.consumed || 0) + moved;
+    batch.updatedAt = new Date().toISOString();
+    quantityToMove -= moved;
+  });
+  if (quantityToMove) return;
+  const targetBatch = responseBatches.sort((a, b) => new Date(a.respondedAt || 0) - new Date(b.respondedAt || 0))[0];
+  targetBatch.quantity = Number(targetBatch.quantity || 0) + 4;
+  targetBatch.remaining = Number(targetBatch.remaining || 0) + 4;
+  targetBatch.updatedAt = new Date().toISOString();
+  target.dataCorrections[correctionKey] = true;
 }
 
 function loadState() {
@@ -514,6 +551,17 @@ function consumeOldestAnonymousConversation(clinicId) {
   return batch;
 }
 
+function consumeAnonymousConversationBatch(batchId) {
+  expireAnonymousDirects();
+  const batch = (state.anonymousConversationBatches || [])
+    .find(item => item.id === batchId && Number(item.remaining || 0) > 0);
+  if (!batch) return null;
+  batch.remaining = Math.max(0, Number(batch.remaining || 0) - 1);
+  batch.consumed = Number(batch.consumed || 0) + 1;
+  batch.updatedAt = new Date().toISOString();
+  return batch;
+}
+
 function advanceAnonymousLead(clinicId, stage, at = new Date().toISOString(), sessionId = null, source = "manual_web") {
   if (stage === "responded") {
     const sourceBatch = consumeOldestAnonymousDirect(clinicId);
@@ -554,6 +602,32 @@ function anonymousBatchDeadline(batch, kind) {
   const limit = kind === "talking" ? 14 : 7;
   const elapsed = Math.max(0, Math.floor((Date.now() - reference) / 86400000));
   return `${Math.max(0, limit - elapsed)}d para expirar`;
+}
+
+function anonymousPipelineDisplayBatches(kind, priorityFilter = "all") {
+  const batches = anonymousPipelineBatches(kind, priorityFilter);
+  if (kind !== "mapped") return batches;
+  const grouped = new Map();
+  batches.forEach(batch => {
+    const deadline = anonymousBatchDeadline(batch, kind);
+    const key = `${batch.clinicId}:${deadline}`;
+    const current = grouped.get(key) || {
+      ...batch,
+      id: `anonymous-group-${key}`,
+      remaining: 0,
+      groupedBatchIds: []
+    };
+    current.remaining += Number(batch.remaining || 0);
+    current.groupedBatchIds.push(batch.id);
+    if (new Date(batch.sentAt || 0) < new Date(current.sentAt || 0)) current.sentAt = batch.sentAt;
+    grouped.set(key, current);
+  });
+  return [...grouped.values()].sort((a, b) => {
+    const clinicOrder = clinicPriority(clinicById(a.clinicId)).order - clinicPriority(clinicById(b.clinicId)).order;
+    if (clinicOrder) return clinicOrder;
+    return String(clinicById(a.clinicId)?.name || "").localeCompare(String(clinicById(b.clinicId)?.name || ""), "pt-BR")
+      || new Date(a.sentAt || 0) - new Date(b.sentAt || 0);
+  });
 }
 
 function recordDirectProgress({ clinicId, instagram: rawInstagram = "", stage = "sent", at = new Date().toISOString(), phone = "", source = "manual_web", sessionId = null }) {
@@ -1265,14 +1339,14 @@ function renderLeads() {
   $("#lead-kanban").innerHTML = columns.map(column => {
     const items = filtered.filter(column.matcher);
     const anonymousKind = column.key === "new" ? "mapped" : column.key === "talking" ? "talking" : null;
-    const anonymousBatches = anonymousKind ? anonymousPipelineBatches(anonymousKind, priorityFilter) : [];
+    const anonymousBatches = anonymousKind ? anonymousPipelineDisplayBatches(anonymousKind, priorityFilter) : [];
     const anonymousVolume = anonymousBatches.reduce((total, batch) => total + Number(batch.remaining || 0), 0);
     const volumeCard = anonymousBatches.map(batch => {
       const clinic = clinicById(batch.clinicId);
-      const reference = anonymousKind === "talking" ? batch.respondedAt : batch.sentAt;
       return `<article class="kanban-volume-card ${column.key}">
         <span class="material-symbols-outlined">${column.key === "new" ? "alternate_email" : "forum"}</span>
-        <div><strong>${batch.remaining} ${batch.remaining === 1 ? "lead anônimo" : "leads anônimos"}</strong><small>${escapeHtml(clinic?.name || "Clínica")} · ${formatDate(reference)} · ${anonymousBatchDeadline(batch, anonymousKind)}</small></div>
+        <div><strong>${batch.remaining} ${batch.remaining === 1 ? "lead anônimo" : "leads anônimos"}</strong><small>${escapeHtml(clinic?.name || "Clínica")} · ${anonymousBatchDeadline(batch, anonymousKind)}</small></div>
+        ${anonymousKind === "talking" ? `<button type="button" data-anonymous-hunter="${batch.id}" aria-label="Identificar lead e enviar à Hunter"><span class="material-symbols-outlined">person_edit</span>Identificar</button>` : ""}
       </article>`;
     }).join("");
     return `<section class="kanban-column" data-kanban-column="${column.key}">
@@ -1301,6 +1375,10 @@ function renderLeads() {
   $$("[data-quick-hunter-update]").forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
     openHunterUpdate(button.dataset.quickHunterUpdate);
+  }));
+  $$("[data-anonymous-hunter]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    openLeadForm({ mode: "phone", anonymousBatchId: button.dataset.anonymousHunter });
   }));
   renderHunterFollowups(filtered);
 }
@@ -1370,7 +1448,9 @@ function markLeadResponded(leadId) {
 function sendLeadToHunter(leadId) {
   const lead = leadById(leadId);
   if (!lead) return;
-  if (!lead.whatsapp) return openLeadForm({ leadId, mode: "phone" });
+  if (!lead.whatsapp || !String(lead.name || "").trim() || !isUsableLeadHandle(lead.clinicId, lead.instagram)) {
+    return openLeadForm({ leadId, mode: "phone" });
+  }
   const clinic = clinicById(lead.clinicId);
   const now = new Date().toISOString();
   lead.status = "sent_to_hunter";
@@ -1855,8 +1935,12 @@ function isBantComplete(lead = {}) {
   return qualificationProgress(lead.qualification).complete;
 }
 
-function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
+function openLeadForm({ leadId = null, mode = "mapped", onSaved = null, anonymousBatchId = null } = {}) {
   const originalLead = leadId ? leadById(leadId) : null;
+  const selectedAnonymousBatch = anonymousBatchId
+    ? (state.anonymousConversationBatches || []).find(batch => batch.id === anonymousBatchId && Number(batch.remaining || 0) > 0)
+    : null;
+  if (anonymousBatchId && !selectedAnonymousBatch) return showToast("Esse grupo já foi atualizado em outro aparelho.");
   const lead = originalLead || {};
   const edit = Boolean(originalLead);
   const isPhone = mode === "phone";
@@ -1867,10 +1951,10 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
   const initialBant = qualificationProgress(lead.qualification);
   openSheet(`<h2 class="sheet-title">${title}</h2><p class="sheet-subtitle">${isPhone ? "Conclua a pré-qualificação e entregue a oportunidade sem a closer repetir perguntas." : "Cole o @ ou o link do Instagram para não perder a conversa."}</p>
     <form class="sheet-form" id="lead-form">
-      ${field("lead-instagram", "Instagram", lead.instagram, !isResponse, "text", "@usuario ou link")}
-      ${field("lead-name", "Nome", lead.name, false, "text", "Nome do lead")}
+      ${field("lead-instagram", "Instagram", lead.instagram, !isResponse || Boolean(selectedAnonymousBatch), "text", "@usuario ou link")}
+      ${field("lead-name", "Nome", lead.name, isPhone, "text", "Nome do lead")}
       ${edit && !isPhone ? field("lead-phone", "WhatsApp", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
-      <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic">${state.clinics.filter(c => c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
+      <div class="field"><label for="lead-clinic">Clínica</label><select id="lead-clinic" ${selectedAnonymousBatch ? "disabled" : ""}>${state.clinics.filter(c => c.active).map(c => `<option value="${c.id}" ${(lead.clinicId || selectedAnonymousBatch?.clinicId || state.session?.clinicId) === c.id ? "selected" : ""}>${c.name}</option>`).join("")}</select></div>
       <div class="qualification-block">
         <div class="qualification-heading"><span class="material-symbols-outlined">verified</span><div><strong>Contexto da conversa</strong><small>Evita que a closer repita o que já foi falado.</small></div></div>
         ${field("lead-interest", "Procedimento de interesse", lead.interest, false, "text", "Ex.: Botox, avaliação facial")}
@@ -1882,7 +1966,7 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
         ${qualificationChecklist(lead)}
       </div>
       ${isPhone ? `<div class="phone-gate ${initialBant.complete ? "complete" : ""}" id="phone-gate"><span class="material-symbols-outlined">${initialBant.complete ? "verified" : "fact_check"}</span><p><strong>${initialBant.complete ? "Contexto completo" : "BANT é um guia, não uma trava"}</strong><small>${initialBant.complete ? "A Hunter receberá toda a pré-qualificação." : "Marque o que conseguiu descobrir e envie mesmo com contexto mínimo."}</small></p></div>` : ""}
-      ${isPhone ? field("lead-phone", "WhatsApp para entrega", lead.whatsapp, false, "tel", "(00) 00000-0000") : ""}
+      ${isPhone ? field("lead-phone", "WhatsApp para entrega", lead.whatsapp, true, "tel", "(00) 00000-0000") : ""}
       ${fixedStatus ? "" : `<div class="field"><label for="lead-status">Etapa do lead</label><select id="lead-status">${Object.entries(statusNames).filter(([key]) => key !== "follow_up").map(([key, label]) => `<option value="${key}" ${(lead.status === "follow_up" ? "talking" : lead.status || "new") === key ? "selected" : ""}>${label}</option>`).join("")}</select></div>`}
       ${isPhone ? "" : `<div class="field"><label for="lead-followup">Próximo follow-up <span class="optional">(opcional)</span></label><input id="lead-followup" type="datetime-local"></div>`}
       <button class="primary-button ${isPhone ? "victory-button" : ""}" id="lead-submit" type="submit">${submitLabel}</button>
@@ -1908,6 +1992,10 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       const clinicId = $("#lead-clinic").value;
       const rawInstagram = $("#lead-instagram").value.trim();
       const now = new Date().toISOString();
+      if (isPhone && (!String($("#lead-name").value || "").trim() || !isUsableLeadHandle(clinicId, rawInstagram))) {
+        showToast("Para enviar à Hunter, informe o nome e o @ do lead.");
+        return;
+      }
       if (!rawInstagram && isResponse && !originalLead) {
         advanceAnonymousLead(clinicId, "responded", now, state.session?.id || null, "manual_web");
         if (state.session?.clinicId === clinicId) updateAction("responses");
@@ -1920,8 +2008,10 @@ function openLeadForm({ leadId = null, mode = "mapped", onSaved = null } = {}) {
       }
       const instagram = instagramHandle(rawInstagram);
       const existing = !edit ? state.leads.find(item => item.clinicId === clinicId && instagramHandle(item.instagram) === instagram) : null;
-      const anonymousConversationMatch = !originalLead && !existing && (isResponse || isPhone)
-        ? consumeOldestAnonymousConversation(clinicId)
+      const anonymousConversationMatch = selectedAnonymousBatch
+        ? consumeAnonymousConversationBatch(selectedAnonymousBatch.id)
+        : !originalLead && !existing && (isResponse || isPhone)
+          ? consumeOldestAnonymousConversation(clinicId)
         : null;
       const anonymousMatch = !originalLead && !existing && (isResponse || isPhone) && !anonymousConversationMatch
         ? consumeOldestAnonymousDirect(clinicId)
@@ -2017,7 +2107,7 @@ function openLeadDetail(leadId) {
     $("#delete-lead").addEventListener("click", () => openDeleteLeadConfirmation(leadId));
     $("#resend-hunter")?.addEventListener("click", () => openHunterWhatsApp(lead));
     $("#hunter-update")?.addEventListener("click", () => openHunterUpdate(leadId));
-    $("#send-hunter")?.addEventListener("click", () => { lead.status = "sent_to_hunter"; lead.sentToHunterAt = new Date().toISOString(); lead.timeline.push({ at: lead.sentToHunterAt, label: `Enviado para ${clinic.hunter}` }); persist(); renderLeads(); renderDashboard(); openHunterWhatsApp(lead); });
+    $("#send-hunter")?.addEventListener("click", () => sendLeadToHunter(leadId));
   });
 }
 
