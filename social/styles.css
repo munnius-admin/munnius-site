@@ -817,6 +817,8 @@ body{background:#f4f7f7;color:var(--ink)}
   --line:#dfe5e7;
 }
 body{background:var(--surface);color:#25313a}
+.auth-brand{border-color:rgba(255,255,255,.82)!important;background:var(--petroleum)!important;box-shadow:0 14px 38px rgba(18,63,80,.18)!important}
+.auth-brand img{filter:none!important}
 .app-shell{background:var(--surface);padding-top:max(14px,env(safe-area-inset-top))}
 .topbar{display:none!important}
 .content{padding-top:10px}
