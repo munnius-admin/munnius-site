@@ -956,3 +956,23 @@ body{background:var(--surface);color:#25313a}
 .goals-sheet-note{display:flex;align-items:flex-start;gap:7px;padding:10px 11px;border-radius:13px;background:#f3f6f7;color:#66747b;font-size:.57rem;line-height:1.45}
 .goals-sheet-note .material-symbols-outlined{color:#507f91;font-size:.9rem}
 @media(max-width:620px){.report-clinic-breakdown>div{grid-template-columns:36px minmax(0,1fr)}.report-clinic-breakdown b{grid-column:1/-1}}
+
+/* v43 · navegação mobile e leitura compacta */
+.subview-back{display:inline-flex;align-items:center;gap:6px;margin:2px 0 8px;border:0;border-radius:11px;padding:8px 10px;background:#edf3f5;color:var(--petroleum);font-size:.61rem;font-weight:800}
+.subview-back .material-symbols-outlined{font-size:.9rem}
+.report-date-filter input{min-width:124px;color:var(--petroleum-dark);color-scheme:light;font-weight:700}
+.report-clinic-breakdown>div{grid-template-columns:36px minmax(82px,1fr) minmax(140px,auto)!important}
+.report-clinic-breakdown b{justify-self:end;width:auto!important;max-width:min(220px,48vw);padding:7px 9px!important;background:#f3f6f7!important;text-align:right!important}
+.report-clinic-breakdown .clinic-current-line{text-align:right!important;line-height:1.45}
+@media(max-width:620px){
+  .report-clinic-breakdown>div{grid-template-columns:34px minmax(68px,1fr) minmax(132px,1.35fr)!important;gap:8px!important;padding:9px 8px!important}
+  .report-clinic-breakdown b{grid-column:auto;max-width:100%}
+}
+@media(max-width:759px){
+  .bottom-nav{border-top:0!important;background:var(--petroleum)!important;box-shadow:0 -8px 28px rgba(9,42,54,.18)}
+  .bottom-nav button{border:0!important;border-radius:13px!important;background:transparent!important;color:rgba(255,255,255,.68)!important}
+  .bottom-nav button.active{border:0!important;border-radius:13px!important;background:rgba(255,255,255,.14)!important;color:#fff!important;box-shadow:none!important}
+  .bottom-nav button:focus-visible{outline:0!important}
+  .nav-profile-avatar{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.16)!important;color:#fff!important}
+  .sidebar-profile>i{border-color:var(--petroleum)!important;background:#f5a9a5;color:#583b39}
+}

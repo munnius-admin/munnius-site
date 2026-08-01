@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=42";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=43";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -1106,6 +1106,7 @@ async function openWorkspace(message = "Bem-vindo") {
   applyAccessMode();
   $("#auth-screen").classList.add("hidden");
   $("#app-shell").classList.remove("hidden");
+  navigate("home", { historyMode: "replace" });
   expireUnansweredLeads();
   renderProfile();
   renderDashboard();
@@ -1139,6 +1140,13 @@ function leadById(id) { return state.leads.find(lead => lead.id === id); }
 function formatDate(value, withTime = false) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("pt-BR", withTime ? { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }).format(new Date(value));
+}
+function dateInputValue(value = new Date()) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 function isSameDay(a, b = new Date()) { const date = new Date(a); return date.toDateString() === new Date(b).toDateString(); }
 function periodBounds(period, reference = null) {
@@ -1293,12 +1301,21 @@ function previousProductTour() {
   renderProductTourStep();
 }
 
-function navigate(view) {
+const navigableViews = new Set(["home", "session", "leads", "reports", "settings", "clinics", "admin", "more"]);
+
+function navigate(view, { historyMode = "none" } = {}) {
+  if (!navigableViews.has(view)) view = "home";
   const currentView = $(".view.active")?.dataset.viewPanel;
+  if (historyMode === "push" && currentView !== view) {
+    history.pushState({ munniusView: view, munniusPreviousView: currentView || "home" }, "", location.href);
+  } else if (historyMode === "replace") {
+    history.replaceState({ ...(history.state || {}), munniusView: view }, "", location.href);
+  }
   if (currentView === "session" && view !== "session") pauseSessionTimer();
   if (view === "session") resumeSessionTimer();
   $$(".view").forEach(panel => panel.classList.toggle("active", panel.dataset.viewPanel === view));
-  $$(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
+  const navigationView = ["clinics", "admin"].includes(view) ? "settings" : view;
+  $$(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.view === navigationView));
   if ($("#page-title")) $("#page-title").textContent = titles[view];
   if (view === "more") {
     localStorage.setItem(`munnius-social-news-v1:${state.profile?.id || "local"}`, "seen");
@@ -2310,7 +2327,7 @@ function renderReport() {
   $$("[data-report-kind]").forEach(button => button.classList.toggle("active", button.dataset.reportKind === reportKind));
   $$("[data-report-card]").forEach(card => card.classList.toggle("hidden", card.dataset.reportCard !== reportKind));
   const reference = state.reportReference || null;
-  $("#report-reference-date").value = reference || "";
+  $("#report-reference-date").value = reference || dateInputValue();
   $("#clear-report-date").classList.toggle("hidden", !reference);
   const stats = periodStats(state.reportPeriod, reference);
   const movements = crmMovementStats(state.reportPeriod, stats, reference);
@@ -3602,8 +3619,13 @@ $("#recovery-form").addEventListener("submit", async event => {
   await openWorkspace("Senha criada. Bem-vindo!");
 });
 $("#signout").addEventListener("click", async () => { await authGateway.signOut(); location.reload(); });
-$$("[data-view]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.view)));
-$("#sidebar-home")?.addEventListener("click", () => navigate("home"));
+$$("[data-view]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.view, { historyMode: "push" })));
+$$("[data-back-view]").forEach(button => button.addEventListener("click", () => {
+  const target = button.dataset.backView || "settings";
+  if (history.state?.munniusPreviousView === target) history.back();
+  else navigate(target, { historyMode: "push" });
+}));
+$("#sidebar-home")?.addEventListener("click", () => navigate("home", { historyMode: "push" }));
 function selectReportingPeriod(period) {
   state.period = period;
   state.reportPeriod = period;
@@ -3619,7 +3641,7 @@ $$("[data-report-period]").forEach(button => button.addEventListener("click", ()
 $$("[data-report-kind]").forEach(button => button.addEventListener("click", () => selectReportKind(button.dataset.reportKind)));
 $$("[data-open-report]").forEach(button => button.addEventListener("click", () => {
   state.reportKind = button.dataset.openReport || "operation";
-  navigate("reports");
+  navigate("reports", { historyMode: "push" });
 }));
 $("#report-reference-date").addEventListener("change", event => {
   state.reportReference = event.target.value || null;
@@ -3674,6 +3696,10 @@ document.addEventListener("keydown", event => { if (event.key === "Escape") clos
 window.addEventListener("resize", () => {
   if (productTourIndex < 0) return;
   positionProductTourFocus(productTourSteps[productTourIndex]?.target);
+});
+window.addEventListener("popstate", event => {
+  if ($("#app-shell").classList.contains("hidden")) return;
+  navigate(event.state?.munniusView || "home");
 });
 
 async function initializeAuth() {
