@@ -131,13 +131,15 @@ em imagem devem ser gerados sob demanda, não armazenados.
 3. Execute, em ordem, os arquivos de `supabase/migrations` no SQL Editor.
 4. Após as migrations `008_platform_admin_and_access.sql` e `010_manager_read_only.sql`, use **Mais → Organizações e
    acessos** no perfil administrador da plataforma para criar organizações e permitir
-   usuários. A função `admin-access` pode enviar o convite por e-mail; login com Google
-   também reivindica automaticamente um e-mail previamente permitido. Nunca exponha a
-   `service_role` no navegador.
+   usuários. O caminho gratuito recomendado é permitir o e-mail e orientar a pessoa a
+   usar **Entrar com Google** com exatamente o mesmo endereço; o primeiro login reivindica
+   o convite e cria o vínculo com a organização. A função `admin-access` tenta enviar o
+   convite quando há entrega disponível e recua com segurança para o login Google quando
+   o provedor de e-mail recusa a entrega. Nunca exponha a `service_role` no navegador.
    O template visual do convite está versionado em `docs/supabase-invite-email-template.html`.
-   No projeto gratuito atual, o Supabase só libera a edição do assunto e do HTML depois
-   da configuração de um SMTP próprio. Sem SMTP, o convite funcional usa o modelo padrão
-   do Supabase; não contrate nem conecte um provedor sem aprovação explícita.
+   No projeto gratuito atual, o envio padrão não deve ser tratado como correio de produção
+   para endereços externos. Templates personalizados e entrega confiável exigem SMTP
+   próprio. Não contrate nem conecte um provedor sem aprovação explícita.
 5. Copie URL e chave pública `anon` para `social/config.js`.
 6. Adicione `https://social.munnius.com.br` às URLs permitidas de autenticação.
 7. Teste dois membros na mesma organização e dois usuários em organizações diferentes.

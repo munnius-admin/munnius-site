@@ -119,7 +119,7 @@ export const authGateway = {
         redirectTo: config.appUrl || `${location.origin}${location.pathname}`
       });
       if (!error) {
-        return { ok: true, message: "E-mail de recuperação enviado. Confira também o spam." };
+        return { ok: true, message: "Solicitação registrada. Se o e-mail não chegar, use Entrar com Google com o mesmo endereço permitido." };
       }
       if (error.code === "over_email_send_rate_limit" || error.status === 429) {
         return {
@@ -292,8 +292,9 @@ export const dataGateway = {
     });
     return {
       inviteId,
-      invitationSent: !invitationError && Boolean(invitation?.ok),
-      invitationStatus: invitation?.status || "allowed"
+      invitationSent: !invitationError && invitation?.status === "invited",
+      invitationStatus: invitationError ? "google_ready" : (invitation?.status || "google_ready"),
+      deliveryMessage: invitation?.message || "Acesso permitido; entrada com Google liberada."
     };
   },
   async setAccessActive(inviteId, active) {

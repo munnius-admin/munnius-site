@@ -678,3 +678,112 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   .bottom-nav small{font-size:.58rem!important}
   .sidebar-brand>span{width:40px!important;height:40px!important;border-radius:13px!important}
 }
+
+/* v38 · paleta Munnius sóbria, pastéis e confiança institucional */
+:root{
+  --ink:#25313a;
+  --muted:#6d7880;
+  --cream:#f4f7f7;
+  --card:#ffffff;
+  --line:#dfe6e8;
+  --green:#123f50;
+  --green-dark:#082f3d;
+  --green-soft:#e8f1f4;
+  --plum:#9b88aa;
+  --coral:#c88e82;
+  --amber:#c9ad68;
+  --pastel-blue:#dfeef3;
+  --pastel-sage:#e2eee7;
+  --pastel-lilac:#ece7f3;
+  --pastel-peach:#f4e6df;
+  --pastel-sand:#f2ecd8;
+  --pastel-rose:#f3e4e7;
+}
+body{background:#f4f7f7;color:var(--ink)}
+.content:before{background:radial-gradient(circle at 15% 12%,rgba(223,238,243,.7),transparent 26%),radial-gradient(circle at 88% 8%,rgba(236,231,243,.55),transparent 24%)}
+.auth-screen{
+  background:
+    radial-gradient(circle at 11% 18%,rgba(223,238,243,.95) 0 11%,transparent 32%),
+    radial-gradient(circle at 91% 12%,rgba(236,231,243,.8) 0 9%,transparent 28%),
+    radial-gradient(circle at 20% 92%,rgba(226,238,231,.86) 0 10%,transparent 30%),
+    #f6f8f8;
+}
+.auth-screen:before{background:#dfeef3;opacity:.46}
+.auth-screen:after{background:#ece7f3;opacity:.5}
+.auth-brand{border-color:rgba(255,255,255,.94);background:rgba(255,255,255,.82);box-shadow:0 14px 38px rgba(18,63,80,.09)}
+.auth-card{border-color:rgba(255,255,255,.95);background:rgba(255,255,255,.94);box-shadow:0 24px 65px rgba(18,63,80,.12)}
+.auth-copy .eyebrow,.auth-copy h1{color:#123f50}
+.social-icon{border-color:rgba(18,63,80,.1);background:rgba(255,255,255,.78);color:#123f50;box-shadow:0 14px 32px rgba(18,63,80,.09)}
+.auth-access-note{display:flex;align-items:flex-start;gap:7px;margin:13px 0 0;padding:10px 11px;border-radius:13px;background:#eef4f6;color:#5f7079;font-size:.65rem;line-height:1.4}
+.auth-access-note .material-symbols-outlined{flex:0 0 auto;color:#507f91;font-size:.95rem}
+.auth-footer a{color:#123f50;font-weight:800;text-decoration:none}
+.field input:focus,.field select:focus{border-color:#7899aa;box-shadow:0 0 0 3px #dfeef3}
+.icon-button,.text-button,.small-link,.undo-link,.phone-report-entry>small,.crm-phone-filter .material-symbols-outlined{color:#365f70}
+.primary-button{background:#123f50;color:#fff;box-shadow:0 9px 22px rgba(18,63,80,.18)}
+.primary-button:hover{background:#082f3d}
+.secondary-button,.clinic-start,.kanban-navigation button{background:#e8eef0!important;color:#364850!important}
+.operation-hero{background:#123f50;box-shadow:0 18px 42px rgba(18,63,80,.18)}
+.operation-hero:before{background:rgba(223,238,243,.14);box-shadow:0 0 0 34px rgba(236,231,243,.055)}
+.operation-hero:after{border-color:rgba(226,238,231,.17)}
+.operation-hero .overline,.operation-hero .card-label,.operation-hero .hero-copy>p:last-child,.hero-value-row>span{color:#fff;opacity:.78}
+.metric-card,.clinic-card,.lead-card,.followup-card,.report-card,.kanban-lead-card,.menu-list,.clinic-option,.goals-card{background:rgba(255,255,255,.97);border-color:#dfe6e8}
+.dashboard-metrics .metric-card:nth-child(1) .ui-icon{background:var(--pastel-blue);color:#466f80}
+.dashboard-metrics .metric-card:nth-child(2) .ui-icon{background:var(--pastel-sage);color:#55796a}
+.dashboard-metrics .metric-card:nth-child(3) .ui-icon{background:var(--pastel-lilac);color:#77698b}
+.dashboard-metrics .metric-card:nth-child(4) .ui-icon{background:var(--pastel-peach);color:#986e63}
+.progress i,.goal-progress b,.report-monthly-goal i b,.bant-progress i{background:#7899aa}
+.session-header,.profile-card,.executive-hero{background:#25313a}
+.profile-card:after{border-color:rgba(223,238,243,.16)}
+.avatar-edit>.material-symbols-outlined{border-color:#25313a;background:#dfeef3;color:#123f50}
+.period-control,.report-kind-control{background:#e8edef}
+.period-control button.active,.report-kind-control button.active{background:#fff;color:#25313a;box-shadow:0 3px 10px rgba(18,63,80,.07)}
+.report-badge,.crm-phone-filter.active,.admin-access-list em.pending{border-color:#d5e3e7!important;background:#e6f0f3!important;color:#365f70!important;box-shadow:none!important}
+.report-actions-grid>div:nth-child(5n+1) .material-symbols-outlined{background:var(--pastel-rose);color:#9b6871}
+.report-actions-grid>div:nth-child(5n+2) .material-symbols-outlined{background:var(--pastel-lilac);color:#76698a}
+.report-actions-grid>div:nth-child(5n+3) .material-symbols-outlined{background:var(--pastel-blue);color:#466f80}
+.report-actions-grid>div:nth-child(5n+4) .material-symbols-outlined{background:var(--pastel-sage);color:#55796a}
+.report-actions-grid>div:nth-child(5n+5) .material-symbols-outlined{background:var(--pastel-peach);color:#986e63}
+.report-actions-grid .material-symbols-outlined{border-radius:10px;padding:5px}
+.report-current-pipeline,.report-monthly-goal>div,.report-crm-movements>div,.phone-funnel-summary>div,.admin-hero,.admin-isolation-note,.admin-delivery-note,.kanban-volume-card,.report-event-note{border-color:#dce6e8;background:#f7fafb}
+.report-monthly-goal>div:nth-child(1),.phone-funnel-summary>div:nth-child(1){background:#f1f7f9}
+.report-monthly-goal>div:nth-child(2),.phone-funnel-summary>div:nth-child(2){background:#f3f7f4}
+.report-monthly-goal>div>.material-symbols-outlined,.phone-funnel-summary .material-symbols-outlined,.phone-audit-icon,.report-crm-movements .material-symbols-outlined,.admin-metrics>article>.material-symbols-outlined,.kanban-volume-card>span{background:#dfeef3;color:#466f80}
+.report-pipeline-stage mark,.report-clinic-breakdown b,.admin-access-avatar{background:#edf3f5;color:#4b6975}
+.report-clinic-breakdown b>span,.report-efficiency-grid strong,.report-date-filter>.material-symbols-outlined,.admin-isolation-note>.material-symbols-outlined,.admin-delivery-note>.material-symbols-outlined{color:#507f91}
+.phone-audit-row>b{background:#e8f1f4;color:#365f70}
+.executive-hero>.material-symbols-outlined{color:#dfeef3}
+.executive-efficiency{background:#edf3f5}
+.report-date-filter input{border-color:#dbe4e7;background:#fff}
+.report-date-filter button,.report-event-note .material-symbols-outlined,.report-crm-movements strong{color:#507f91}
+.clinic-card.has-active-session,.session-clinic-row.active{border-color:rgba(120,153,170,.45);box-shadow:0 8px 24px rgba(18,63,80,.08)}
+.admin-organization-card>header{background:#25313a}
+.admin-organization-card>header>.material-symbols-outlined{background:#dfeef3;color:#123f50}
+.admin-organization-card header button{background:#e2eee7;color:#3f6556}
+.admin-access-list article>button{color:#507f91}
+.kanban-column header>b,.goals-grid>div>.material-symbols-outlined,.kanban-column-tools>b{background:#e5edf0!important;color:#36515d!important}
+.kanban-column-tools>button{border-color:#dfe6e8;background:#fff;color:#507f91}
+.victory-button{background:#123f50!important;color:#fff!important;box-shadow:0 10px 24px rgba(18,63,80,.18)}
+.message-preview{border-color:#d5e4e8;background:#eef5f7;color:#123f50}
+.sidebar-brand{border:0;background:transparent;color:inherit;cursor:pointer}
+.sidebar-brand:focus-visible{outline:2px solid rgba(255,255,255,.72);outline-offset:3px;border-radius:15px}
+.trust-panel{margin:16px 0 0;padding:18px;border:1px solid #dce5e7;border-radius:22px;background:#fff;box-shadow:0 10px 32px rgba(18,63,80,.055)}
+.trust-heading{display:flex;align-items:center;gap:11px}
+.trust-heading>span{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:13px;background:#dfeef3;color:#365f70}
+.trust-heading h2{margin:2px 0 0;font-size:1rem}
+.trust-heading .overline{margin:0;color:#507f91}
+.trust-intro{margin:13px 0 15px;color:var(--muted);font-size:.7rem;line-height:1.55}
+.trust-grid{display:grid;gap:8px}
+.trust-grid article{display:grid;grid-template-columns:34px minmax(0,1fr);gap:9px;align-items:start;padding:11px;border-radius:15px;background:#f7f9f9}
+.trust-grid article:nth-child(1){background:#f0f6f8}.trust-grid article:nth-child(2){background:#f2f6f3}.trust-grid article:nth-child(3){background:#f5f2f7}.trust-grid article:nth-child(4){background:#f8f2ef}
+.trust-grid article>span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.8);color:#507180;font-size:1rem}
+.trust-grid strong,.trust-grid small{display:block}.trust-grid strong{font-size:.67rem}.trust-grid small{margin-top:3px;color:var(--muted);font-size:.56rem;line-height:1.42}
+.trust-panel footer{display:flex;flex-direction:column;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid #e4e9ea;color:#7b858b;font-size:.54rem;line-height:1.4}
+.trust-panel footer a{color:#123f50;font-weight:800;text-decoration:none}
+.admin-delivery-note{display:flex;align-items:flex-start;gap:9px;margin-bottom:14px;padding:11px;border:1px solid #dce6e8;border-radius:14px}
+.admin-delivery-note p{margin:0}.admin-delivery-note strong,.admin-delivery-note small{display:block}.admin-delivery-note strong{font-size:.64rem}.admin-delivery-note small{margin-top:3px;color:var(--muted);font-size:.54rem;line-height:1.4}
+@media(min-width:760px){
+  .bottom-nav button.active{background:rgba(255,255,255,.14)!important;box-shadow:none!important}
+  .sidebar-brand{display:grid!important;justify-items:center;padding:0!important;min-height:auto!important}
+  .trust-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .trust-panel footer{flex-direction:row;align-items:center;justify-content:space-between}
+}

@@ -58,8 +58,13 @@ export default {
     });
     if (invitationError || !invited.user) {
       const alreadyRegistered = /already|registered|exists/i.test(invitationError?.message || "");
-      if (!alreadyRegistered) return response({ error: "Não foi possível enviar o convite agora." }, 400);
-      return response({ ok: true, status: "allowed", message: "E-mail permitido; usuário pode entrar com Google." });
+      const deliveryRestricted = /not authorized|smtp|rate limit|email/i.test(invitationError?.message || "");
+      if (!alreadyRegistered && !deliveryRestricted) return response({ error: "Não foi possível preparar esse acesso agora." }, 400);
+      return response({
+        ok: true,
+        status: "google_ready",
+        message: "Acesso permitido; usuário pode entrar com Google usando o mesmo e-mail."
+      });
     }
 
     const profileId = invited.user.id;

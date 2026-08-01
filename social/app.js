@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=37";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=38";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -122,11 +122,11 @@ function normalizeState(candidate) {
     if (clinic.active == null) clinic.active = true;
     clinic.priority = priorityFromInvestment(clinic.trafficInvestment, clinic.priority);
     clinic.color = ({
-      "#75566f": "#7c6f91", "#836a73": "#7c6f91",
-      "#df765f": "#ef7d62", "#c87358": "#ef7d62",
-      "#1f6b57": "#3f5b78", "#765f1c": "#3f5b78",
-      "#dda94c": "#e2b61b", "#c99b2f": "#e2b61b"
-    })[String(clinic.color || "").toLowerCase()] || clinic.color || "#d3a900";
+      "#75566f": "#9b88aa", "#836a73": "#9b88aa", "#7c6f91": "#9b88aa",
+      "#df765f": "#c88e82", "#c87358": "#c88e82", "#ef7d62": "#c88e82",
+      "#1f6b57": "#7899aa", "#765f1c": "#7899aa", "#3f5b78": "#7899aa",
+      "#dda94c": "#91aa9d", "#c99b2f": "#91aa9d", "#e2b61b": "#91aa9d", "#d3a900": "#91aa9d"
+    })[String(clinic.color || "").toLowerCase()] || clinic.color || "#7899aa";
   });
   normalized.leads.forEach(lead => {
     if (lead.status === "no_response") lead.status = "lost";
@@ -1521,7 +1521,8 @@ function openAdminAccessForm(organizationId) {
       ${field("admin-access-email", "E-mail permitido", "", true, "email", "pessoa@empresa.com.br")}
       <div class="field"><label for="admin-access-role">Cargo</label><select id="admin-access-role"><option value="social_seller">Social seller</option><option value="manager">Gestor · somente leitura</option><option value="admin">Admin da organização</option></select></div>
       <div class="admin-isolation-note" id="admin-role-note"><span class="material-symbols-outlined">shield_lock</span><p><strong>Acesso isolado</strong><small>Social seller opera clínicas, sessões, leads e relatórios de ${escapeHtml(organization.name)}.</small></p></div>
-      <button class="primary-button" type="submit">Criar acesso e enviar convite</button>
+      <div class="admin-delivery-note"><span class="material-symbols-outlined">login</span><p><strong>Entrada gratuita e imediata</strong><small>Depois de liberar, a pessoa entra com Google usando exatamente o e-mail cadastrado. O envio automático de convite depende de um correio SMTP próprio.</small></p></div>
+      <button class="primary-button" type="submit">Liberar acesso</button>
     </form>`, () => {
     const roleSelect = $("#admin-access-role");
     const roleNote = $("#admin-role-note small");
@@ -1545,7 +1546,7 @@ function openAdminAccessForm(organizationId) {
           role: $("#admin-access-role").value
         });
         closeSheet();
-        showToast(result.invitationSent ? "Acesso criado e convite enviado por e-mail" : "E-mail permitido; acesso com Google já está liberado");
+        showToast(result.invitationSent ? "Acesso criado e convite enviado por e-mail" : "Acesso liberado: a pessoa já pode entrar com Google");
         await renderAdminAccess();
       } catch (error) {
         console.warn("Falha ao criar acesso.", error);
@@ -2442,7 +2443,7 @@ function openClinicForm(clinicId = null) {
         hunterPhone: phoneDigits($("#clinic-hunter-phone").value), protocol: $("#clinic-protocol").value.trim(),
         location: $("#clinic-location").value.trim(), evaluationPrice: Number($("#clinic-price").value || 0),
         trafficInvestment, priority: priorityFromInvestment(trafficInvestment),
-        color: clinic.color || ["#7c6f91", "#ef7d62", "#3f5b78", "#e2b61b"][state.clinics.length % 4], active: true
+        color: clinic.color || ["#9b88aa", "#c88e82", "#7899aa", "#91aa9d"][state.clinics.length % 4], active: true
       };
       if (edit) Object.assign(clinic, record); else state.clinics.push(record);
       persist(); renderClinics(); closeSheet(); showToast(edit ? "Clínica atualizada" : "Clínica cadastrada");
@@ -3369,6 +3370,7 @@ $("#recovery-form").addEventListener("submit", async event => {
 });
 $("#signout").addEventListener("click", async () => { await authGateway.signOut(); location.reload(); });
 $$("[data-view]").forEach(button => button.addEventListener("click", () => navigate(button.dataset.view)));
+$("#sidebar-home")?.addEventListener("click", () => navigate("home"));
 function selectReportingPeriod(period) {
   state.period = period;
   state.reportPeriod = period;
