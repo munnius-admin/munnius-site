@@ -147,7 +147,7 @@ export const authGateway = {
       const client = await getClient();
       const { error } = await client.auth.updateUser({ password });
       return error
-        ? { ok: false, message: "Não foi possível salvar a senha. Abra novamente o link recebido." }
+        ? { ok: false, message: "Não foi possível salvar a senha agora. Tente novamente em instantes." }
         : { ok: true, message: "Senha criada com sucesso." };
     } catch (error) {
       console.warn("Falha ao atualizar senha.", error);
@@ -160,7 +160,7 @@ export const dataGateway = {
   async uploadProfileImage(file) {
     if (!isSupabaseConfigured || !file) return null;
     const client = await getClient();
-    const { user, organizationId } = await getWritableContext(client);
+    const { user, organizationId } = await getContext(client);
     const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
     const path = `${organizationId}/profiles/${user.id}-${Date.now()}.${extension}`;
     const { error } = await client.storage.from("clinic-images").upload(path, file, {
@@ -175,6 +175,34 @@ export const dataGateway = {
       .eq("id", user.id);
     if (profileError) throw profileError;
     return avatarUrl;
+  },
+  async updateProfileName(fullName) {
+    const name = String(fullName || "").trim();
+    if (!name) throw new Error("Nome inválido.");
+    if (!isSupabaseConfigured) return name;
+    const client = await getClient();
+    const { user } = await getContext(client);
+    const { error: authError } = await client.auth.updateUser({ data: { full_name: name, name } });
+    if (authError) throw authError;
+    const { error } = await client.from("profiles")
+      .update({ full_name: name, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (error) throw error;
+    return name;
+  },
+  async updateNotificationPreference(enabled) {
+    if (!isSupabaseConfigured) return Boolean(enabled);
+    const client = await getClient();
+    const { error } = await client.auth.updateUser({ data: { munnius_social_notifications: Boolean(enabled) } });
+    if (error) throw error;
+    return Boolean(enabled);
+  },
+  async markProductTourSeen() {
+    if (!isSupabaseConfigured) return true;
+    const client = await getClient();
+    const { error } = await client.auth.updateUser({ data: { munnius_social_tour_seen: true } });
+    if (error) throw error;
+    return true;
   },
   async uploadClinicImage(file, clinicId) {
     if (!isSupabaseConfigured || !file || !clinicId) return null;
@@ -230,16 +258,7 @@ export const dataGateway = {
     if (profileError) throw profileError;
     const email = (profile.email || user.email || "").toLowerCase();
     const accountName = user.user_metadata?.full_name || user.user_metadata?.name;
-    const knownAccountNames = {
-      "grmunhoz7@gmail.com": "Gabriel Munhoz"
-    };
-    const name = knownAccountNames[email] || accountName || profile.full_name || user.email?.split("@")[0] || "Usuário";
-    if (knownAccountNames[email] && profile.full_name !== name) {
-      client.from("profiles").update({ full_name: name, updated_at: new Date().toISOString() }).eq("id", user.id)
-        .then(({ error: updateError }) => {
-          if (updateError) console.warn("O nome correto será mantido nesta sessão.", updateError);
-        });
-    }
+    const name = profile.full_name || accountName || user.email?.split("@")[0] || "Usuário";
     return {
       snapshot: data?.payload || null,
       profile: {
@@ -248,6 +267,8 @@ export const dataGateway = {
         email: profile.email || user.email,
         avatarUrl: profile.avatar_url || "",
         initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(),
+        notificationsEnabled: user.user_metadata?.munnius_social_notifications ?? true,
+        productTourSeen: Boolean(user.user_metadata?.munnius_social_tour_seen),
         role,
         platformAdmin
       }

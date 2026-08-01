@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=40">
 </head>
 <body>
   <main id="app">
@@ -76,14 +76,6 @@
     </section>
 
     <section class="app-shell hidden" id="app-shell">
-      <header class="topbar">
-        <div class="topbar-copy">
-          <h1 id="page-title">Visão geral</h1>
-          <div class="topbar-subline"><p class="overline" id="greeting">Bem-vindo</p><span class="access-mode-badge hidden" id="access-mode-badge"><span class="material-symbols-outlined">visibility</span>Somente leitura</span></div>
-        </div>
-        <button class="avatar-button" id="profile-avatar-button" data-view="more" aria-label="Abrir perfil">••</button>
-      </header>
-
       <div class="content">
         <section class="view active" data-view-panel="home">
           <div class="period-control" role="group" aria-label="Período">
@@ -97,6 +89,11 @@
               <div class="hero-value-row"><strong class="hero-number" id="actions-total">0</strong><span>ações</span></div>
               <p id="hero-summary">Comece por uma clínica para registrar o dia.</p>
             </div>
+            <div class="hero-goals" aria-label="Meta global do período">
+              <div class="hero-goals-heading"><span>Meta global do período</span><small>Acompanhamento do mês</small></div>
+              <div class="hero-goal-item"><span class="material-symbols-outlined">phone_in_talk</span><p><strong id="goal-phones-progress">0 / 60</strong><small>Números prospectados</small></p><i><b id="goal-phones-bar"></b></i></div>
+              <div class="hero-goal-item"><span class="material-symbols-outlined">event_available</span><p><strong id="goal-scheduled-progress">0 / 30</strong><small>Agendamentos</small></p><i><b id="goal-scheduled-bar"></b></i></div>
+            </div>
           </div>
           <div class="metrics-grid dashboard-metrics">
             <button class="metric-card metric-card-action phone-report-entry" type="button" data-open-report="phones"><span class="ui-icon"><span class="material-symbols-outlined">phone_in_talk</span></span><strong id="leads-total">0</strong><p>Telefones captados</p><small>Ver auditoria</small></button>
@@ -104,13 +101,6 @@
             <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">domain</span></span><strong id="clinics-total">0</strong><p>Clínicas ativas</p></article>
             <article class="metric-card metric-card-action" data-view="leads"><span class="ui-icon"><span class="material-symbols-outlined">forum</span></span><strong id="followups-total">0</strong><p>Conversas ativas</p></article>
           </div>
-          <article class="goals-card home-goals-card">
-            <div class="goals-card-heading"><div><p class="overline">Meta global do período</p><h2>Rumo ao resultado</h2></div><button class="goals-edit-icon manager-write" id="edit-goals" aria-label="Editar metas"><span class="material-symbols-outlined">tune</span></button></div>
-            <div class="goals-grid">
-              <div><span class="material-symbols-outlined">phone_in_talk</span><p><strong id="goal-phones-progress">0 / 60</strong><small>Números prospectados</small></p><i class="goal-progress"><b id="goal-phones-bar"></b></i></div>
-              <div><span class="material-symbols-outlined">event_available</span><p><strong id="goal-scheduled-progress">0 / 30</strong><small>Agendamentos</small></p><i class="goal-progress"><b id="goal-scheduled-bar"></b></i></div>
-            </div>
-          </article>
           <div class="section-heading"><div><p class="overline">Status atual de Social Selling</p><h2>Fila de oportunidades</h2></div><button class="small-link" data-view="leads">Abrir CRM</button></div>
             <div class="pipeline-strip">
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">person_search</span></span><strong id="pipeline-mapped">0</strong><small>Leads mapeados</small></button>
@@ -119,7 +109,7 @@
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">event_available</span></span><strong id="pipeline-scheduled">0</strong><small>Agendados</small></button>
               <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">verified</span></span><strong id="pipeline-attended">0</strong><small>Compareceram</small></button>
           </div>
-          <div class="section-heading"><div><p class="overline">Operação</p><h2 id="home-clinics-title">Começar por uma clínica</h2></div><button class="small-link" data-view="clinics">Gerenciar</button></div>
+          <div class="section-heading"><div><p class="overline">Operação</p><h2 id="home-clinics-title">Começar por uma clínica</h2></div></div>
           <div class="clinic-list" id="clinic-list"></div>
         </section>
 
@@ -193,10 +183,25 @@
         <section class="view" data-view-panel="more">
           <div class="profile-card"><button class="avatar-large avatar-edit" id="profile-avatar-large" type="button" aria-label="Alterar foto do perfil">••<span class="material-symbols-outlined">add_a_photo</span></button><div><h2 id="profile-name">Perfil</h2><p id="profile-role">Social seller</p><small id="profile-avatar-hint">Toque na foto para alterar</small></div></div>
           <input class="hidden" id="profile-image-input" type="file" accept="image/png,image/jpeg,image/webp">
-          <div class="menu-list">
-            <button data-view="clinics"><span class="material-symbols-outlined">domain</span><div><strong>Clínicas e metas</strong><small>Carteira, prioridades e metas globais</small></div><b>›</b></button>
-            <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><div><strong>Relatórios</strong><small>Exporte para WhatsApp ou Discord</small></div><b>›</b></button>
-            <button class="hidden" id="admin-access-menu" data-view="admin"><span class="material-symbols-outlined">admin_panel_settings</span><div><strong>Organizações e acessos</strong><small>Ambientes, usuários permitidos e convites</small></div><b>›</b></button>
+          <div class="profile-details-card">
+            <div><span class="material-symbols-outlined">alternate_email</span><p><strong id="profile-email">—</strong><small>E-mail de acesso</small></p></div>
+            <span class="access-mode-badge hidden" id="access-mode-badge"><span class="material-symbols-outlined">visibility</span>Somente leitura</span>
+          </div>
+          <div class="menu-list profile-menu-list">
+            <button id="edit-profile-name"><span class="material-symbols-outlined">badge</span><div><strong>Nome do perfil</strong><small>Altere como seu nome aparece no produto</small></div><b>›</b></button>
+            <button id="change-profile-password"><span class="material-symbols-outlined">password</span><div><strong>Redefinir senha</strong><small>Crie uma nova senha para este acesso</small></div><b>›</b></button>
+            <label class="profile-toggle"><span class="material-symbols-outlined">notifications</span><div><strong>Notificações</strong><small>Deixe sua preferência pronta para os próximos alertas</small></div><input id="profile-notifications" type="checkbox"><i></i></label>
+          </div>
+          <button class="signout-button" id="signout">Sair da conta</button>
+        </section>
+
+        <section class="view" data-view-panel="settings">
+          <div class="settings-intro"><span class="material-symbols-outlined">tune</span><div><p class="overline">Central do produto</p><h2>Configurações</h2><p>Organize a operação e os acessos em um único lugar.</p></div></div>
+          <div class="settings-grid" id="settings-grid">
+            <button class="manager-write" id="settings-edit-goals"><span class="settings-icon pastel-yellow"><span class="material-symbols-outlined">track_changes</span></span><div><strong>Metas globais</strong><small>Números prospectados e agendamentos do mês</small></div><b>›</b></button>
+            <button data-view="clinics"><span class="settings-icon pastel-mint"><span class="material-symbols-outlined">domain</span></span><div><strong>Clínicas</strong><small>Cadastros, Hunters, prioridades e tempos de sessão</small></div><b>›</b></button>
+            <button class="hidden" id="admin-access-menu" data-view="admin"><span class="settings-icon pastel-lilac"><span class="material-symbols-outlined">admin_panel_settings</span></span><div><strong>Organização e acessos</strong><small>Ambientes, cargos e usuários permitidos</small></div><b>›</b></button>
+            <button id="restart-product-tour"><span class="settings-icon pastel-blue"><span class="material-symbols-outlined">explore</span></span><div><strong>Tutorial do produto</strong><small>Veja novamente o fluxo principal do Munnius Social</small></div><b>›</b></button>
           </div>
           <section class="trust-panel" aria-labelledby="trust-title">
             <div class="trust-heading"><span class="material-symbols-outlined">shield_lock</span><div><p class="overline">Confiança por arquitetura</p><h2 id="trust-title">Segurança pensada desde a base</h2></div></div>
@@ -209,7 +214,6 @@
             </div>
             <footer><span>Supabase Auth + PostgreSQL · Row Level Security · Cloudflare</span><a href="https://munnius.com.br" target="_blank" rel="noopener noreferrer">Conheça a Munnius <span aria-hidden="true">↗</span></a></footer>
           </section>
-          <button class="signout-button" id="signout">Sair da conta</button>
         </section>
 
         <section class="view" data-view-panel="clinics">
@@ -280,10 +284,14 @@
 
       <nav class="bottom-nav" aria-label="Navegação principal">
         <button class="sidebar-brand" type="button" id="sidebar-home" aria-label="Voltar ao início"><span><img src="assets/munnius-mark-light.png" alt="Munnius"></span></button>
-        <button class="active" data-view="home"><span class="material-symbols-outlined">home</span><small>Início</small></button>
-        <button data-view="session"><span class="material-symbols-outlined">timer</span><small>Sessão</small></button>
-        <button data-view="leads"><span class="material-symbols-outlined">group</span><small>Leads</small></button>
-        <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><small>Relatórios</small></button>
+        <div class="nav-main">
+          <button class="active" data-view="home"><span class="material-symbols-outlined">home</span><small>Início</small></button>
+          <button data-view="session"><span class="material-symbols-outlined">timer</span><small>Sessão</small></button>
+          <button data-view="leads"><span class="material-symbols-outlined">group</span><small>Leads</small></button>
+          <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><small>Relatórios</small></button>
+          <button data-view="settings"><span class="material-symbols-outlined">settings</span><small>Ajustes</small></button>
+        </div>
+        <button class="sidebar-profile" type="button" data-view="more" aria-label="Abrir perfil"><span class="nav-profile-avatar" id="nav-profile-avatar">••</span><small>Perfil</small><i id="profile-news-badge">!</i></button>
       </nav>
     </section>
   </main>
@@ -296,8 +304,19 @@
     </section>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script src="vendor/html2canvas.min.js?v=39"></script>
-  <script src="config.js?v=39"></script>
-  <script type="module" src="app.js?v=39"></script>
+  <div class="product-tour hidden" id="product-tour" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+    <button class="tour-click-layer" id="tour-next-layer" type="button" aria-label="Avançar tutorial"></button>
+    <div class="tour-focus-ring hidden" id="tour-focus-ring" aria-hidden="true"></div>
+    <section class="tour-card" id="tour-card">
+      <div class="tour-progress"><span id="tour-step-label">1 de 10</span><i><b id="tour-progress-bar"></b></i></div>
+      <span class="tour-icon material-symbols-outlined" id="tour-icon">waving_hand</span>
+      <h2 id="tour-title">Bem-vindo ao App Social da Munnius</h2>
+      <p id="tour-copy">Aqui você realiza a gestão do seu Social Selling de ponta a ponta.</p>
+      <div class="tour-actions"><button type="button" id="tour-skip">Pular tutorial</button><button type="button" id="tour-back">Voltar</button><button type="button" id="tour-next">Começar</button></div>
+    </section>
+  </div>
+  <script src="vendor/html2canvas.min.js?v=40"></script>
+  <script src="config.js?v=40"></script>
+  <script type="module" src="app.js?v=40"></script>
 </body>
 </html>

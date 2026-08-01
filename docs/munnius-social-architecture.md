@@ -129,8 +129,9 @@ em imagem devem ser gerados sob demanda, não armazenados.
 1. Crie um projeto na região mais próxima disponível.
 2. Em Authentication, mantenha e-mail/senha e desative cadastro público.
 3. Execute, em ordem, os arquivos de `supabase/migrations` no SQL Editor.
-4. Após as migrations `008_platform_admin_and_access.sql` e `010_manager_read_only.sql`, use **Mais → Organizações e
-   acessos** no perfil administrador da plataforma para criar organizações e permitir
+4. Após as migrations `008_platform_admin_and_access.sql`, `010_manager_read_only.sql` e
+   `011_profile_self_service.sql`, use **Ajustes → Organização e acessos** no perfil
+   administrador da plataforma para criar organizações e permitir
    usuários. O caminho gratuito recomendado é permitir o e-mail e orientar a pessoa a
    usar **Entrar com Google** com exatamente o mesmo endereço; o primeiro login reivindica
    o convite e cria o vínculo com a organização. A função `admin-access` tenta enviar o
@@ -148,6 +149,23 @@ Fotos de clínicas podem usar o bucket público `clinic-images`, com limite de 2
 políticas por organização previstas em `007_clinic_images.sql`. A migração deve ser
 aplicada somente quando o recurso for ativado; imagens contam na franquia gratuita de
 Storage e não ocupam o banco PostgreSQL.
+
+A migration `011_profile_self_service.sql` mantém o Gestor somente leitura na operação,
+mas permite que qualquer membro ativo atualize o próprio nome e foto. Preferências de
+notificação e conclusão do tutorial ficam nos metadados privados da conta autenticada.
+
+## Navegação e primeiro acesso
+
+A interface usa fundos neutros, azul-petróleo como cor estrutural da Munnius e acentos
+pastéis para distinguir contexto, etapa do funil e ação sem transformar cada página em
+uma nova identidade. No desktop, a navegação fica em uma barra lateral compacta; no
+iPhone, as mesmas áreas formam a barra inferior do PWA.
+
+- **Perfil** contém somente dados pessoais, senha, foto e preferência de notificações.
+- **Ajustes** concentra metas, clínicas, organização/acessos, confiança da arquitetura e
+  a opção de rever o tutorial.
+- O tutorial guiado é exibido uma vez no primeiro acesso, destaca controles reais em
+  sequência e registra a conclusão tanto no navegador quanto na conta autenticada.
 
 As migrations devem permanecer versionadas junto do código e ser aplicadas primeiro
 em prévia sempre que houver um ambiente separado.

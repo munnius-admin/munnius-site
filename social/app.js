@@ -1,11 +1,11 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=39";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=40";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const STORAGE_KEY = "munnius-social-v3";
 const LEGACY_STORAGE_KEY = "munnius-social-v2";
 const countLabels = { likes: "Curtidas", comments: "Comentários", directs: "Directs", responses: "Responderam", phones: "Telefones captados" };
-const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", more: "Mais", clinics: "Clínicas e metas", reports: "Relatórios", admin: "Administração" };
+const titles = { home: "Visão geral", session: "Sessão", leads: "Leads", more: "Perfil", settings: "Configurações", clinics: "Clínicas", reports: "Relatórios", admin: "Administração" };
 const statusNames = {
   new: "Lead mapeado",
   talking: "Conversando",
@@ -957,26 +957,27 @@ function renderProfile() {
   const firstName = name.split(/\s+/)[0];
   const initials = state.profile?.initials || firstName.slice(0, 2).toUpperCase();
   const avatarUrl = state.profile?.avatarUrl || "";
-  $("#greeting").textContent = `Olá, ${firstName}`;
-  const headerAvatar = $("#profile-avatar-button");
+  const navAvatar = $("#nav-profile-avatar");
   const profileAvatar = $("#profile-avatar-large");
-  [headerAvatar, profileAvatar].forEach(avatar => {
+  [navAvatar, profileAvatar].forEach(avatar => {
     avatar.classList.toggle("has-image", Boolean(avatarUrl));
     avatar.style.backgroundImage = avatarUrl ? `url("${avatarUrl}")` : "";
   });
-  headerAvatar.textContent = avatarUrl ? "" : initials;
+  navAvatar.textContent = avatarUrl ? "" : initials;
   profileAvatar.innerHTML = `${avatarUrl ? "" : escapeHtml(initials)}<span class="material-symbols-outlined">add_a_photo</span>`;
-  profileAvatar.disabled = isReadOnlyManager();
+  profileAvatar.disabled = false;
   $("#profile-name").textContent = name;
+  $("#profile-email").textContent = state.profile?.email || "E-mail não informado";
+  $("#profile-notifications").checked = state.profile?.notificationsEnabled !== false;
   $("#profile-role").textContent = state.profile?.platformAdmin
     ? "Administrador da plataforma"
     : state.profile?.role === "admin" ? "Admin · Social seller"
       : isReadOnlyManager() ? "Gestor · Somente leitura" : "Social seller";
-  $("#profile-avatar-hint").textContent = isReadOnlyManager()
-    ? "Acesso protegido para acompanhamento"
-    : "Toque na foto para alterar";
+  $("#profile-avatar-hint").textContent = "Toque na foto para alterar";
   $("#access-mode-badge").classList.toggle("hidden", !isReadOnlyManager());
   $("#admin-access-menu").classList.toggle("hidden", !state.profile?.platformAdmin);
+  const newsSeen = localStorage.getItem(`munnius-social-news-v1:${state.profile?.id || "local"}`) === "seen";
+  $("#profile-news-badge").classList.toggle("hidden", newsSeen);
 }
 
 function applyAccessMode() {
@@ -993,7 +994,6 @@ function applyAccessMode() {
 }
 
 async function saveProfileImage(file) {
-  if (!requireOperationEdit()) return;
   if (!file) return;
   if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return showToast("Use uma imagem PNG, JPG ou WebP.");
   if (file.size > 2 * 1024 * 1024) return showToast("Escolha uma foto de até 2 MB.");
@@ -1012,6 +1012,65 @@ async function saveProfileImage(file) {
     avatar.classList.remove("uploading");
     $("#profile-image-input").value = "";
   }
+}
+
+function openProfileNameForm() {
+  openSheet(`<h2 class="sheet-title">Nome do perfil</h2><p class="sheet-subtitle">Este nome aparece no painel e nos relatórios exportados.</p>
+    <form class="sheet-form" id="profile-name-form">
+      ${field("profile-name-input", "Nome completo", state.profile?.name || "", true, "text", "Seu nome")}
+      <button class="primary-button" type="submit">Salvar nome</button>
+    </form>`, () => {
+    $("#profile-name-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      const name = $("#profile-name-input").value.trim();
+      if (name.length < 2) return showToast("Informe um nome válido.");
+      button.disabled = true;
+      button.textContent = "Salvando…";
+      try {
+        const savedName = await dataGateway.updateProfileName(name);
+        state.profile.name = savedName;
+        state.profile.initials = savedName.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
+        renderProfile();
+        renderReport();
+        closeSheet();
+        showToast("Nome do perfil atualizado");
+      } catch (error) {
+        console.warn("Falha ao atualizar nome.", error);
+        button.disabled = false;
+        button.textContent = "Salvar nome";
+        showToast("Não foi possível alterar o nome agora.");
+      }
+    });
+  });
+}
+
+function openProfilePasswordForm() {
+  openSheet(`<h2 class="sheet-title">Redefinir senha</h2><p class="sheet-subtitle">Crie uma senha segura com pelo menos oito caracteres.</p>
+    <form class="sheet-form" id="profile-password-form">
+      ${field("profile-new-password", "Nova senha", "", true, "password", "Mínimo de 8 caracteres")}
+      ${field("profile-confirm-password", "Confirmar senha", "", true, "password", "Repita a nova senha")}
+      <button class="primary-button" type="submit">Atualizar senha</button>
+    </form>`, () => {
+    $("#profile-password-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const password = $("#profile-new-password").value;
+      const confirmation = $("#profile-confirm-password").value;
+      if (password.length < 8) return showToast("Use pelo menos 8 caracteres.");
+      if (password !== confirmation) return showToast("As senhas não são iguais.");
+      const button = event.submitter;
+      button.disabled = true;
+      button.textContent = "Atualizando…";
+      const result = await authGateway.updatePassword(password);
+      if (!result.ok) {
+        button.disabled = false;
+        button.textContent = "Atualizar senha";
+        return showToast(result.message);
+      }
+      closeSheet();
+      showToast("Senha atualizada com sucesso");
+    });
+  });
 }
 
 function showRecoveryForm() {
@@ -1070,6 +1129,8 @@ async function openWorkspace(message = "Bem-vindo") {
     }
   }
   showToast(message);
+  const tourSeenLocally = localStorage.getItem(`munnius-social-tour-v1:${state.profile?.id || "local"}`) === "seen";
+  if (!state.profile?.productTourSeen && !tourSeenLocally) setTimeout(() => startProductTour(), 700);
 }
 
 function uid(prefix) { return crypto.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`; }
@@ -1109,13 +1170,140 @@ function showToast(message) {
   showToast.timeout = setTimeout(() => toast.classList.add("hidden"), 2300);
 }
 
+const productTourSteps = [
+  {
+    icon: "waving_hand",
+    title: "Bem-vindo ao App Social da Munnius",
+    copy: "Aqui você poderá realizar a gestão do seu Social Selling, acompanhar a rotina e transformar conversas em oportunidades rastreáveis."
+  },
+  {
+    view: "home", target: ".period-control", icon: "date_range",
+    title: "Veja o período que importa",
+    copy: "Alterne entre Hoje, Semana e Mês. Todos os indicadores da Home acompanham o período selecionado."
+  },
+  {
+    view: "home", target: ".operation-hero", icon: "speed",
+    title: "Ritmo e meta no mesmo lugar",
+    copy: "A faixa resume as ações realizadas e mostra, ao lado, o avanço da meta global de telefones e agendamentos."
+  },
+  {
+    view: "home", target: "#clinic-list", icon: "play_circle",
+    title: "Comece por uma clínica",
+    copy: "Inicie a sessão da conta que será trabalhada. O app mantém o tempo e as ações separados por clínica."
+  },
+  {
+    view: "session", target: ".session-day-overview", icon: "timer",
+    title: "Controle a ronda do dia",
+    copy: "Em Sessão você vê quais clínicas já foram trabalhadas, quanto tempo recebeu cada uma e quais ainda faltam."
+  },
+  {
+    view: "leads", target: ".crm-toolbar", icon: "filter_alt",
+    title: "Encontre a oportunidade certa",
+    copy: "Pesquise por nome ou @, filtre a prioridade das clínicas e veja rapidamente quais conversas já possuem telefone."
+  },
+  {
+    view: "leads", target: ".kanban-navigation", icon: "view_kanban",
+    title: "Acompanhe o mini CRM",
+    copy: "O funil organiza leads mapeados, conversas, encaminhamentos, agendamentos e comparecimentos sem burocracia."
+  },
+  {
+    view: "reports", target: ".report-kind-control", icon: "monitoring",
+    title: "Mostre o trabalho realizado",
+    copy: "Gere relatórios da operação, auditoria de telefones ou um resumo executivo pronto para compartilhar."
+  },
+  {
+    view: "settings", target: "#settings-grid", icon: "settings",
+    title: "Centralize as configurações",
+    copy: "Metas, clínicas, acessos, segurança e este tutorial ficam reunidos em Configurações."
+  },
+  {
+    view: "more", target: ".profile-menu-list", icon: "account_circle",
+    title: "Seu perfil, do seu jeito",
+    copy: "Troque nome, foto e senha, além de deixar preparada sua preferência de notificações."
+  },
+  {
+    icon: "rocket_launch",
+    title: "Tudo pronto para começar",
+    copy: "Abra uma clínica, inicie a sessão e registre a operação. O Munnius Social cuida da organização enquanto você cuida das conversas."
+  }
+];
+let productTourIndex = -1;
+
+function positionProductTourFocus(selector) {
+  const tour = $("#product-tour");
+  const ring = $("#tour-focus-ring");
+  const card = $("#tour-card");
+  const target = selector ? $(selector) : null;
+  tour.classList.toggle("tour-no-target", !target);
+  ring.classList.toggle("hidden", !target);
+  card.classList.remove("tour-card-top");
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  setTimeout(() => {
+    const rect = target.getBoundingClientRect();
+    const padding = 8;
+    ring.style.left = `${Math.max(8, rect.left - padding)}px`;
+    ring.style.top = `${Math.max(8, rect.top - padding)}px`;
+    ring.style.width = `${Math.min(innerWidth - 16, rect.width + padding * 2)}px`;
+    ring.style.height = `${Math.min(innerHeight - 16, rect.height + padding * 2)}px`;
+    card.classList.toggle("tour-card-top", rect.top > innerHeight * .56);
+  }, 240);
+}
+
+function renderProductTourStep() {
+  const step = productTourSteps[productTourIndex];
+  if (!step) return finishProductTour();
+  if (step.view) navigate(step.view);
+  $("#tour-step-label").textContent = `${productTourIndex + 1} de ${productTourSteps.length}`;
+  $("#tour-progress-bar").style.width = `${(productTourIndex + 1) / productTourSteps.length * 100}%`;
+  $("#tour-icon").textContent = step.icon;
+  $("#tour-title").textContent = step.title;
+  $("#tour-copy").textContent = step.copy;
+  $("#tour-back").classList.toggle("hidden", productTourIndex === 0);
+  $("#tour-next").textContent = productTourIndex === productTourSteps.length - 1 ? "Concluir" : productTourIndex === 0 ? "Começar" : "Próximo";
+  requestAnimationFrame(() => positionProductTourFocus(step.target));
+}
+
+function startProductTour(force = false) {
+  if (!force && !$("#product-tour").classList.contains("hidden")) return;
+  productTourIndex = 0;
+  $("#product-tour").classList.remove("hidden");
+  document.body.classList.add("tour-open");
+  renderProductTourStep();
+}
+
+async function finishProductTour() {
+  $("#product-tour").classList.add("hidden");
+  document.body.classList.remove("tour-open");
+  productTourIndex = -1;
+  const key = `munnius-social-tour-v1:${state.profile?.id || "local"}`;
+  localStorage.setItem(key, "seen");
+  state.profile.productTourSeen = true;
+  try { await dataGateway.markProductTourSeen?.(); } catch (error) { console.info("Tutorial concluído localmente.", error); }
+}
+
+function nextProductTour() {
+  if (productTourIndex >= productTourSteps.length - 1) return finishProductTour();
+  productTourIndex += 1;
+  renderProductTourStep();
+}
+
+function previousProductTour() {
+  productTourIndex = Math.max(0, productTourIndex - 1);
+  renderProductTourStep();
+}
+
 function navigate(view) {
   const currentView = $(".view.active")?.dataset.viewPanel;
   if (currentView === "session" && view !== "session") pauseSessionTimer();
   if (view === "session") resumeSessionTimer();
   $$(".view").forEach(panel => panel.classList.toggle("active", panel.dataset.viewPanel === view));
   $$(".bottom-nav button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
-  $("#page-title").textContent = titles[view];
+  if ($("#page-title")) $("#page-title").textContent = titles[view];
+  if (view === "more") {
+    localStorage.setItem(`munnius-social-news-v1:${state.profile?.id || "local"}`, "seen");
+    $("#profile-news-badge").classList.add("hidden");
+  }
   if (view === "home") renderDashboard();
   if (view === "clinics") renderClinics();
   if (view === "leads") renderLeads();
@@ -3414,12 +3602,35 @@ $("#sheet-backdrop").addEventListener("click", event => { if (event.target === $
 $("#add-clinic").addEventListener("click", () => openClinicForm());
 $("#profile-avatar-large").addEventListener("click", () => $("#profile-image-input").click());
 $("#profile-image-input").addEventListener("change", event => saveProfileImage(event.target.files?.[0]));
+$("#edit-profile-name").addEventListener("click", openProfileNameForm);
+$("#change-profile-password").addEventListener("click", openProfilePasswordForm);
+$("#profile-notifications").addEventListener("change", async event => {
+  const enabled = event.target.checked;
+  state.profile.notificationsEnabled = enabled;
+  try {
+    await dataGateway.updateNotificationPreference(enabled);
+    showToast(enabled ? "Notificações serão ativadas quando disponíveis" : "Preferência de notificações desativada");
+  } catch (error) {
+    event.target.checked = !enabled;
+    state.profile.notificationsEnabled = !enabled;
+    showToast("Não foi possível salvar essa preferência.");
+  }
+});
 $("#admin-add-organization").addEventListener("click", openAdminOrganizationForm);
-$("#edit-goals").addEventListener("click", openGoalsForm);
+$("#settings-edit-goals").addEventListener("click", openGoalsForm);
 $("#edit-goals-clinics").addEventListener("click", openGoalsForm);
+$("#restart-product-tour").addEventListener("click", () => startProductTour(true));
+$("#tour-next").addEventListener("click", nextProductTour);
+$("#tour-next-layer").addEventListener("click", nextProductTour);
+$("#tour-back").addEventListener("click", previousProductTour);
+$("#tour-skip").addEventListener("click", finishProductTour);
 $("#export-report").addEventListener("click", () => exportReport(false));
 $("#share-report").addEventListener("click", () => exportReport(true));
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });
+window.addEventListener("resize", () => {
+  if (productTourIndex < 0) return;
+  positionProductTourFocus(productTourSteps[productTourIndex]?.target);
+});
 
 async function initializeAuth() {
   if (!isSupabaseConfigured) return;
