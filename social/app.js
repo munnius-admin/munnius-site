@@ -1,4 +1,4 @@
-import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=41";
+import { authGateway, dataGateway, isSupabaseConfigured } from "./supabase-client.js?v=42";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -1621,12 +1621,20 @@ async function renderAdminAccess() {
         <span class="admin-access-avatar">${initials(access.fullName || access.email)}</span>
         <div><strong>${escapeHtml(access.fullName || access.email)}</strong><small>${escapeHtml(access.email)} · ${accessRoleLabel(access.role)}</small></div>
         <em class="${access.active ? access.claimed ? "active" : "pending" : "inactive"}">${access.active ? access.claimed ? "Ativo" : "Pendente" : "Pausado"}</em>
-        ${access.id ? `<button data-admin-toggle-access="${access.id}" data-access-active="${access.active}">${access.active ? "Pausar" : "Reativar"}</button>` : ""}
+        <span class="admin-access-actions">
+          <button data-admin-edit-access="${organization.id}" data-access-email="${escapeHtml(access.email)}" data-access-role="${access.role}"><span class="material-symbols-outlined">manage_accounts</span>Alterar cargo</button>
+          ${access.id ? `<button data-admin-toggle-access="${access.id}" data-access-active="${access.active}">${access.active ? "Pausar" : "Reativar"}</button>` : ""}
+        </span>
       </article>`).join("") || `<div class="admin-empty-access">Nenhum acesso nesta organização.</div>`}</div>
     </section>`;
   }).join("") || emptyState("Crie a primeira organização para começar.");
   $$("[data-admin-edit-organization]").forEach(button => button.addEventListener("click", () => openAdminOrganizationEditForm(button.dataset.adminEditOrganization)));
   $$("[data-admin-add-access]").forEach(button => button.addEventListener("click", () => openAdminAccessForm(button.dataset.adminAddAccess)));
+  $$("[data-admin-edit-access]").forEach(button => button.addEventListener("click", () => openAdminAccessRoleForm({
+    organizationId: button.dataset.adminEditAccess,
+    email: button.dataset.accessEmail,
+    role: button.dataset.accessRole
+  })));
   $$("[data-admin-toggle-access]").forEach(button => button.addEventListener("click", async () => {
     button.disabled = true;
     try {
@@ -1746,6 +1754,37 @@ function openAdminAccessForm(organizationId) {
   });
 }
 
+function openAdminAccessRoleForm({ organizationId, email, role }) {
+  const organization = adminDirectoryCache.organizations.find(item => item.id === organizationId);
+  if (!organization) return showToast("Organização não encontrada.");
+  openSheet(`<h2 class="sheet-title">Alterar cargo</h2><p class="sheet-subtitle">Defina o que ${escapeHtml(email)} pode fazer em ${escapeHtml(organization.name)}.</p>
+    <form class="sheet-form" id="admin-access-role-form">
+      <div class="field"><label for="admin-edit-access-role">Cargo</label><select id="admin-edit-access-role">
+        <option value="social_seller" ${role === "social_seller" ? "selected" : ""}>Social seller</option>
+        <option value="manager" ${role === "manager" ? "selected" : ""}>Gestor · somente leitura</option>
+        <option value="admin" ${role === "admin" ? "selected" : ""}>Admin da organização</option>
+      </select></div>
+      <div class="admin-isolation-note"><span class="material-symbols-outlined">shield_lock</span><p><strong>Permissão protegida no banco</strong><small>O novo cargo será aplicado ao acesso e ao vínculo ativo da organização.</small></p></div>
+      <button class="primary-button" type="submit">Salvar cargo</button>
+    </form>`, () => {
+    $("#admin-access-role-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      try {
+        await dataGateway.setAccessRole({ organizationId, email, role: $("#admin-edit-access-role").value });
+        closeSheet();
+        showToast("Cargo atualizado");
+        await renderAdminAccess();
+      } catch (error) {
+        console.warn("Falha ao alterar cargo.", error);
+        button.disabled = false;
+        showToast("Não foi possível alterar o cargo.");
+      }
+    });
+  });
+}
+
 function renderGoals() {
   const monthly = periodStats("month");
   [["goal-phones-progress", "goal-phones-bar"], ["clinic-goal-phones-progress", "clinic-goal-phones-bar"]].forEach(([labelId, barId]) => {
@@ -1762,10 +1801,16 @@ function renderGoals() {
 
 function openGoalsForm() {
   if (!requireOperationEdit()) return;
-  openSheet(`<h2 class="sheet-title">Metas globais</h2><p class="sheet-subtitle">Defina o alvo atual da operação inteira. Nenhuma meta é vinculada a uma clínica específica.</p>
-    <form class="sheet-form" id="goals-form">
-      ${field("goals-phones", "Números prospectados no período", state.goals.phones, true, "number", "60")}
-      ${field("goals-scheduled", "Agendamentos no período", state.goals.scheduled, true, "number", "30")}
+  const monthly = periodStats("month");
+  const phonesPercent = Math.min(100, monthly.phonesTotal / Math.max(1, state.goals.phones) * 100);
+  const scheduledPercent = Math.min(100, monthly.scheduledTotal / Math.max(1, state.goals.scheduled) * 100);
+  openSheet(`<div class="goals-sheet-heading"><span class="material-symbols-outlined">track_changes</span><div><h2 class="sheet-title">Metas globais</h2><p class="sheet-subtitle">Ajuste os objetivos mensais da operação inteira.</p></div></div>
+    <form class="sheet-form goals-sheet-form" id="goals-form">
+      <div class="goals-sheet-grid">
+        <label class="goals-sheet-item" for="goals-phones"><span class="material-symbols-outlined">phone_in_talk</span><p><strong>${monthly.phonesTotal} captados</strong><small>Meta de telefones no mês</small></p><input id="goals-phones" type="number" inputmode="numeric" min="1" required value="${state.goals.phones}"><i><b style="width:${phonesPercent}%"></b></i></label>
+        <label class="goals-sheet-item" for="goals-scheduled"><span class="material-symbols-outlined">event_available</span><p><strong>${monthly.scheduledTotal} agendados</strong><small>Meta de agendamentos no mês</small></p><input id="goals-scheduled" type="number" inputmode="numeric" min="1" required value="${state.goals.scheduled}"><i><b style="width:${scheduledPercent}%"></b></i></label>
+      </div>
+      <div class="goals-sheet-note"><span class="material-symbols-outlined">info</span>Essas metas aparecem na Home e nos relatórios; nenhuma clínica recebe uma meta individual.</div>
       <button class="primary-button" type="submit">Salvar metas</button>
     </form>`, () => {
     $("#goals-form").addEventListener("submit", event => {
@@ -3618,7 +3663,6 @@ $("#profile-notifications").addEventListener("change", async event => {
 });
 $("#admin-add-organization").addEventListener("click", openAdminOrganizationForm);
 $("#settings-edit-goals").addEventListener("click", openGoalsForm);
-$("#edit-goals-clinics").addEventListener("click", openGoalsForm);
 $("#restart-product-tour").addEventListener("click", () => startProductTour(true));
 $("#tour-next").addEventListener("click", nextProductTour);
 $("#tour-next-layer").addEventListener("click", nextProductTour);

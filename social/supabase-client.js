@@ -326,6 +326,15 @@ export const dataGateway = {
     });
     if (error) throw error;
   },
+  async setAccessRole({ organizationId, email, role }) {
+    const client = await getClient();
+    const { error } = await client.rpc("admin_set_access_role", {
+      target_organization_id: organizationId,
+      access_email: email,
+      access_role: role
+    });
+    if (error) throw error;
+  },
   async saveSnapshot(payload) {
     if (!isSupabaseConfigured) return;
     const client = await getClient();
