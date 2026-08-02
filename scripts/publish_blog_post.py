@@ -201,10 +201,10 @@ def post_template(meta: dict[str, str], body_html: str, slug: str, related: list
 
 <footer id="site-footer">
   <div class="footer-top">
-    <div class="footer-brand"><a href="/index.html"><img src="../assets/brand/munnius-logo-light.png" alt="Munnius" /></a><p>Estudos aplicados sobre IA, onboarding e operação SaaS.</p></div>
+    <div class="footer-brand"><a href="/index.html"><img src="../assets/brand/munnius-logo-light.png" alt="Munnius" /></a><p>Projetos remotos e conteúdo aplicado sobre IA, onboarding e operação SaaS.</p></div>
     <div class="footer-links"><div><strong>Site</strong><a href="/sobre.html">Sobre</a><a href="/servicos.html">Projetos</a><a href="/blog/index.html">Blog</a><a href="/contato.html">Contato</a></div><div><strong>Contato</strong><a href="mailto:contato@munnius.com.br">contato@munnius.com.br</a><a href="https://linkedin.com/in/grmunhoz" target="_blank" rel="noreferrer">LinkedIn</a><a href="https://youtube.com/@by.munnius" target="_blank" rel="noreferrer">YouTube</a></div></div>
   </div>
-  <div class="footer-bottom"><p>© 2026 Munnius. Todos os direitos reservados.</p></div>
+  <div class="footer-bottom"><p>© 2026 Munnius. Todos os direitos reservados.</p><p class="footer-legal"><strong>CNPJ:</strong>&nbsp;68.069.326/0001-09</p></div>
 </footer>
 <script src="../assets/mobile-menu.js"></script>
 </body>

@@ -31,6 +31,14 @@
     observer.observe(element);
   });
 
+  const footerBottom = document.querySelector('#site-footer .footer-bottom');
+  if (footerBottom && !footerBottom.querySelector('.footer-legal')) {
+    const legal = document.createElement('p');
+    legal.className = 'footer-legal';
+    legal.innerHTML = '<strong>CNPJ:</strong>&nbsp;68.069.326/0001-09';
+    footerBottom.appendChild(legal);
+  }
+
   if (!header || !toggle) return;
 
   const closeMenu = () => {
