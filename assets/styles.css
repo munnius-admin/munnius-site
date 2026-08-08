@@ -2,10 +2,10 @@
   --color-primary: #15384A;
   --color-primary-dark: #0B2530;
   --color-primary-soft: #1F4A5D;
-  --color-accent: #DCEAF3;
-  --color-accent-strong: #C5DCE9;
-  --color-accent-soft: #EEF5F8;
-  --color-accent-ink: #24546A;
+  --color-accent: #F4E6A3;
+  --color-accent-strong: #E6CF68;
+  --color-accent-soft: #FFF6CF;
+  --color-accent-ink: #6A5917;
   --color-pastel-blue: #DCEAF3;
   --color-pastel-mint: #DDEFE5;
   --color-pastel-lilac: #E9E2F4;
@@ -400,7 +400,11 @@ p { color: var(--color-muted); }
   color: var(--color-primary);
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
+.hero-pills .mini-pill:nth-child(2),
+.hero-pills .mini-pill:nth-child(4) { background: var(--color-accent-soft); }
+.brand-surface .badge { background: var(--color-accent); color: var(--color-primary-dark); border-color: transparent; }
 
 .logo-rail {
   padding: 34px;
@@ -496,6 +500,8 @@ p { color: var(--color-muted); }
 .proof-card {
   padding: 28px;
 }
+.proof-mosaic .proof-card { display: flex; flex-direction: column; align-items: flex-start; }
+.proof-mosaic .proof-card .icon-badge { flex: 0 0 42px; margin: 0 0 20px; }
 .proof-mosaic .proof-card h2 {
   font-size: clamp(30px, 3.5vw, 44px);
 }
@@ -582,17 +588,17 @@ p { color: var(--color-muted); }
 .quote-card {
   display: flex;
   flex-direction: column;
-  min-height: 300px;
-  padding: 28px;
+  min-height: 230px;
+  padding: 22px;
 }
 .quote-card p {
   color: var(--color-primary);
-  font-size: 17px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.55;
 }
 .quote-card footer {
   margin-top: auto;
-  padding-top: 22px;
+  padding-top: 16px;
 }
 .quote-card strong {
   display: block;
@@ -786,7 +792,7 @@ p { color: var(--color-muted); }
   border-radius: var(--radius-md);
 }
 .signal-item span {
-  color: var(--color-accent);
+  color: var(--color-accent-ink);
   font-weight: 900;
 }
 .signal-item h3 { margin-bottom: 4px; font-size: 20px; }
@@ -1037,6 +1043,7 @@ p { color: var(--color-muted); }
   background: var(--color-card);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-card);
+  align-items: center;
 }
 .timeline-item h3 {
   margin-bottom: 8px;
@@ -1047,7 +1054,14 @@ p { color: var(--color-muted); }
   max-width: 720px;
 }
 .tl-periodo {
-  color: var(--color-primary-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: .06em;
@@ -1249,7 +1263,7 @@ input:focus, textarea:focus {
   font-weight: 800;
 }
 .contact-hero-points strong {
-  color: var(--color-accent-strong);
+  color: var(--color-accent-ink);
 }
 .contact-snapshot {
   padding: 32px;
