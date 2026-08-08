@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#123f50">
+  <meta name="description" content="Munnius Social — operação simples de social selling.">
+  <title>Munnius Social</title>
+  <link rel="icon" href="assets/munnius-app-icon.png">
+  <link rel="apple-touch-icon" href="assets/munnius-app-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=43">
+</head>
+<body>
+  <main id="app">
+    <section class="auth-screen" id="auth-screen">
+      <div class="auth-brand">
+        <img src="assets/munnius-mark-light.png" alt="Munnius">
+      </div>
+      <div class="auth-social-canvas" aria-hidden="true">
+        <span class="social-icon social-icon-campaign"><i class="material-symbols-outlined">campaign</i></span>
+        <span class="social-icon social-icon-send"><i class="material-symbols-outlined">send</i></span>
+        <span class="social-icon social-icon-instagram"><img src="assets/instagram.svg?v=9" alt=""></span>
+        <span class="social-icon social-icon-whatsapp"><img src="assets/whatsapp-brand.svg" alt=""></span>
+      </div>
+      <div class="auth-copy">
+        <p class="eyebrow">Seu trabalho, organizado.</p>
+        <h1>Transforme conversas em oportunidades.</h1>
+        <p>Um espaço simples para acompanhar sua rotina, cuidar dos leads e mostrar resultados.</p>
+      </div>
+      <form class="auth-card" id="login-form">
+        <button class="oauth-button hidden" type="button" id="google-login">
+          <img src="assets/google.svg?v=9" alt="">
+          <span>Continuar com Google</span>
+        </button>
+        <div class="auth-divider hidden" id="google-divider"><span>ou use seu e-mail</span></div>
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" type="email" autocomplete="email" placeholder="voce@empresa.com" required>
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <div class="password-wrap">
+            <input id="password" type="password" autocomplete="current-password" placeholder="Sua senha" minlength="6" required>
+            <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar senha">Ver</button>
+          </div>
+        </div>
+        <button class="primary-button" type="submit">Entrar</button>
+        <button class="text-button" type="button" id="forgot-password">Esqueci minha senha</button>
+        <p class="form-note">Acesso exclusivo para usuários convidados.</p>
+        <p class="auth-access-note"><span class="material-symbols-outlined">verified_user</span><span>Recebeu acesso em um e-mail Google? Entre com o botão acima usando exatamente esse endereço.</span></p>
+      </form>
+      <form class="auth-card recovery-card hidden" id="recovery-form">
+        <div class="recovery-heading">
+          <span class="material-symbols-outlined">lock_reset</span>
+          <div>
+            <p class="eyebrow" id="recovery-eyebrow">Acesso recuperado</p>
+            <h2 id="recovery-title">Crie sua nova senha</h2>
+          </div>
+        </div>
+        <p class="recovery-copy" id="recovery-copy">Defina uma senha segura e você entrará no aplicativo logo em seguida.</p>
+        <div class="field">
+          <label for="new-password">Nova senha</label>
+          <input id="new-password" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" minlength="8" required>
+        </div>
+        <div class="field">
+          <label for="confirm-password">Confirmar nova senha</label>
+          <input id="confirm-password" type="password" autocomplete="new-password" placeholder="Repita sua senha" minlength="8" required>
+        </div>
+        <button class="primary-button" type="submit" id="save-password">Salvar senha e entrar</button>
+      </form>
+      <p class="auth-footer">© 2026 <a href="https://munnius.com.br" target="_blank" rel="noopener noreferrer">Munnius</a> · ambiente privado</p>
+    </section>
+
+    <section class="app-shell hidden" id="app-shell">
+      <div class="content">
+        <section class="view active" data-view-panel="home">
+          <div class="period-control" role="group" aria-label="Período">
+            <button class="active" data-period="day">Hoje</button>
+            <button data-period="week">Semana</button>
+            <button data-period="month">Mês</button>
+          </div>
+          <div class="hero-card operation-hero">
+            <div class="hero-copy">
+              <p class="card-label">Ritmo da operação</p>
+              <div class="hero-value-row"><strong class="hero-number" id="actions-total">0</strong><span>ações</span></div>
+              <p id="hero-summary">Comece por uma clínica para registrar o dia.</p>
+            </div>
+            <div class="hero-goals" aria-label="Meta global do período">
+              <div class="hero-goals-heading"><span>Meta global do período</span><small>Acompanhamento do mês</small></div>
+              <div class="hero-goal-item"><span class="material-symbols-outlined">phone_in_talk</span><p><strong id="goal-phones-progress">0 / 60</strong><small>Números prospectados</small></p><i><b id="goal-phones-bar"></b></i></div>
+              <div class="hero-goal-item"><span class="material-symbols-outlined">event_available</span><p><strong id="goal-scheduled-progress">0 / 30</strong><small>Agendamentos</small></p><i><b id="goal-scheduled-bar"></b></i></div>
+            </div>
+          </div>
+          <div class="metrics-grid dashboard-metrics">
+            <button class="metric-card metric-card-action phone-report-entry" type="button" data-open-report="phones"><span class="ui-icon"><span class="material-symbols-outlined">phone_in_talk</span></span><strong id="leads-total">0</strong><p>Telefones captados</p><small>Ver auditoria</small></button>
+            <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">event_available</span></span><strong id="hunters-total">0</strong><p>Agendamentos</p></article>
+            <article class="metric-card"><span class="ui-icon"><span class="material-symbols-outlined">domain</span></span><strong id="clinics-total">0</strong><p>Clínicas ativas</p></article>
+            <article class="metric-card metric-card-action" data-view="leads"><span class="ui-icon"><span class="material-symbols-outlined">forum</span></span><strong id="followups-total">0</strong><p>Conversas ativas</p></article>
+          </div>
+          <div class="section-heading"><div><p class="overline">Status atual de Social Selling</p><h2>Fila de oportunidades</h2></div><button class="small-link" data-view="leads">Abrir CRM</button></div>
+            <div class="pipeline-strip">
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">person_search</span></span><strong id="pipeline-mapped">0</strong><small>Leads mapeados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">forum</span></span><strong id="pipeline-talking">0</strong><small>Conversando</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">celebration</span></span><strong id="pipeline-qualified">0</strong><small>Encaminhados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">event_available</span></span><strong id="pipeline-scheduled">0</strong><small>Agendados</small></button>
+              <button data-view="leads"><span class="pipeline-icon"><span class="material-symbols-outlined">verified</span></span><strong id="pipeline-attended">0</strong><small>Compareceram</small></button>
+          </div>
+          <div class="section-heading"><div><p class="overline">Operação</p><h2 id="home-clinics-title">Começar por uma clínica</h2></div></div>
+          <div class="clinic-list" id="clinic-list"></div>
+        </section>
+
+        <section class="view" data-view-panel="session">
+          <div class="session-empty" id="session-empty">
+            <span class="large-icon"><span class="material-symbols-outlined">timer</span></span>
+            <h2 id="session-empty-title">Pronta para começar?</h2>
+            <p id="session-empty-copy">Escolha uma clínica e registre seu trabalho sem perder o ritmo.</p>
+            <button class="primary-button manager-write" id="choose-clinic">Escolher clínica</button>
+          </div>
+          <div class="session-active hidden" id="session-active">
+            <div class="session-header">
+              <div><p class="overline">Sessão ativa</p><h2 id="session-clinic">Clínica Bella</h2></div>
+              <div class="timer-panel">
+                <div class="timer" id="timer">30:00</div>
+                <small id="session-limit-label">restantes</small>
+              </div>
+            </div>
+            <div class="session-timer-track" aria-hidden="true"><i id="session-timer-progress"></i></div>
+            <div class="action-grid manager-write" id="action-grid">
+              <button data-action="likes"><span class="material-symbols-outlined">favorite</span><strong>0</strong><small>Curtidas</small></button>
+              <button data-action="comments"><span class="material-symbols-outlined">chat_bubble</span><strong>0</strong><small>Comentários</small></button>
+              <button data-action="directs"><span class="material-symbols-outlined">send</span><strong>0</strong><small>Directs</small></button>
+              <button data-action="responses"><span class="material-symbols-outlined">mark_chat_read</span><strong>0</strong><small>Responderam</small></button>
+              <button class="accent-action" data-action="phones"><span class="material-symbols-outlined">phone_in_talk</span><strong>0</strong><small>Telefone captado</small></button>
+            </div>
+            <div class="session-actions manager-write">
+              <button class="secondary-button" id="open-instagram">Abrir Instagram</button>
+              <button class="secondary-button" id="quick-lead">+ Registrar resposta</button>
+            </div>
+            <button class="danger-link manager-write" id="finish-session">Encerrar sessão</button>
+            <div class="quiet-actions manager-write">
+              <button class="undo-link" id="undo-action">Desfazer última ação</button>
+              <button class="undo-link" id="adjust-counts">Ajustar contagens</button>
+            </div>
+          </div>
+          <section class="session-day-overview" aria-labelledby="session-day-title">
+            <div class="session-day-heading">
+              <div><p class="overline">Ronda de hoje</p><h2 id="session-day-title">Clínicas do dia</h2></div>
+              <strong id="session-day-progress-label">0 de 0</strong>
+            </div>
+            <div class="session-day-progress" aria-hidden="true"><i id="session-day-progress-bar"></i></div>
+            <p class="session-day-summary" id="session-day-summary">Veja rapidamente quais contas ainda faltam trabalhar.</p>
+            <div class="session-clinic-list" id="session-clinic-list"></div>
+          </section>
+        </section>
+
+        <section class="view" data-view-panel="leads">
+          <div class="crm-toolbar">
+            <label class="search"><span class="material-symbols-outlined">search</span><input id="lead-search" placeholder="Buscar nome ou @"></label>
+            <label class="priority-filter"><span class="material-symbols-outlined">low_priority</span><select id="lead-priority-filter" aria-label="Filtrar prioridade">
+              <option value="all">Todas as prioridades</option>
+              <option value="A">Prioridade A</option>
+              <option value="B">Prioridade B</option>
+              <option value="C">Prioridade C</option>
+            </select></label>
+            <button class="crm-phone-filter" id="lead-phone-filter" type="button" aria-pressed="false"><span class="material-symbols-outlined">phone_in_talk</span><span>Com telefone</span></button>
+          </div>
+          <div class="kanban-navigation">
+            <button id="kanban-prev" aria-label="Etapa anterior"><span class="material-symbols-outlined">arrow_back</span></button>
+            <div><strong>Funil completo</strong><small>Deslize para acompanhar cada etapa</small></div>
+            <button id="kanban-next" aria-label="Próxima etapa"><span class="material-symbols-outlined">arrow_forward</span></button>
+          </div>
+          <div class="kanban-board" id="lead-kanban"></div>
+          <section class="hunter-followup-section">
+            <div class="section-heading"><div><p class="overline">Cobrança de retorno</p><h2>Acompanhamento por Hunter</h2></div></div>
+            <div class="hunter-followup-list" id="hunter-followup-list"></div>
+          </section>
+        </section>
+
+        <section class="view" data-view-panel="more">
+          <div class="profile-card"><button class="avatar-large avatar-edit" id="profile-avatar-large" type="button" aria-label="Alterar foto do perfil">••<span class="material-symbols-outlined">add_a_photo</span></button><div><h2 id="profile-name">Perfil</h2><p id="profile-role">Social seller</p><small id="profile-avatar-hint">Toque na foto para alterar</small></div></div>
+          <input class="hidden" id="profile-image-input" type="file" accept="image/png,image/jpeg,image/webp">
+          <div class="profile-details-card">
+            <div><span class="material-symbols-outlined">alternate_email</span><p><strong id="profile-email">—</strong><small>E-mail de acesso</small></p></div>
+            <span class="access-mode-badge hidden" id="access-mode-badge"><span class="material-symbols-outlined">visibility</span>Somente leitura</span>
+          </div>
+          <div class="menu-list profile-menu-list">
+            <button id="edit-profile-name"><span class="material-symbols-outlined">badge</span><div><strong>Nome do perfil</strong><small>Altere como seu nome aparece no produto</small></div><b>›</b></button>
+            <button id="change-profile-password"><span class="material-symbols-outlined">password</span><div><strong>Redefinir senha</strong><small>Crie uma nova senha para este acesso</small></div><b>›</b></button>
+            <label class="profile-toggle"><span class="material-symbols-outlined">notifications</span><div><strong>Notificações</strong><small>Deixe sua preferência pronta para os próximos alertas</small></div><input id="profile-notifications" type="checkbox"><i></i></label>
+          </div>
+          <button class="signout-button" id="signout">Sair da conta</button>
+        </section>
+
+        <section class="view" data-view-panel="settings">
+          <div class="settings-intro"><span class="material-symbols-outlined">tune</span><div><p class="overline">Central do produto</p><h2>Configurações</h2><p>Organize a operação e os acessos em um único lugar.</p></div></div>
+          <div class="settings-grid" id="settings-grid">
+            <button class="manager-write" id="settings-edit-goals"><span class="settings-icon pastel-yellow"><span class="material-symbols-outlined">track_changes</span></span><div><strong>Metas globais</strong><small>Números prospectados e agendamentos do mês</small></div><b>›</b></button>
+            <button data-view="clinics"><span class="settings-icon pastel-mint"><span class="material-symbols-outlined">domain</span></span><div><strong>Clínicas</strong><small>Cadastros, Hunters, prioridades e tempos de sessão</small></div><b>›</b></button>
+            <button class="hidden" id="admin-access-menu" data-view="admin"><span class="settings-icon pastel-lilac"><span class="material-symbols-outlined">admin_panel_settings</span></span><div><strong>Organização e acessos</strong><small>Ambientes, cargos e usuários permitidos</small></div><b>›</b></button>
+            <button id="restart-product-tour"><span class="settings-icon pastel-blue"><span class="material-symbols-outlined">explore</span></span><div><strong>Tutorial do produto</strong><small>Veja novamente o fluxo principal do Munnius Social</small></div><b>›</b></button>
+          </div>
+          <section class="trust-panel" aria-labelledby="trust-title">
+            <div class="trust-heading"><span class="material-symbols-outlined">shield_lock</span><div><p class="overline">Confiança por arquitetura</p><h2 id="trust-title">Segurança pensada desde a base</h2></div></div>
+            <p class="trust-intro">O Munnius Social foi estruturado para manter cada operação separada, com acesso mínimo e rastreabilidade dos dados essenciais.</p>
+            <div class="trust-grid">
+              <article><span class="material-symbols-outlined">domain</span><div><strong>Ambientes isolados</strong><small>Dados separados por organização e protegidos no banco por políticas de acesso em cada registro.</small></div></article>
+              <article><span class="material-symbols-outlined">manage_accounts</span><div><strong>Permissões por função</strong><small>Admin, Social seller e Gestor recebem somente as capacidades previstas para seu papel.</small></div></article>
+              <article><span class="material-symbols-outlined">lock</span><div><strong>Acesso protegido</strong><small>Autenticação gerenciada pelo Supabase e conexão HTTPS no domínio oficial.</small></div></article>
+              <article><span class="material-symbols-outlined">data_check</span><div><strong>Coleta responsável</strong><small>O produto registra o necessário para a operação, sem armazenar senhas do Instagram ou conversas completas.</small></div></article>
+            </div>
+            <footer><span>Supabase Auth + PostgreSQL · Row Level Security · Cloudflare</span><a href="https://munnius.com.br" target="_blank" rel="noopener noreferrer">Conheça a Munnius <span aria-hidden="true">↗</span></a></footer>
+          </section>
+        </section>
+
+        <section class="view" data-view-panel="clinics">
+          <button class="subview-back" type="button" data-back-view="settings"><span class="material-symbols-outlined">arrow_back</span>Voltar aos ajustes</button>
+          <div class="section-heading"><div><p class="overline">Carteira</p><h2>Clínicas ativas</h2></div><button class="small-link manager-write" id="add-clinic">+ Adicionar</button></div>
+          <div class="clinic-list detailed" id="clinics-page-list"></div>
+        </section>
+
+        <section class="view" data-view-panel="admin">
+          <button class="subview-back" type="button" data-back-view="settings"><span class="material-symbols-outlined">arrow_back</span>Voltar aos ajustes</button>
+          <div class="admin-hero">
+            <div><p class="overline">Administração da plataforma</p><h2>Organizações e acessos</h2><p>Crie ambientes isolados e defina exatamente quem pode entrar em cada um.</p></div>
+            <button class="primary-button" id="admin-add-organization"><span class="material-symbols-outlined">domain_add</span>Nova organização</button>
+          </div>
+          <div class="admin-metrics" id="admin-metrics"></div>
+          <div class="admin-organization-list" id="admin-organization-list"></div>
+        </section>
+
+        <section class="view" data-view-panel="reports">
+          <div class="report-kind-control" role="group" aria-label="Tipo de relatório">
+            <button class="active" data-report-kind="operation"><span class="material-symbols-outlined">monitoring</span><span>Operação</span></button>
+            <button data-report-kind="phones"><span class="material-symbols-outlined">phone_in_talk</span><span>Telefones</span></button>
+            <button data-report-kind="executive"><span class="material-symbols-outlined">summarize</span><span>Executivo</span></button>
+          </div>
+          <div class="period-control" id="report-period" role="group" aria-label="Período do relatório">
+            <button class="active" data-report-period="day">Hoje</button>
+            <button data-report-period="week">Semana</button>
+            <button data-report-period="month">Mês</button>
+          </div>
+          <div class="report-date-filter"><span class="material-symbols-outlined">calendar_month</span><label for="report-reference-date">Consultar outra data</label><input id="report-reference-date" type="date" aria-label="Data de referência"><button class="hidden" id="clear-report-date" type="button">Voltar para hoje</button></div>
+          <article class="report-card" id="report-card" data-report-card="operation">
+            <div class="report-brand"><span class="report-brand-mark"><img src="assets/munnius-mark-light.png" alt="Munnius"></span><span>Relatório de <strong id="report-user">Social seller</strong></span></div>
+            <p class="overline">Resumo da operação</p>
+            <div class="report-heading"><div><h2 id="report-label">Hoje</h2><p id="report-date"></p></div><span class="report-badge">Social selling</span></div>
+            <div class="report-section-title report-first-section"><span>Ações realizadas</span><small id="report-actions-total">0 ações no período</small></div>
+            <div class="report-actions-grid">
+              <div><span class="material-symbols-outlined">favorite</span><strong id="report-likes">0</strong><small>Curtidas</small></div>
+              <div><span class="material-symbols-outlined">chat_bubble</span><strong id="report-comments">0</strong><small>Comentários</small></div>
+              <div><span class="material-symbols-outlined">send</span><strong id="report-directs-detail">0</strong><small>Directs enviados</small></div>
+              <div><span class="material-symbols-outlined">mark_chat_read</span><strong id="report-responses">0</strong><small>Directs respondidos</small></div>
+              <div><span class="material-symbols-outlined">phone_in_talk</span><strong id="report-phones">0</strong><small>Telefones captados</small></div>
+            </div>
+            <div class="report-section-title"><span>Fila de oportunidades</span><small>Status atual de Social Selling</small></div>
+            <div class="report-current-pipeline" id="report-current-pipeline"></div>
+            <p class="report-expired-note hidden" id="report-expired-note"></p>
+            <div class="report-section-title"><span>Meta do mês atual</span><small id="report-goal-month">Acompanhamento mensal</small></div>
+            <div class="report-monthly-goal">
+              <div><span class="material-symbols-outlined">phone_in_talk</span><p><strong id="report-goal-phones">0 / 60</strong><small>Telefones captados</small></p><i><b id="report-goal-phones-bar"></b></i></div>
+              <div><span class="material-symbols-outlined">event_available</span><p><strong id="report-goal-scheduled">0 / 30</strong><small>Agendamentos confirmados</small></p><i><b id="report-goal-scheduled-bar"></b></i></div>
+            </div>
+            <div class="report-section-title"><span>Por clínica</span><small>Status atual</small></div>
+            <div class="report-clinic-breakdown" id="report-clinic-breakdown"></div>
+            <div class="report-footer"><span>Relatório de social selling</span><strong>Pré-qualificação e encaminhamento</strong></div>
+          </article>
+          <article class="report-card hidden" id="phone-report-card" data-report-card="phones"></article>
+          <article class="report-card executive-report-card hidden" id="executive-report-card" data-report-card="executive"></article>
+          <div class="report-actions">
+            <button class="primary-button" id="export-report">Baixar imagem</button>
+            <button class="secondary-button" id="share-report">Compartilhar</button>
+          </div>
+        </section>
+      </div>
+
+      <nav class="bottom-nav" aria-label="Navegação principal">
+        <button class="sidebar-brand" type="button" id="sidebar-home" aria-label="Voltar ao início"><span><img src="assets/munnius-mark-light.png" alt="Munnius"></span></button>
+        <div class="nav-main">
+          <button class="active" data-view="home"><span class="material-symbols-outlined">home</span><small>Início</small></button>
+          <button data-view="session"><span class="material-symbols-outlined">timer</span><small>Sessão</small></button>
+          <button data-view="leads"><span class="material-symbols-outlined">group</span><small>Leads</small></button>
+          <button data-view="reports"><span class="material-symbols-outlined">monitoring</span><small>Relatórios</small></button>
+          <button data-view="settings"><span class="material-symbols-outlined">settings</span><small>Ajustes</small></button>
+        </div>
+        <button class="sidebar-profile" type="button" data-view="more" aria-label="Abrir perfil"><span class="nav-profile-avatar" id="nav-profile-avatar">••</span><small>Perfil</small><i id="profile-news-badge">!</i></button>
+      </nav>
+    </section>
+  </main>
+
+  <div class="sheet-backdrop hidden" id="sheet-backdrop">
+    <section class="bottom-sheet" id="bottom-sheet" role="dialog" aria-modal="true">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" id="sheet-close" aria-label="Fechar">×</button>
+      <div id="sheet-content"></div>
+    </section>
+  </div>
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+  <div class="product-tour hidden" id="product-tour" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+    <button class="tour-click-layer" id="tour-next-layer" type="button" aria-label="Avançar tutorial"></button>
+    <div class="tour-focus-ring hidden" id="tour-focus-ring" aria-hidden="true"></div>
+    <section class="tour-card" id="tour-card">
+      <div class="tour-progress"><span id="tour-step-label">1 de 10</span><i><b id="tour-progress-bar"></b></i></div>
+      <span class="tour-icon material-symbols-outlined" id="tour-icon">waving_hand</span>
+      <h2 id="tour-title">Bem-vindo ao App Social da Munnius</h2>
+      <p id="tour-copy">Aqui você realiza a gestão do seu Social Selling de ponta a ponta.</p>
+      <div class="tour-actions"><button type="button" id="tour-skip">Pular tutorial</button><button type="button" id="tour-back">Voltar</button><button type="button" id="tour-next">Começar</button></div>
+    </section>
+  </div>
+  <script src="vendor/html2canvas.min.js?v=43"></script>
+  <script src="config.js?v=43"></script>
+  <script type="module" src="app.js?v=43"></script>
+</body>
+</html>
